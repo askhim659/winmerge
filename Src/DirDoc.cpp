@@ -38,6 +38,7 @@
 #include "FilterErrorMessages.h"
 #include "DirActions.h"
 #include "DirScan.h"
+#include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "MessageBoxDialog.h"
 #include "DirCmpReport.h"
@@ -259,7 +260,12 @@ void CDirDoc::LoadSubstitutionFiltersList(CDiffContext* pCtxt)
 void CDirDoc::DiffThreadCallback(int& state)
 {
 	if (state == CDiffThread::EVENT_COMPARE_COMPLETED)
+	{
 		m_elapsed = clock() - m_compareStart;
+		// Merge20 (Phase 4 D0, design section 3.11): the compare
+		// worker thread finished; record the scan-completed point.
+		Merge20MeasureCompareCompleted();
+	}
 	PostMessage(m_pDirView->GetSafeHwnd(), MSG_UI_UPDATE, state, false);
 }
 
@@ -387,6 +393,10 @@ void CDirDoc::Rescan()
 		m_pCompareStats->Reset();
 
 	m_compareStart = clock();
+
+	// Merge20 (Phase 4 D0, design section 3.11): start the
+	// folder-compare timing (compare start -> list finalized).
+	Merge20MeasureBeginCompare();
 
 	pf->ShowProgressBar();
 	auto* pCmpProgressBar = GetCompProgressBar();

@@ -235,6 +235,31 @@ void Init(COptionsMgr *pOptions)
 	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_SPECIAL, true);
 	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_KEEP, true);
 
+	// Merge20 (Phase 4 D0, design section 4.1): dedicated compare
+	// mode and its companions. Defaults match the HTML tool:
+	// dedMode/dedPinned/todoOnly/sniperOn/slim/dockHid are off,
+	// dedZoom 750 is DEF_SCALE 0.75 (HTML camS), snFont 20 is the
+	// HTML sniper font size (clamped 14-28 there), snLayout 0 is
+	// the 3-column layout ('cols'). DedZoom is kept apart from
+	// OPT_VIEW_ZOOM (default 1000): entering dedicated mode keeps
+	// its own zoom and R resets it to 750 (spec section 4(g)).
+	// Ranges follow the HTML clamps: dedZoom 350-2200 (camS
+	// 0.35-2.2), sniperFont 14-28, sniperLayout 0-1 (0 = columns,
+	// 1 = rows). FocusDockHeight 0 means the default dock height.
+	// GrepHistory is a semicolon-separated list of the latest
+	// search strings (at most 10, enforced by D7).
+	pOptions->InitOption(OPT_MERGE20_DED_MODE, false);
+	pOptions->InitOption(OPT_MERGE20_DED_PINNED, false);
+	pOptions->InitOption(OPT_MERGE20_DED_ZOOM, 750, 350, 2200);
+	pOptions->InitOption(OPT_MERGE20_TODO_ONLY, false);
+	pOptions->InitOption(OPT_MERGE20_SNIPER_ON, false);
+	pOptions->InitOption(OPT_MERGE20_SNIPER_FONT, 20, 14, 28);
+	pOptions->InitOption(OPT_MERGE20_SNIPER_LAYOUT, 0, 0, 1);
+	pOptions->InitOption(OPT_MERGE20_SLIM, false);
+	pOptions->InitOption(OPT_MERGE20_DOCK_HIDDEN, false);
+	pOptions->InitOption(OPT_MERGE20_FOCUS_DOCK_HEIGHT, 0);
+	pOptions->InitOption(OPT_MERGE20_GREP_HISTORY, _T(""));
+
 	pOptions->InitOption(OPT_PROJECTS_PATH, _T(""));
 	pOptions->InitOption(OPT_USE_SYSTEM_TEMP_PATH, true);
 	pOptions->InitOption(OPT_CUSTOM_TEMP_PATH, _T(""));
