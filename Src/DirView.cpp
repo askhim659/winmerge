@@ -43,6 +43,7 @@
 #include "Merge20/Merge20CsvExportDlg.h"
 #include "Merge20/Merge20MemoDlg.h"
 #include "Merge20/Merge20LearnDlg.h"
+#include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
@@ -3015,6 +3016,17 @@ LRESULT CDirView::OnUpdateUIMessage(WPARAM wParam, LPARAM lParam)
 
 		if (!pDoc->GetGeneratingReport())
 			Redisplay();
+
+		// Merge20 (Phase 4 D0, design section 3.11): the folder list
+		// was rebuilt (or skipped for report generation); record the
+		// list-finalized point and write the measurement to the log
+		// (View > Log). The last result stays in memory for D10.
+		Merge20MeasureListFinalized(ctxt.m_pCompareStats->GetTotalItems());
+		if (Merge20MeasureHasResult())
+		{
+			const std::string line = Merge20MeasureFormatLast();
+			RootLogger::Info(String(line.begin(), line.end()));
+		}
 
 		if (!pDoc->GetReportFile().empty())
 		{
