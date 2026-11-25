@@ -828,3 +828,6 @@ TEST(FileMenu, OpenProject3)
 }
 
 #endif
+// NEGATIVE TEST ONLY - intentional syntax error to verify CI fails
+// on a broken build (do not merge this branch).
+int this_is_an_intentional_syntax_error @@@
