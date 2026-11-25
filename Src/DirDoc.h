@@ -100,6 +100,11 @@ public:
 	// these forwarders are the API the S2 key handling will use.
 	ReviewState GetMerge20ReviewState(const DIFFITEM& di) const;
 	void SetMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	// Merge20 (S2): output checkbox flag of one item, and the review
+	// setter with the output-flag linkage of spec section 4(b).
+	bool GetMerge20IncludeInOutput(const DIFFITEM& di) const;
+	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include);
+	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
 	void Redisplay();
 	virtual ~CDirDoc();
 	void SetDirView( CDirView *newView ); // TODO Perry

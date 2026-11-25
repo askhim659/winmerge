@@ -93,6 +93,89 @@ void CDiffContext::SetMerge20ReviewState(const String& relPath, ReviewState stat
 }
 
 /**
+ * @brief Merge20 (S2): initial output flag from the existence category.
+ * @param [in] di Difference item.
+ * @return False for identical files and for NEW_ONLY files (2-way
+ * right-only), true otherwise (changed files and OLD_ONLY files).
+ * This is the initial value of Merge20FileState::includeInOutput
+ * (design section 3.2, spec section 4(b)); it is used only while the
+ * file has no sidecar entry yet.
+ */
+static bool IsMerge20InitialIncludeInOutput(const CDiffContext& ctxt, const DIFFITEM& di)
+{
+	if (di.diffcode.isResultSame())
+		return false;
+	if (ctxt.GetCompareDirs() < 3 && di.diffcode.isSideSecondOnly())
+		return false;
+	return true;
+}
+
+/**
+ * @brief Merge20 (S2): set the review state of one item.
+ * @param [in] di Difference item.
+ * @param [in] state New review state.
+ */
+void CDiffContext::SetMerge20ReviewState(const DIFFITEM& di, ReviewState state)
+{
+	const String relPath = di.getItemRelativePath();
+	if (!m_merge20FileStates.HasState(relPath))
+		m_merge20FileStates.GetOrCreateState(relPath).includeInOutput = IsMerge20InitialIncludeInOutput(*this, di);
+	m_merge20FileStates.SetReviewState(relPath, state);
+}
+
+/**
+ * @brief Merge20 (S2): output checkbox flag of one file.
+ * @param [in] di Difference item.
+ * @return Stored flag when the file has an entry, otherwise the initial
+ * value from its existence category.
+ */
+bool CDiffContext::GetMerge20IncludeInOutput(const DIFFITEM& di) const
+{
+	const String relPath = di.getItemRelativePath();
+	if (m_merge20FileStates.HasState(relPath))
+		return m_merge20FileStates.GetIncludeInOutput(relPath);
+	return IsMerge20InitialIncludeInOutput(*this, di);
+}
+
+/**
+ * @brief Merge20 (S2): set the output checkbox flag of one file.
+ * @param [in] di Difference item.
+ * @param [in] include New output flag.
+ */
+void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
+{
+	m_merge20FileStates.SetIncludeInOutput(di.getItemRelativePath(), include);
+}
+
+/**
+ * @brief Merge20 (S2): set the review state and apply the output linkage.
+ * @param [in] di Difference item.
+ * @param [in] state New review state.
+ */
+void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
+{
+	SetMerge20ReviewState(di, state);
+	Merge20FileState& st = m_merge20FileStates.GetOrCreateState(di.getItemRelativePath());
+	switch (state)
+	{
+	case ReviewState::DONE:
+		// DONE turns the output flag back ON, except for NEW_ONLY files
+		// (2-way right-only), which stay OFF (HTML setRev/cycRev).
+		if (!(GetCompareDirs() < 3 && di.diffcode.isSideSecondOnly()))
+			st.includeInOutput = true;
+		break;
+	case ReviewState::HOLD:
+	case ReviewState::KEEP:
+		st.includeInOutput = false;
+		break;
+	case ReviewState::TODO:
+	case ReviewState::SPECIAL:
+	default:
+		break;
+	}
+}
+
+/**
  * @brief Update info in item in result list from disk.
  * This function updates result list item's file information from actual
  * file in the disk. This updates info like date, size and attributes.

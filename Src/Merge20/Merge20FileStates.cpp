@@ -30,3 +30,18 @@ void Merge20FileStates::SetReviewState(const String& relPath, ReviewState state)
 {
 	GetOrCreateState(relPath).review = state;
 }
+
+bool Merge20FileStates::HasState(const String& relPath) const
+{
+	return m_states.find(relPath) != m_states.end();
+}
+
+bool Merge20FileStates::GetIncludeInOutput(const String& relPath) const
+{
+	return GetState(relPath).includeInOutput;
+}
+
+void Merge20FileStates::SetIncludeInOutput(const String& relPath, bool include)
+{
+	GetOrCreateState(relPath).includeInOutput = include;
+}

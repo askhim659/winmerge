@@ -7223,6 +7223,16 @@ msgstr "個別対応要"
 msgid "Keep as is"
 msgstr "現状維持"
 
+#. Merge20 (S2): folder compare "Include in Output" column
+#: Src/DirViewColItems.cpp
+msgid "Include in Output"
+msgstr "出力"
+
+#. Merge20 (S2)
+#: Src/DirViewColItems.cpp
+msgid "Whether the file is included in the output (ZIP / merged files). Checked means included. Done turns it on again, On hold and Keep as is turn it off."
+msgstr "ファイルが出力（ZIP／マージ後ファイル）に含まれるかどうか。チェックありは含まれることを示します。「済」にすると再度 ON になり、「保留」「現状維持」にすると OFF になります。"
+
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
 msgid "Image files are identical"

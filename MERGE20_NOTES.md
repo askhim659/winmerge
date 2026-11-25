@@ -392,3 +392,116 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
 - 再実行 45594649835 は success。成果物 2 件（いずれも 2027-02-23 失効）：
   `WinMerge-x64.zip`（26,037,934 バイト、ID 15013980458）、
   `WinMerge-x64-Setup-x64.exe`（39,509,228 バイト、ID 15011999981）。
+
+## 10. Phase 2 S2（連動ルール＋キー）— ブランチ `merge20/phase2-s2`
+
+設計書 `merge20-phase2-design.md` §7 の S2 に従う（§3.2 のうち連動ルール・
+キー操作・出力チェック列・行色）。C++ の変更はこの Linux VM では
+コンパイルできないため、CI でのビルド＋成果物確認が検証になる。
+
+### 10.1 変更内容
+
+- `Src/Merge20/Merge20FileStates.h`／`.cpp`：`HasState`（エントリの有無）、
+  `GetIncludeInOutput`／`SetIncludeInOutput`（出力チェック旗）を追加。
+- `Src/DiffContext.h`／`.cpp`：`GetMerge20IncludeInOutput(const DIFFITEM&)`／
+  `SetMerge20IncludeInOutput(const DIFFITEM&, bool)`、
+  `SetMerge20ReviewState(const DIFFITEM&, ReviewState)`（初回エントリ作成時に
+  出力チェック初期値を存在区分から決めて記録する）、
+  `ApplyMerge20ReviewState(const DIFFITEM&, ReviewState)`（連動ルール付き設定）
+  を追加。初期値は設計書 §3.2 どおり：変更・旧のみ＝ON、新のみ・同一＝OFF。
+  連動ルールは HTML の `setRev`／`cycRev` と同一：DONE→ON（ただし 2-way の
+  新のみファイルは ON にしない）、HOLD／KEEP→OFF、TODO／SPECIAL→変更なし。
+- `Src/DirDoc.h`／`.cpp`：上記のフォワーダ
+  （`Get/SetMerge20IncludeInOutput`、`ApplyMerge20ReviewState`）を追加。
+  `SetMerge20ReviewState` は DIFFITEM 版を使うように変更（初期値の記録のため）。
+- `Src/DirViewColItems.cpp`：新列「出力」（regName `Soutput`、英語
+  `Include in Output`）。表示は ☑（U+2611）／☐（U+2610）の文字で、
+  フォルダ行は空欄。ソートは未チェック＜チェック。`f_cols`（既定表示順 7、
+  確認内容列の次）と `f_cols3`（既定表示順 8）の両方に追加し、表の末尾に配置
+  （S1 と同じ理由：`CompareFilesIfFilesAreLarge` のハードコード列番号）。
+  `IsColOutputCheck` ヘルパーを `DirViewColItems.h`／`.cpp` に追加。
+- `Src/DirView.cpp`：(1) `PreTranslateMessage` にキー 1〜5（未確認／済／保留／
+  個別対応要／現状維持）と Space 順送り（TODO→DONE→HOLD→SPECIAL→KEEP→TODO）
+  を追加。フォルダ比較一覧内のみで有効（`!IsLabelEdit()` かつフォーカス行あり）。
+  修飾子付き（Ctrl／Alt／Shift）は除外し、加速子との競合を避ける。エディタ内では
+  有効にしない（設計書 §1.3 #3）。(2) `OnClick` に出力列セルのクリック切替を
+  追加（`SubItemHitTest` で列を判定し、`IsColOutputCheck` の列だけ切替える。
+  フォルダ行と「..」行は対象外。仮想リストのため行の再描画で反映）。
+  (3) `GetColors` に確認内容ごとの行色を追加：SPECIAL＝薄赤背景
+  RGB(255,200,200)、HOLD＝薄黄背景 RGB(255,255,180)、KEEP＝灰背景
+  RGB(230,230,230)、TODO／DONE＝従来色。背景だけを変え、差分状態の文字色は
+  そのまま残す（両立）。固定色で、テーマ対応は後回し（設計書 §3.2）。
+- `Translations/WinMerge/Japanese.po`：`Include in Output`→`出力`、列説明文の訳
+  を追加（S0・S1 と同じ msgid 参照の方針）。
+- 新規 `.cpp` ファイルはないため `Merge.vcxproj`／`UnitTests.vcxproj` の変更は
+  不要（S1 の LNK2019 の教訓に該当しない）。
+
+### 10.2 設計からの変更点（重要）：出力チェック列は文字表示＋クリック切替
+
+- 設計書 §3.2 の推奨案 (a)（ステートイメージリストによる自前チェック描画）は
+  採用しなかった。実コードで確認したところ、リストビュー項目のステートイメージ
+  は 1 行に 1 つで第 1 列にしか表示されず、しかもツリーモードでは既に展開／折畳み
+  アイコン（state image 1／2）に使われている（`DirView.cpp: ReflectGetdispinfo`）。
+  したがってサブ項目列にステートイメージでチェックボックスを描くことはできない。
+- 代わりに設計書のフォールバック案 (b)（☑／☐ の文字表示）を採用し、クリックでの
+  手動 ON／OFF 切替も実装した（`CDirView::OnClick`）。値は他の列と同じく
+  `LVN_GETDISPINFO`（`ReflectGetdispinfo` → `ColGetTextToDisplay`）で動的供給
+  されるため、仮想リスト構造（T-2-4）との整合性は保たれている。
+- 設計書とのその他の食い違いはない。確認内容キー 1〜5・Space の有効範囲は
+  設計書 §1.3 #3 の結論どおりフォルダ比較一覧のみ（専用モードは Phase 4）。
+
+### 10.3 API でのコミット時の注意（S2 で発生）
+
+- `commit_file.py` を短い間隔で連続実行すると、2 件目が 422
+  "Update is not a fast forward" で失敗することがある（1 件目の ref 更新直後に
+  GET した head が古い値を返す。GitHub 側の結果整合性の遅延とみられる）。
+  失敗したコミット自体は作成済みだが ref が進んでいないため、数秒待って同じ
+  `commit_file.py` を再実行すればよい（同じ内容の blob が再利用され、新しい
+  commit が現在の head の子として作られる）。孤立したコミットは無害。
+  以後の教訓：コミット間に数秒の間隔を置くこと。
+
+### 10.4 S2 で未実施のこと（S3 以降）
+
+- 一括チェック・件数表示（S3）、対応区分・リスク・要約（S4）、一括承認（S5）、
+  CSV（S6）、ZIP（S7）、セッション保存（S8）には着手していない。
+- U-0-2（2-way 自動マージの挙動確認）は Windows 実機での確認が必要なため、
+  このスライスでは扱っていない（S5 着手前）。
+
+### 10.5 Windows 実機での確認手順（S2 受け入れテスト）
+
+1. CI 成果物 ZIP の `WinMergeU.exe` で 2 フォルダ比較を開く（変更・旧のみ・
+   新のみ・同一の 4 種を含むこと）。
+2. 一覧に「出力」列が表示され、初期値が「変更・旧のみ＝☑、新のみ・同一＝☐」
+   であること。フォルダ行は空欄であること。
+3. フォーカス行でキー 2（済）を押すと確認内容が「✓済」になり、出力が ☑ に
+   なること。ただし新のみファイルでキー 2 を押しても出力は ☐ のままであること。
+4. キー 3（保留）／キー 5（現状維持）を押すと出力が ☐ になること。
+   キー 4（個別対応要）／キー 1（未確認）では出力が変わらないこと。
+5. Space を繰り返し押すと確認内容が未確認→済→保留→個別対応要→現状維持→
+   未確認と順送りされ、連動ルールが 3・4 と同じになること。
+6. 出力列のセルをクリックすると ☑／☐ が手動で切り替わること。確認内容は
+   変わらないこと。フォルダ行の出力セルをクリックしても何も変わらないこと。
+7. 行色：個別対応要の行が薄赤、保留の行が薄黄、現状維持の行が灰色の背景に
+   なること。済・未確認の行は従来の差分色のままであること。
+8. 列ヘッダの「出力」でソートできること。列選択ダイアログで「出力」列を
+   非表示／再表示できること。3 フォルダ比較でも同じ列が出ること。
+9. 再スキャン（F5）後も確認内容と出力チェックが変わらないこと。
+10. ファイル比較エディタを開き、数字キー 1〜5 と Space を押すと文字が入力
+    されること（確認内容が変わらないこと）。
+
+### 10.6 CI 結果と修正（PR #7）
+
+- PR #7（`merge20/phase2-s2`、12 コミット＋修正 2 コミット）。CI 実行 45600362144 は
+  failure：`Src/DirView.cpp(1428,13): error C2039: 'isDirectory': is not a member
+  of 'DIFFITEM'`。原因は `isDirectory()` が `DIFFITEM` ではなく `DIFFCODE` の
+  メンバであることの見誤り（`DiffItem.h:88` の `isDirectory()` は `struct DIFFCODE`
+  内の定義。既存コードは `di.diffcode.isDirectory()` と書いている）。
+  同じ誤りが `DirViewColItems.cpp` の出力列 getter／sorter にもあったため、
+  3 箇所すべてを `di.diffcode.isDirectory()`（sorter は `ldi`／`rdi`）に修正。
+  以後の教訓：`DIFFITEM` の述語は `diffcode.` 経由（`isSideFirstOnly`／
+  `isResultSame` 等も同じ）。`DiffItem.h` の grep 結果は struct 名を確認すること。
+- 修正コミットごとに CI が走り、1 件目の修正だけを含む実行 45602942908 は
+  failure（DirView.cpp の修正がまだ入っていないため当然）、2 件とも含む実行
+  45602987787 は success。成果物 2 件（いずれも 2027-02-23 失効）：
+  `WinMerge-x64.zip`（26,039,876 バイト、ID 15016932460）、
+  `WinMerge-x64-Setup-x64.exe`（39,517,186 バイト、ID 15017521005）。

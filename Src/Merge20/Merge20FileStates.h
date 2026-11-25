@@ -26,6 +26,12 @@ public:
 	ReviewState GetReviewState(const String& relPath) const;
 	/** @brief Set the review state of one file, keeping the rest of its state. */
 	void SetReviewState(const String& relPath, ReviewState state);
+	/** @brief True when the file already has an entry (S2: distinguishes a stored output flag from the initial value). */
+	bool HasState(const String& relPath) const;
+	/** @brief Return the output checkbox flag (true when the file has no entry yet; the initial value itself is computed by the caller from DIFFITEM). */
+	bool GetIncludeInOutput(const String& relPath) const;
+	/** @brief Set the output checkbox flag of one file, keeping the rest of its state. */
+	void SetIncludeInOutput(const String& relPath, bool include);
 
 private:
 	std::map<String, Merge20FileState> m_states;

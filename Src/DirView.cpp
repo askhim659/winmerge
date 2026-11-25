@@ -1411,6 +1411,29 @@ void CDirView::OnClick(NMHDR* pNMHDR, LRESULT* pResult)
 		else
 			ExpandSubdir(pNM->iItem);
 	}
+	// Merge20 (S2, design section 3.2): clicking the Output column cell
+	// toggles the file's output checkbox. Directory rows and the ".."
+	// parent row have no output flag and are ignored. The column value
+	// itself is supplied dynamically through LVN_GETDISPINFO (this is an
+	// owner-data list), so the row is redrawn instead of setting text.
+	if ((lvhti.flags & LVHT_ONITEM) != 0 && lvhti.iItem >= 0 && lvhti.iSubItem >= 0)
+	{
+		int logCol = m_pColItems->ColPhysToLog(lvhti.iSubItem);
+		if (m_pColItems->IsColOutputCheck(logCol))
+		{
+			DIFFITEM *pKey = GetItemKey(lvhti.iItem);
+			if (pKey != nullptr && !IsDiffItemSpecial(pKey))
+			{
+				const DIFFITEM &di = GetDiffItem(lvhti.iItem);
+				if (!di.diffcode.isDirectory())
+				{
+					CDirDoc *pDoc = GetDocument();
+					pDoc->SetMerge20IncludeInOutput(di, !pDoc->GetMerge20IncludeInOutput(di));
+					GetListCtrl().RedrawItems(lvhti.iItem, lvhti.iItem);
+				}
+			}
+		}
+	}
 
 	*pResult = 0;
 }
@@ -2829,6 +2852,33 @@ BOOL CDirView::PreTranslateMessage(MSG* pMsg)
 				{
 					ExpandSubdir(sel, true);
 					return TRUE;
+				}
+				// Merge20 (S2, design section 3.2, spec section 4(b)):
+				// review-state keys 1-5 and Space to cycle the five states
+				// (TODO -> DONE -> HOLD -> SPECIAL -> KEEP -> TODO). The
+				// output-flag linkage of spec section 4(b) is applied by
+				// CDirDoc::ApplyMerge20ReviewState, the same rule the HTML
+				// tool's setRev/cycRev use. Only here, in the folder
+				// compare list: in the file editor the same bare keys are
+				// text input (design section 1.3 #3). Bare keys only, so
+				// accelerators with Ctrl/Alt/Shift keep working.
+				if ((GetKeyState(VK_CONTROL) & 0x8000) == 0 &&
+					(GetKeyState(VK_MENU) & 0x8000) == 0 &&
+					(GetKeyState(VK_SHIFT) & 0x8000) == 0)
+				{
+					if (pMsg->wParam >= '1' && pMsg->wParam <= '5')
+					{
+						GetDocument()->ApplyMerge20ReviewState(dip, static_cast<ReviewState>(pMsg->wParam - '1'));
+						GetListCtrl().RedrawItems(sel, sel);
+						return TRUE;
+					}
+					if (pMsg->wParam == VK_SPACE)
+					{
+						ReviewState curState = GetDocument()->GetMerge20ReviewState(dip);
+						GetDocument()->ApplyMerge20ReviewState(dip, static_cast<ReviewState>((static_cast<int>(curState) + 1) % 5));
+						GetListCtrl().RedrawItems(sel, sel);
+						return TRUE;
+					}
 				}
 			}
 		}
@@ -4952,6 +5002,28 @@ void CDirView::GetColors (int nRow, int nCol, COLORREF& clrBk, COLORREF& clrText
 	{
 		clrText = theApp.GetMainSyntaxColors()->GetColor(COLORINDEX_NORMALTEXT);
 		clrBk = theApp.GetMainSyntaxColors()->GetColor(COLORINDEX_BKGND);
+	}
+
+	// Merge20 (S2, design section 3.2, spec section 5.1): tint the row
+	// background by review state so the state is visible at a glance.
+	// Only the background is tinted; the text color from the difference
+	// status above is kept, so both pieces of information stay visible.
+	// Fixed colors for now; theme (ColorSchemes) support is a later step.
+	switch (GetDiffContext().GetMerge20ReviewState(di.getItemRelativePath()))
+	{
+	case ReviewState::SPECIAL:
+		clrBk = RGB(255, 200, 200);
+		break;
+	case ReviewState::HOLD:
+		clrBk = RGB(255, 255, 180);
+		break;
+	case ReviewState::KEEP:
+		clrBk = RGB(230, 230, 230);
+		break;
+	case ReviewState::TODO:
+	case ReviewState::DONE:
+	default:
+		break;
 	}
 }
 
