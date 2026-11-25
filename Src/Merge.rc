@@ -870,6 +870,7 @@ BEGIN
         MENUITEM "Diff &Pane",                  ID_VIEW_DETAIL_BAR
         MENUITEM "Lo&cation Pane",              ID_VIEW_LOCATION_BAR
         MENUITEM "Merge Result Pane",           ID_VIEW_MERGE_RESULT_BAR
+        MENUITEM "Dedicated Compare Mode",     ID_VIEW_MERGE20_DEDICATED_MODE
         MENUITEM "Output Pane",                 ID_VIEW_OUTPUT_BAR
         MENUITEM SEPARATOR
         MENUITEM "Refresh\tF5",                 ID_REFRESH
