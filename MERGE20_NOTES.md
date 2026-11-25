@@ -488,3 +488,20 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
 9. 再スキャン（F5）後も確認内容と出力チェックが変わらないこと。
 10. ファイル比較エディタを開き、数字キー 1〜5 と Space を押すと文字が入力
     されること（確認内容が変わらないこと）。
+
+### 10.6 CI 結果と修正（PR #7）
+
+- PR #7（`merge20/phase2-s2`、12 コミット＋修正 2 コミット）。CI 実行 45600362144 は
+  failure：`Src/DirView.cpp(1428,13): error C2039: 'isDirectory': is not a member
+  of 'DIFFITEM'`。原因は `isDirectory()` が `DIFFITEM` ではなく `DIFFCODE` の
+  メンバであることの見誤り（`DiffItem.h:88` の `isDirectory()` は `struct DIFFCODE`
+  内の定義。既存コードは `di.diffcode.isDirectory()` と書いている）。
+  同じ誤りが `DirViewColItems.cpp` の出力列 getter／sorter にもあったため、
+  3 箇所すべてを `di.diffcode.isDirectory()`（sorter は `ldi`／`rdi`）に修正。
+  以後の教訓：`DIFFITEM` の述語は `diffcode.` 経由（`isSideFirstOnly`／
+  `isResultSame` 等も同じ）。`DiffItem.h` の grep 結果は struct 名を確認すること。
+- 修正コミットごとに CI が走り、1 件目の修正だけを含む実行 45602942908 は
+  failure（DirView.cpp の修正がまだ入っていないため当然）、2 件とも含む実行
+  45602987787 は success。成果物 2 件（いずれも 2027-02-23 失効）：
+  `WinMerge-x64.zip`（26,039,876 バイト、ID 15016932460）、
+  `WinMerge-x64-Setup-x64.exe`（39,517,186 バイト、ID 15017521005）。
