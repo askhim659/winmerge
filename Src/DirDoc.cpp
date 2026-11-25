@@ -620,7 +620,44 @@ void CDirDoc::SetMerge20ReviewState(const DIFFITEM& di, ReviewState state)
 {
 	if (m_pCtxt == nullptr)
 		return;
-	m_pCtxt->SetMerge20ReviewState(di.getItemRelativePath(), state);
+	m_pCtxt->SetMerge20ReviewState(di, state);
+}
+
+/**
+ * @brief Merge20 (S2): output checkbox flag of one item.
+ * @param [in] di Difference item.
+ * @return Stored flag when the item has an entry, otherwise the initial
+ * value from its existence category.
+ */
+bool CDirDoc::GetMerge20IncludeInOutput(const DIFFITEM& di) const
+{
+	if (m_pCtxt == nullptr)
+		return true;
+	return m_pCtxt->GetMerge20IncludeInOutput(di);
+}
+
+/**
+ * @brief Merge20 (S2): set the output checkbox flag of one item.
+ * @param [in] di Difference item.
+ * @param [in] include New output flag.
+ */
+void CDirDoc::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	m_pCtxt->SetMerge20IncludeInOutput(di, include);
+}
+
+/**
+ * @brief Merge20 (S2): set the review state and apply the output linkage.
+ * @param [in] di Difference item.
+ * @param [in] state New review state.
+ */
+void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	m_pCtxt->ApplyMerge20ReviewState(di, state);
 }
 
 void CDirDoc::InitStatusStrings()
