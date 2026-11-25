@@ -72,6 +72,9 @@ const char *COLHDR_NIDIFFS      = N_("Ignored Diff");
 const char *COLHDR_EXCLUDED     = N_("Ignored diffs");
 const char *COLHDR_REVIEWSTATE  = N_("Review State");
 const char *COLHDR_OUTPUT       = N_("Include in Output");
+const char *COLHDR_ACTION       = N_("Action Category");
+const char *COLHDR_RISK         = N_("Risk");
+const char *COLHDR_SUMMARY      = N_("Summary");
 const char *COLHDR_NSDIFFS      = N_("Differences");
 const char *COLHDR_BINARY       = NC_("DirView|ColumnHeader", "Binary");
 const char *COLHDR_UNPACKER     = N_("Unpacker");
@@ -129,6 +132,9 @@ const char *COLDESC_NIDIFFS     = N_("Number of ignored differences in file. Ign
 const char *COLDESC_EXCLUDED    = N_("Number of ignored differences in file (prediffer exclusions). Interim display for the excluded-line count; this is a diff count, not a line count.");
 const char *COLDESC_REVIEWSTATE = N_("Review state of the file: Not reviewed, Done, On hold, Needs manual work, or Keep as is. All files start as Not reviewed; nothing is applied automatically.");
 const char *COLDESC_OUTPUT      = N_("Whether the file is included in the output (ZIP / merged files). Checked means included. Done turns it on again, On hold and Keep as is turn it off.");
+const char *COLDESC_ACTION      = N_("Action category of the file, derived from the existence category and the diff breakdown (missing / changed / added lines). Shown only after the file has been opened; unopened files show Not calculated.");
+const char *COLDESC_RISK        = N_("Risk level of the file: None, Medium, or High. One attention point (missing lines, changed lines, or an important keyword in the diff) means Medium; several overlapping points mean High.");
+const char *COLDESC_SUMMARY     = N_("Rule-based summary of the file: missing / changed / added line counts, detected changes (rounding, SQL, deleted if guard, condition/boundary, constants) and the affected functions. This is a deterministic pattern match, not generated AI: the same input always returns the same summary.");
 const char *COLDESC_NSDIFFS     = N_("Number of differences in file (excluding ignored).");
 const char *COLDESC_BINARY      = N_("Shows an asterisk (*) if the file is binary.");
 const char *COLDESC_UNPACKER    = N_("Unpacker plugin name or pipeline.");
@@ -713,6 +719,162 @@ static int ColOutputCheckSort(const CDiffContext *pCtxt, const void *p, const vo
 	if (l == r)
 		return 0;
 	return l ? 1 : -1;
+}
+
+/**
+ * @brief Format Action Category column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return Display string for the action category. Directory rows have
+ * no classification and show nothing; files that have never been
+ * opened show "Not calculated" (design section 3.1 stage 1: the
+ * breakdown of missing / changed / added lines is only known once
+ * the file has been opened in a merge doc).
+ *
+ * Merge20 (S4, design sections 3.1 and 6, spec section 3 (2/4)).
+ */
+static String ColActionCategoryGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	switch (st.action)
+	{
+	case ActionCategory::MERGE_CLEAN_OLD:
+		return _("Merge (missing in new)");
+	case ActionCategory::REVIEW_MIXED:
+		return _("Review (missing + changed)");
+	case ActionCategory::REVIEW_MOD_ONLY:
+		return _("Review (modified)");
+	case ActionCategory::NO_MERGE_NEW_ADD:
+		return _("New additions only");
+	case ActionCategory::COPY_OLD_FILE:
+		return _("Old-only file");
+	case ActionCategory::SKIP_NEW_FILE:
+		return _("New-only file");
+	case ActionCategory::NO_ACTION_IDENTICAL:
+	default:
+		return _("Identical");
+	}
+}
+
+/**
+ * @brief Compare Action Category column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by ActionCategory enum order; unclassified
+ * (never opened) files sort last, after every classified file.
+ */
+static int ColActionCategorySort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	const int l = ls.classified ? static_cast<int>(ls.action) : 100;
+	const int r = rs.classified ? static_cast<int>(rs.action) : 100;
+	if (l == r)
+		return 0;
+	return l < r ? -1 : 1;
+}
+
+/**
+ * @brief Format Risk column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return Display string for the risk level ("None" / "Medium" /
+ * "High"; "Not calculated" for files that have never been opened).
+ *
+ * Merge20 (S4, design sections 3.1 and 6, spec section 3 (2/4)).
+ */
+static String ColRiskGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	switch (st.risk)
+	{
+	case RiskLevel::MEDIUM:
+		return _("Medium");
+	case RiskLevel::HIGH:
+		return _("High");
+	case RiskLevel::NONE:
+	default:
+		return _("None");
+	}
+}
+
+/**
+ * @brief Compare Risk column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by RiskLevel order (None < Medium < High);
+ * unclassified (never opened) files sort last.
+ */
+static int ColRiskSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	const int l = ls.classified ? static_cast<int>(ls.risk) : 100;
+	const int r = rs.classified ? static_cast<int>(rs.risk) : 100;
+	if (l == r)
+		return 0;
+	return l < r ? -1 : 1;
+}
+
+/**
+ * @brief Format Summary column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return The rule-based summary text composed at classification time
+ * (counts, detected changes, affected functions). Directory rows show
+ * nothing; files that have never been opened show "Not calculated".
+ * The text is a deterministic pattern match, not generated AI.
+ *
+ * Merge20 (S4, design sections 3.1 and 6, spec section 3 (2/4)).
+ */
+static String ColSummaryGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	return st.summary;
+}
+
+/**
+ * @brief Compare Summary column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by summary text; unclassified (never
+ * opened) files sort last.
+ */
+static int ColSummarySort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	if (!ls.classified && !rs.classified)
+		return 0;
+	if (!ls.classified)
+		return 1;
+	if (!rs.classified)
+		return -1;
+	return ls.summary.compare(rs.summary);
 }
 
 /**
@@ -1710,6 +1872,14 @@ static DirColInfo f_cols[] =
 	// Shown by default (order 7, after the review column) so the linkage
 	// of spec section 4(b) is visible without opening the column dialog.
 	{ _T("Soutput"), nullptr, COLHDR_OUTPUT, COLDESC_OUTPUT, &ColOutputCheckGet, &ColOutputCheckSort, 0, 7, true, DirColInfo::ALIGN_CENTER },
+	// Merge20 (S4, design sections 3.1 and 7, spec section 3 (2/4)):
+	// action category, risk and rule-based summary columns, same
+	// end-of-table note as the review column above. Shown by default
+	// (orders 8-10, after the output column) so the S4 acceptance
+	// check can see them without opening the column dialog first.
+	{ _T("Saction"), nullptr, COLHDR_ACTION, COLDESC_ACTION, &ColActionCategoryGet, &ColActionCategorySort, 0, 8, true, DirColInfo::ALIGN_LEFT },
+	{ _T("Srisk"), nullptr, COLHDR_RISK, COLDESC_RISK, &ColRiskGet, &ColRiskSort, 0, 9, true, DirColInfo::ALIGN_CENTER },
+	{ _T("Ssummary"), nullptr, COLHDR_SUMMARY, COLDESC_SUMMARY, &ColSummaryGet, &ColSummarySort, 0, 10, true, DirColInfo::ALIGN_LEFT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
@@ -1775,6 +1945,13 @@ static DirColInfo f_cols3[] =
 	// f_cols above; default order is 8 here because Extension is 6 and
 	// the review column is 7 in the 3-way table.
 	{ _T("Soutput"), nullptr, COLHDR_OUTPUT, COLDESC_OUTPUT, &ColOutputCheckGet, &ColOutputCheckSort, 0, 8, true, DirColInfo::ALIGN_CENTER },
+	// Merge20 (S4): action category, risk and rule-based summary
+	// columns, 3-way table. Same note as in f_cols above; default
+	// orders are 9-11 here because Extension is 6, the review column
+	// is 7 and the output column is 8 in the 3-way table.
+	{ _T("Saction"), nullptr, COLHDR_ACTION, COLDESC_ACTION, &ColActionCategoryGet, &ColActionCategorySort, 0, 9, true, DirColInfo::ALIGN_LEFT },
+	{ _T("Srisk"), nullptr, COLHDR_RISK, COLDESC_RISK, &ColRiskGet, &ColRiskSort, 0, 10, true, DirColInfo::ALIGN_CENTER },
+	{ _T("Ssummary"), nullptr, COLHDR_SUMMARY, COLDESC_SUMMARY, &ColSummaryGet, &ColSummarySort, 0, 11, true, DirColInfo::ALIGN_LEFT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
