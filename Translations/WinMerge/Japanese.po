@@ -7233,6 +7233,61 @@ msgstr "出力"
 msgid "Whether the file is included in the output (ZIP / merged files). Checked means included. Done turns it on again, On hold and Keep as is turn it off."
 msgstr "ファイルが出力（ZIP／マージ後ファイル）に含まれるかどうか。チェックありは含まれることを示します。「済」にすると再度 ON になり、「保留」「現状維持」にすると OFF になります。"
 
+#. Merge20 (S3): batch-check dialog, OK button label with the target count
+#: Src/Merge20/Merge20BatchCheckDlg.cpp
+msgid "Check selected (%1 items)"
+msgstr "選択分を一括チェック（%1件）"
+
+#. Merge20 (S3): batch-check dialog, target count line
+#: Src/Merge20/Merge20BatchCheckDlg.cpp
+msgid "%1 files will be checked"
+msgstr "%1件のファイルが対象です"
+
+#. Merge20 (S3): batch-check dialog caption (Merge.rc)
+#: Src/Merge.rc
+msgid "Batch Check"
+msgstr "一括チェック"
+
+#. Merge20 (S3): batch-check dialog group box (Merge.rc)
+#: Src/Merge.rc
+msgid "Review states to check"
+msgstr "チェックする確認内容"
+
+#. Merge20 (S3): batch-check dialog explanation (Merge.rc)
+#: Src/Merge.rc
+msgid "The output boxes of all displayed files with the selected review states will be checked."
+msgstr "選択した確認内容の、表示中の全ファイルの出力チェックを入れます。"
+
+#. Merge20 (S3): batch-check dialog button (Merge.rc)
+#: Src/Merge.rc
+msgid "Check all displayed"
+msgstr "表示分すべてチェック"
+
+#. Merge20 (S3): batch-check dialog button (Merge.rc)
+#: Src/Merge.rc
+msgid "Clear all checks"
+msgstr "全解除"
+
+#. Merge20 (S3): folder compare context menu
+#: Src/DirView.cpp
+msgid "Batch check..."
+msgstr "一括チェック…"
+
+#. Merge20 (S3): folder compare context menu (directory rows only)
+#: Src/DirView.cpp
+msgid "Check all files under folder"
+msgstr "配下をすべてチェック"
+
+#. Merge20 (S3): folder compare context menu (directory rows only)
+#: Src/DirView.cpp
+msgid "Uncheck all files under folder"
+msgstr "配下のチェックをすべて外す"
+
+#. Merge20 (S3): status bar count
+#: Src/DirView.cpp
+msgid "%1 displayed, %2 checked"
+msgstr "表示 %1 件中 %2 件チェック"
+
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
 msgid "Image files are identical"
