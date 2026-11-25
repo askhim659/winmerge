@@ -32,6 +32,7 @@ typedef enum { DO_NOT_EXPAND, EXPAND_ALL, EXPAND_DIFFERENT, EXPAND_IDENTICAL } e
 
 class CDirDoc;
 class CDirFrame;
+struct Merge20SessionDisplay;
 
 class PackingInfo;
 class PathContext;
@@ -369,6 +370,11 @@ protected:
 	afx_msg void OnMerge20BatchCheck();
 	// Merge20 (S6): diff-list CSV export
 	afx_msg void OnMerge20CsvExport();
+	// Merge20 (S8): session save/restore, audit-memo editor
+	afx_msg void OnMerge20SessionSave();
+	afx_msg void OnMerge20SessionRestore();
+	afx_msg void OnUpdateMerge20Session(CCmdUI* pCmdUI);
+	afx_msg void OnMerge20MemoEdit();
 	afx_msg void OnMerge20DirCheckAll();
 	afx_msg void OnMerge20DirUncheckAll();
 	afx_msg void OnUpdateMerge20DirCheck(CCmdUI* pCmdUI);
@@ -481,6 +487,11 @@ private:
 	void Merge20CountDisplayedByReviewState(int counts[5]);
 	void Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include);
 	void Merge20SetOutputForAllFiles(bool include);
+	// Merge20 (S8): display settings for the session save/restore
+	void Merge20GetDisplaySettings(Merge20SessionDisplay& display);
+	void Merge20SetDisplayFilter(const Merge20SessionDisplay& display);
+	void Merge20ApplyColumnSettings(const String& orders, const String& widths);
+	void Merge20RestoreViewPosition(const String& focusedPath, int topIndex);
 	void ShowShellContextMenu(UINT id);
 	CShellContextMenu* GetCorrespondingShellContextMenu(HMENU hMenu) const;
 	void ReloadColumns();
