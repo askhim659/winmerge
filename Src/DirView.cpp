@@ -3394,7 +3394,7 @@ void CDirView::OnMerge20CsvExport()
 	Merge20CsvCountRanges(ctxt, selectedOnly, allDiffs);
 	if (selectedOnly == 0 && allDiffs == 0)
 	{
-		AfxMessageBox(_("There are no files with differences to export."), MB_ICONINFORMATION);
+		AfxMessageBox(_("There are no files with differences to export.").c_str(), MB_ICONINFORMATION);
 		return;
 	}
 	Merge20CsvExportDlg dlg(this, selectedOnly, allDiffs);
