@@ -346,6 +346,23 @@ inline const String OPT_MERGE20_SHOW_REVIEW_HOLD {_T("Merge20/ShowReviewHold"s)}
 inline const String OPT_MERGE20_SHOW_REVIEW_SPECIAL {_T("Merge20/ShowReviewSpecial"s)};
 inline const String OPT_MERGE20_SHOW_REVIEW_KEEP {_T("Merge20/ShowReviewKeep"s)};
 
+// Merge20 (Phase 4 D0, design sections 4.1 and 5.2/D0): dedicated
+// compare mode, auto sniper, unreviewed-only tour, slim list, focus
+// dock and Grep. Defaults match the HTML tool (17_v17.15.html):
+// DEF_SCALE 0.75, snFont 20, snLayout 'cols'. The keys have no UI
+// yet (D1-D9 add the readers); D11 wires them into session save.
+inline const String OPT_MERGE20_DED_MODE {_T("Merge20/DedMode"s)};
+inline const String OPT_MERGE20_DED_PINNED {_T("Merge20/DedPinned"s)};
+inline const String OPT_MERGE20_DED_ZOOM {_T("Merge20/DedZoom"s)};
+inline const String OPT_MERGE20_TODO_ONLY {_T("Merge20/TodoOnly"s)};
+inline const String OPT_MERGE20_SNIPER_ON {_T("Merge20/SniperOn"s)};
+inline const String OPT_MERGE20_SNIPER_FONT {_T("Merge20/SniperFont"s)};
+inline const String OPT_MERGE20_SNIPER_LAYOUT {_T("Merge20/SniperLayout"s)};
+inline const String OPT_MERGE20_SLIM {_T("Merge20/Slim"s)};
+inline const String OPT_MERGE20_DOCK_HIDDEN {_T("Merge20/DockHidden"s)};
+inline const String OPT_MERGE20_FOCUS_DOCK_HEIGHT {_T("Merge20/FocusDockHeight"s)};
+inline const String OPT_MERGE20_GREP_HISTORY {_T("Merge20/GrepHistory"s)};
+
 /// Substitution Filters
 inline const String OPT_SUBSTITUTION_FILTERS_ENABLED {_T("Settings/SubstitutionFiltersEnabled"s)};
 
