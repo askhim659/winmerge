@@ -705,3 +705,185 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
   tests.`）。`Merge20Csv` の 7 テスト（列数、エスケープ 3 件、
   行整形 3 件）も全て合格。CI ログで `Merge20Csv.cpp`／
   `Merge20Csv_test.cpp` のコンパイルと 7 テストの `[ OK ]` を確認済み。
+
+## 14. Phase 2 S8（セッション保存・復元）— ブランチ `merge20/phase2-s8`
+
+### 14.1 実施した変更の一覧
+
+新規ファイル：
+
+- `Src/Merge20/Merge20Session.h`／`Merge20Session.cpp` — UI 非依存の
+  純粋モジュール。UTF-8 エンコード／デコード、軽量 JSON
+  パーサ／シリアライザ（整数のみ・入れ子上限 32・BOM 許容・
+  不正バイトは U+FFFD）、セッション構造体（v1）と JSON 変換、
+  ファイル入出力（一時ファイル＋リネーム、失敗時は直接書き込みに
+  フォールバック）、変更検出（`Merge20SessionFileChanged`）。
+  JSON は整形済み 2 スペース・UTF-8・BOM なしで、日本語はそのまま
+  読める。
+- `Src/Merge20/Merge20SessionDoc.h`／`Merge20SessionDoc.cpp` —
+  MFC アダプタ。セッションファイルの場所（FNV-1a ハッシュ付き
+  ファイル名）、`CDirDoc`／`CMergeDoc` からのセッション構築・
+  適用、差分判定の抽出・復元、復旧提案ダイアログ。
+- `Src/Merge20/Merge20MemoDlg.h`／`Merge20MemoDlg.cpp` —
+  監査メモ編集ダイアログ（`CTrDialog`、IDD 295）。
+- `Testing/GoogleTest/Merge20/Merge20Session_test.cpp` —
+  純粋モジュールの単体テスト（UTF-8 往復、JSON 往復・異常系、
+  セッション往復・形式異常、変更検出）。
+
+変更したファイル：
+
+- `Src/Merge20/Merge20Types.h` — `Merge20DiffJudgment` 構造体
+  （diffIdx・op・begin/end[3]・state・srcPanes）と
+  `Merge20FileState::diffJudgments` を追加。
+- `Src/Merge20/Merge20FileStates.h`／`.cpp` — メモの
+  `GetMemo`／`SetMemo` を追加。
+- `Src/DiffContext.h`／`.cpp` — メモの取得・設定
+  （`GetMerge20Memo`／`SetMerge20Memo`）、差分判定の保存
+  （`SetMerge20DiffJudgments`）、セッション状態の一括復元
+  （`SetMerge20SessionState`）、変更ファイルのリセット
+  （`ResetMerge20ChangedFile`：確認内容を TODO に、出力フラグを
+  初期値に、分類・差分判定を消去、メモは保持）。
+- `Src/DirDoc.h`／`.cpp` — メモのフォワーダ
+  （`GetMerge20Memo`／`SetMerge20Memo`）、
+  `RefreshMerge20DiffJudgments`（保存前に開いている全マージ文書
+  の判定をサイドカーへ）、`MergeDocClosing` での判定スタッシュ、
+  `OnCloseDocument` 先頭での自動保存フック、
+  `m_bMerge20SessionAsked`（復旧提案は文書あたり 1 回）。
+- `Src/DirView.h`／`.cpp` — 右クリックメニューに「セッションを保存」
+  「セッションを復元…」「監査メモを編集…」を追加（メモは単一
+  ファイル選択時のみ）。`OnUpdateUIMessage` の比較完了時に復旧提案
+  を呼ぶ。表示設定の取得・適用・列設定・表示位置復元の
+  `Merge20GetDisplaySettings`／`Merge20SetDisplayFilter`／
+  `Merge20ApplyColumnSettings`／`Merge20RestoreViewPosition` を追加。
+- `Src/DirViewColItems.cpp` — `COLDESC_MEMO` の説明を更新
+  （「編集は未実装」→右クリックメニューから編集できる旨）。
+- `Src/MergeDoc.h`／`Src/MergeDocResultPane.cpp` —
+  `Merge20SetResultSegmentState` を追加し、`StartMergeSession`
+  （`BuildMergeResult`＋自動マージの直後）から
+  `Merge20SessionRestoreMergeDoc` を呼んで保存済みの差分判定を
+  復元する。
+- `Src/OptionsDef.h`／`Src/OptionsInit.cpp` — 新規キー 8 件
+  （`OPT_MERGE20_SESSION_AUTOSAVE`、`OPT_MERGE20_LEARNING_ENABLED`、
+  `OPT_MERGE20_BATCH_APPROVE_DIALOG`、
+  `OPT_MERGE20_SHOW_REVIEW_TODO/DONE/HOLD/SPECIAL/KEEP`）。
+  いずれも既定 true。
+- `Src/resource.h`／`Src/Merge.rc` — `IDD_MERGE20_MEMO`（295）、
+  `IDC_MERGE20_MEMO_PATH`（1729）／`IDC_MERGE20_MEMO_TEXT`（1730）、
+  `ID_MERGE20_SESSION_SAVE`（38935）／
+  `ID_MERGE20_SESSION_RESTORE`（38936）／
+  `ID_MERGE20_MEMO_EDIT`（38937）、メモダイアログのテンプレート・
+  レイアウト・`AFX_DIALOG_LAYOUT` を追加。`_APS_NEXT_*` を更新。
+- `Src/Merge.vcxproj`／`.filters`、
+  `Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` —
+  新規 .cpp／.h を登録（`Merge20Session.cpp` は pch.h グループ、
+  `Merge20SessionDoc.cpp`／`Merge20MemoDlg.cpp` は StdAfx.h グループ）。
+- `Translations/WinMerge/Japanese.po` — S8 の UI 文字列 24 件を追加
+  し、`COLDESC_MEMO` の訳を更新。
+
+### 14.2 設計・仕様との食い違いと判断理由
+
+- **T-2-1 は (b) 自前実装**：`Src/`・`Externals/` を `json` で
+  grep した結果、nlohmann／picojson／rapidjson／jsoncpp／Poco/JSON
+  の既存利用は皆無だった。Poco は未初期化のサブモジュールに過ぎず
+  何もリンクしていない。セッションの構造は固定で小さいため、汎用
+  パーサは不要と判断し、整数のみ・入れ子上限 32 の軽量
+  JSON 読み書きを `Src/Merge20/` 内に自前実装した。
+  (c) ProjectFile（XML）拡張は仕様書の JSON 指定と矛盾するため
+  不採用。
+- **終了時自動保存のフック先は `CDirDoc::OnCloseDocument` の先頭**
+  （T-2-5 の解決）。この時点ではマージ文書はまだ開いているため、
+  保存前のリフレッシュで開いている文書の判定も含められる。
+  比較スレッド実行中と未比較の文書は保存をスキップする。
+  保存失敗はメッセージボックスで明示する（仕様書 §7）。
+- **復旧提案は `CDirDoc::CompareReady()` ではなく
+  `CDirView::OnUpdateUIMessage` の比較完了処理から呼ぶ**：
+  `CompareReady()` は `SaveModified()` からも呼ばれる（比較中の
+  ウィンドウを閉じる際にスレッド中断後に呼ばれる）。閉じようと
+  している文書に復旧を提案するのは誤りのため、UI スレッドの
+  比較完了イベント側に置いた。提案はリスト再構築とフォーカス・
+  スクロール復元の後、かつレポート生成要求がない場合にのみ行う
+  （コマンドラインのレポート生成を妨げない）。
+- **比較オプションは保存するが復元時は適用しない（第 1 版の制限）**：
+  適用には再スキャンが必要なため。保存値と現在値が異なる項目は
+  復元レポートに列挙する。表示フィルタ・列順／列幅・隠し項目・
+  フォーカス・スクロール位置は適用する（フィルタ類はグローバル
+  設定に書き戻すため、復元後の既定値も変わる。手動でフィルタを
+  切り替えたのと同じ副作用）。
+- **手動保存／復元はフォルダ一覧の右クリックメニュー**
+  （「セッションを保存」「セッションを復元…」）。設計書 §2.2 の
+  メインメニュー配置ではなく、S3／S6 と同じ DirView 配置にした。
+- **テーマ・検索文字列・スリム／ドック／カメラ／専用モード／ピン**：
+  仕様書 §6.1 の「画面に出ているものはすべて」保存対象のうち、
+  フォークにまだ存在しない Phase 4 機能（専用モード、スナイパー、
+  Grep 検索、スリム表示）は保存する対象自体がない。テーマは
+  参考として記録する設計だったが、グローバル設定が優先するため
+  適用せず、セッションにも含めていない（テーマを変えると全比較に
+  影響するため）。Phase 4 で当該機能が入った時点で保存対象に
+  追加する。
+- **確認内容フィルタのキー（`OPT_MERGE20_SHOW_REVIEW_*`）は用意
+  したが UI はない**：S3 は設計書 §3.2 のフィルタ UI を実装して
+  いないため。キーの値はセッションに記録され、将来のフィルタ
+  UI が使える。
+- **差分判定の復元**：保存時の Auto は `ResultChooseSources` で
+  内容を復元した後、`Merge20SetResultSegmentState` で状態を
+  Auto に戻す（`ResultChooseSources` は Chosen にしてしまうため）。
+  Unresolved／Conflict は空のソース選択で未解決に戻す（自動マージ
+  が解決してしまう差分も、利用者が意図的に未解決にしたものは
+  戻す）。Edited は手編集の内容を再現できないため復元しない。
+  op・begin・end が一致しない判定は無視する。
+- **変更ファイルのリセット**：サイズ・更新日時・差分件数のいずれかが
+  変わっていたファイルは確認内容を TODO に戻し、分類・差分判定を
+  消去する。メモだけは保持する（ファイル内容の主張ではなく確認者の
+  記録のため）。サイズ・更新日時が不明（-1）の側は変更とみなさない。
+- **`IDirDoc` は変更しない**：アダプタは `dynamic_cast<CDirDoc*>`
+  でフォルダ文書に到達する（S8 計画時の判断どおり）。
+
+### 14.3 検証結果（ローカル g++ ハーネス）
+
+純粋モジュール `Merge20Session` を g++（C++17）でビルドし、
+ハーネスで 100 チェック全て合格：UTF-8 往復（日本語・絵文字・
+引用符・制御文字、不正バイトは U+FFFD）、JSON 往復（日本語・
+サロゲートペア・BOM 許容）、異常系 7 件（末尾ゴミ・未終端文字列・
+小数・末尾カンマ・不正エスケープ・空文字・値なしキー）、
+セッション往復（全フィールド・差分判定 2 件・旧のみファイル）、
+ファイル入出力往復、形式異常（`app` 不一致・バージョン 2・
+バージョン欠落・JSON でないものは拒否、ファイル 1 件の不良は
+スキップして他を復元、差分 1 件の不良は差分だけ落とす）、
+変更検出（サイズ・更新日時・差分件数の変化、不明値は変更と
+みなさない、欠落側のままは変更とみなさない）。
+生成 JSON は整形済みで日本語が生の UTF-8 で読めることを確認。
+CI での gtest（`Merge20Session_test.cpp`、同内容）は 14.5 参照。
+
+### 14.4 Windows 実機での確認手順（S8 受け入れテスト）
+
+1. CI 成果物 ZIP の `WinMergeU.exe` で 2 フォルダ比較を開く
+   （S4・S6 と同じデモフォルダがよい。変更・旧のみ・新のみ・同一を
+   含むもの）。ポータブル版（`winmerge.ini` あり）では
+   `Merge20Sessions` フォルダが exe の隣に作られること。
+2. ファイルを何件か開いて分類させ、確認内容を DONE／HOLD 等に
+   し、出力チェックを変え、メモを 1 件編集する（右クリック→
+   「監査メモを編集…」）。ファイル比較で差分判定を 1 件入れる
+   （マージセッションで左／右を選択）。
+3. 右クリック→「セッションを保存」。「セッションを保存しました：
+   <パス>」と出ること。`Merge20Session_<16桁16進>.json` が
+   できていること。メモ帳で開き、日本語（メモ・要約）が文字化け
+   なく読めること。
+4. WinMerge を閉じて再度同じフォルダ組を開く。比較完了後に
+   「%1に保存されたセッションが…見つかりました」と尋ねられること。
+   「はい」で確認内容・出力チェック・メモが戻ること。ファイル比較を
+   開いてマージセッションを開始すると、保存した差分判定が復元
+   されていること。
+5. 保存後に実ファイル 1 件を変更（内容を 1 行追加）してから
+   手順 4 を行う。そのファイルだけ未確認（TODO）に戻り、出力
+   チェックが初期値に戻り、分類・差分判定が消えていること。
+   ただしメモは残っていること。
+6. 右クリック→「セッションを復元…」で、他のフォルダ組の
+   セッションファイルを選ぶと「別のフォルダ組のものです」と
+   断られること。
+7. 比較オプションを保存時と変えて（例：空白無視を切る）から
+   復元すると、レポートに「保存された比較オプションは現在のものと
+   異なるため適用していません」と出ること。
+8. 終了時自動保存：手順 2 の状態で WinMerge を閉じ（手動保存なし）、
+   再度開くと復旧提案が出ること。
+9. 既存のフォルダ比較・ファイル比較・CSV 出力・一括チェックが
+   従来どおり動くこと（回帰確認）。
