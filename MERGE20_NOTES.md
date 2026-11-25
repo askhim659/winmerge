@@ -285,3 +285,95 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
 - 表示名・⊘N 列・往復テストの Windows 実機での目視確認：CI 成果物での
   確認待ち（§8.4 の手順を含む）。
 - U-0-2（2-way 自動マージの挙動確認）：S5 着手前に Windows 実機で確認すること。
+
+## 9. Phase 2 S1（確認内容の状態保持＋列追加）— ブランチ `merge20/phase2-s1`
+
+設計書 `merge20-phase2-design.md` §7 の S1 に従う（§3.2 のうち状態保持と
+列追加のみ。キー操作・連動ルールは S2）。C++ の変更はこの Linux VM では
+コンパイルできないため、CI でのビルド＋成果物確認が検証になる。
+
+### 9.1 設計からの変更点（重要）：サイドカーは `CDiffContext` に置いた
+
+- 設計書 §2.2 はサイドカーを `CDirDoc` のメンバ（`m_merge20States`）と
+  していたが、実コードで確認したところ列の getter は `const CDiffContext *`
+  と `DIFFITEM` しか受け取らない（`DirColInfo::getfnc`、
+  `DirViewColItems.cpp` の `ColGetTextToDisplay`、`DirView.cpp` の
+  `ReflectGetdispinfo`）。`CDiffContext` には `CDirDoc` への逆ポインタが
+  なく、`DirColInfo` の関数シグネチャを変えると全 getter／sorter に波及
+  するため、`CDirDoc` メンバでは列から状態に到達できない。
+- そこでサイドカー（`Merge20FileStates`、相対パスをキーにした map）は
+  `CDiffContext` のメンバ `m_merge20FileStates` に置いた。`CDirDoc` は
+  `m_pCtxt` として `CDiffContext` を 1 つだけ持ち、再スキャンでも作り直さ
+  ない（`DirDoc.cpp:192` で一度だけ生成、`Rescan` は再利用する）ため、
+  寿命は設計書の `CDirDoc` メンバ案と同じ。`CDirDoc` には同じ内容の
+  アクセサ（`GetMerge20ReviewState`／`SetMerge20ReviewState`）を
+  フォワーダとして用意し、S2 のキー処理はそちらを使う。
+- `DIFFITEM` には GUI 状態を入れていない（`DiffItem.h` のコメントどおり）。
+
+### 9.2 T-2-4 の解消：`CDirView` は仮想リストである
+
+- `DirView.cpp:115` で `LVS_OWNERDATA` が立っており、`LVN_GETDISPINFO`
+  は `ReflectGetdispinfo`（同:5183）で処理され、表示文字列はその場で
+  `ColGetTextToDisplay(&ctxt, i, di)` から供給される。したがって確認内容
+  列は通常の `DirColInfo` 追加で表示でき、仮想リスト用の特別な描画は
+  不要だった。チェックボックス列（S2 の出力列）の描画・クリック処理は、
+  この仮想リスト構造を前提に S2 で設計し直すこと（`LVN_GETDISPINFO` で
+  の動的供給になる）。
+
+### 9.3 変更内容
+
+- `Src/Merge20/Merge20Types.h`（新規）：`ReviewState`（TODO／DONE／
+  HOLD／SPECIAL／KEEP）、`ActionCategory`、`RiskLevel`、
+  `Merge20FileState`（設計書 §2.4 どおり。S1 で使うのは `review` のみ。
+  他のフィールドは S2／S4 で埋める）。
+- `Src/Merge20/Merge20FileStates.h`／`.cpp`（新規）：相対パスをキーに
+  したサイドカー map。エントリのないファイルは既定状態（未確認）を返す。
+  自動適用はしない（仕様書 §4(c)）。
+- `Src/DiffContext.h`／`.cpp`：メンバ `m_merge20FileStates` と
+  `GetMerge20ReviewState`／`SetMerge20ReviewState`、
+  `GetMerge20FileStates()` を追加。
+- `Src/DirDoc.h`／`.cpp`：`GetMerge20ReviewState(const DIFFITEM&)`／
+  `SetMerge20ReviewState(const DIFFITEM&, ReviewState)` のフォワーダを
+  追加（S2 用。比較コンテキストがまだない場合は未確認を返す／何もしない）。
+- `Src/DirViewColItems.cpp`：新列「確認内容」（regName `Sreview`、英語
+  `Review State`）。表示は短縮形（未確認／✓済／保留／個別対応要／
+  現状維持。✓は S0 の ⊘ と同じく `\x2713` エスケープ）。ソートは enum
+  順（TODO＜DONE＜HOLD＜SPECIAL＜KEEP）。`f_cols`（既定表示順 6）と
+  `f_cols3`（既定表示順 7、Extension が 6 のため）の両方に追加し、表の
+  末尾（`Rext` の後、デバッグ列の前）に置いた。末尾に置いた理由：
+  `CDirDoc::CompareFilesIfFilesAreLarge`（`DirDoc.cpp:1098-1117`）が
+  論理列番号 2・3+i・8+i・10+i・13+i をハードコードで参照しており、
+  それより前に列を挿入すると大ファイル確認ダイアログの表示がずれるため。
+  既定で表示する（設計書 R-7 の「既定で表示するかどうかは S1 の受け入れ
+  テストで決める」を受け、受け入れ基準「一覧に確認内容列が出る」を満たす
+  ため。不要なら既定順を -1 に戻すだけ）。
+- `Translations/WinMerge/Japanese.po`：`Review State`→`確認内容`、
+  `Not reviewed`→`未確認`、`Done`→`済`、`On hold`→`保留`、
+  `Needs manual work`→`個別対応要`、`Keep as is`→`現状維持`、列説明文
+  の訳を追加（S0 と同じ msgid 参照の方針）。
+- `Src/Merge.vcxproj`／`Src/Merge.vcxproj.filters`：新規 3 ファイルを
+  登録（フィルタ `Merge20` を新設。`.cpp` は `DiffContext.cpp` と同じ
+  PCH 設定）。
+
+### 9.4 S1 で未実施のこと（S2 以降）
+
+- キー 1-5・Space 順送り、連動ルール（DONE→出力 ON、HOLD／KEEP→OFF）、
+  行色、出力チェック列は S2 の範囲。S1 では状態を変更する UI はない
+  （全ファイルが「未確認」と表示される）。
+- 一括チェック・件数表示（S3）、対応区分・リスク・要約（S4）、一括承認
+  （S5）、CSV（S6）、ZIP（S7）、セッション保存（S8）には着手していない。
+
+### 9.5 Windows 実機での確認手順（S1 受け入れテスト）
+
+1. CI 成果物 ZIP の `WinMergeU.exe` で 2 フォルダ比較を開く。
+2. 一覧に「確認内容」列が表示され、全ファイル（フォルダ行を含む）が
+   「未確認」と表示されること。既存の列（比較結果・日付・サイズ等）が
+   壊れていないこと。
+3. 列ヘッダの「確認内容」でソートできること（全て未確認のため順序は
+   変わらないが、エラーにならないこと）。
+4. 列選択ダイアログで「確認内容」列を非表示／再表示できること。
+5. 3 フォルダ比較でも同じ列が出ること。
+6. 大きいファイルを含むフォルダで「大きいファイルを比較しますか」の
+   ダイアログが出た場合、日付・サイズの表示がずれていないこと
+   （§9.3 のハードコード列番号の回帰確認）。
+7. 再スキャン（F5）後も列と表示が変わらないこと。
