@@ -10870,3 +10870,50 @@ msgstr "学習フォルダを作成できません：\n%1"
 #: Src/Merge20/Merge20LearnDoc.cpp
 msgid "Cannot save the learning data:\n%1"
 msgstr "学習データを保存できません：\n%1"
+
+#. Merge20 (L3): learning candidate commands, result pane context menu
+#. IDR_POPUP_MERGERESULTVIEW_2WAY, ID_MERGE20_LEARN_APPLY
+#: Src/Merge.rc:83
+msgid "Apply Learning Suggestion"
+msgstr "🎓 学習候補を適用"
+
+#. Merge20 (L3): learning candidate commands, result pane context menu
+#. IDR_POPUP_MERGERESULTVIEW_2WAY, ID_MERGE20_LEARN_DISMISS
+#: Src/Merge.rc:84
+msgid "Dismiss Learning Suggestion"
+msgstr "候補を却下"
+
+#. Merge20 (L3): apply menu item with the candidate detail (MergeResultView)
+#: Src/MergeResultView.cpp
+msgid "Apply Learning Suggestion (%1, %2, %3)"
+msgstr "🎓 学習候補を適用（%1・%2・%3件）"
+
+#. Merge20 (L3): strategy display names (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Insert old"
+msgstr "旧挿入"
+
+#. Merge20 (L3): strategy display names (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Keep new"
+msgstr "新維持"
+
+#. Merge20 (L3): strategy display names (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Replace with old"
+msgstr "旧置換"
+
+#. Merge20 (L3): strategy display names (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Both old and new"
+msgstr "両方"
+
+#. Merge20 (L3): candidate match display names (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Exact match"
+msgstr "完全一致"
+
+#. Merge20 (L3): candidate match display names (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Feature match"
+msgstr "特徴一致"
