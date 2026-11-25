@@ -108,6 +108,16 @@ public:
 	// Merge20 (S4, IDirDoc): store the classification computed by a
 	// merge doc after a rescan (see IDirDoc::SetMerge20Classification).
 	void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) override;
+	// Merge20 (S8): audit memo of one item (see CDiffContext::GetMerge20Memo).
+	String GetMerge20Memo(const DIFFITEM& di) const;
+	void SetMerge20Memo(const DIFFITEM& di, const String& memo);
+	// Merge20 (S8): refresh the diff judgments of all still-open merge
+	// docs into the sidecar map (called before a session save).
+	void RefreshMerge20DiffJudgments();
+	// Merge20 (S8): true once the session-restore offer was shown for
+	// this document (the offer is made once, after the first compare).
+	bool Merge20SessionAsked() const { return m_bMerge20SessionAsked; }
+	void SetMerge20SessionAsked() { m_bMerge20SessionAsked = true; }
 	void Redisplay();
 	virtual ~CDirDoc();
 	void SetDirView( CDirView *newView ); // TODO Perry
@@ -173,6 +183,7 @@ private:
 	FileFilterHelper m_imgfileFilter;
 	bool m_bMarkedRescan; /**< If `true` next rescan scans only marked items */
 	bool m_bGeneratingReport;
+	bool m_bMerge20SessionAsked = false; /**< Merge20 (S8): session-restore offer already shown for this document */
 	std::unique_ptr<DirCmpReport> m_pReport;
 	FileFilterHelper m_fileHelper; /**< File filter helper */
 	clock_t m_compareStart; /**< Starting process time of the compare */

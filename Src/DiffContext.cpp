@@ -199,6 +199,66 @@ void CDiffContext::SetMerge20Classification(const String& relPath, const Merge20
 }
 
 /**
+ * @brief Merge20 (S8): audit memo of one file from the sidecar map.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @return Memo text, empty when the file has no entry yet.
+ */
+String CDiffContext::GetMerge20Memo(const String& relPath) const
+{
+	return m_merge20FileStates.GetMemo(relPath);
+}
+
+/**
+ * @brief Merge20 (S8): set the audit memo of one file in the sidecar map.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] memo New memo text.
+ */
+void CDiffContext::SetMerge20Memo(const String& relPath, const String& memo)
+{
+	m_merge20FileStates.SetMemo(relPath, memo);
+}
+
+/**
+ * @brief Merge20 (S8): store the per-diff judgments of one file.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] judgments Judgments extracted from the file's merge doc.
+ */
+void CDiffContext::SetMerge20DiffJudgments(const String& relPath, const std::vector<Merge20DiffJudgment>& judgments)
+{
+	m_merge20FileStates.GetOrCreateState(relPath).diffJudgments = judgments;
+}
+
+/**
+ * @brief Merge20 (S8): restore a whole saved per-file state.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] state Saved state from the session file. Every field is
+ * copied verbatim, including the review state, output flag, memo and
+ * diff judgments.
+ */
+void CDiffContext::SetMerge20SessionState(const String& relPath, const Merge20FileState& state)
+{
+	m_merge20FileStates.GetOrCreateState(relPath) = state;
+}
+
+/**
+ * @brief Merge20 (S8): reset a file whose contents changed since the
+ * session was saved (spec section 6.1).
+ * @param [in] di Difference item.
+ * The review state returns to TODO, the output flag to its initial
+ * value, and the classification and diff judgments are cleared. The
+ * audit memo is kept: it is the reviewer's note, not a claim about
+ * the file's contents.
+ */
+void CDiffContext::ResetMerge20ChangedFile(const DIFFITEM& di)
+{
+	Merge20FileState& st = m_merge20FileStates.GetOrCreateState(di.getItemRelativePath());
+	const String memo = st.memo;
+	st = Merge20FileState{};
+	st.memo = memo;
+	st.includeInOutput = IsMerge20InitialIncludeInOutput(*this, di);
+}
+
+/**
  * @brief Update info in item in result list from disk.
  * This function updates result list item's file information from actual
  * file in the disk. This updates info like date, size and attributes.

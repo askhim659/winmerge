@@ -115,6 +115,7 @@
 #define IDD_FILTERS_MATCHINSIDE         291
 #define IDD_MERGE20_BATCH_CHECK         293
 #define IDD_MERGE20_CSV_EXPORT          294
+#define IDD_MERGE20_MEMO                295
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -777,6 +778,8 @@
 #define IDC_MERGE20_BATCH_CLEAR_ALL     1726
 #define IDC_MERGE20_CSV_SELECTED        1727
 #define IDC_MERGE20_CSV_ALL             1728
+#define IDC_MERGE20_MEMO_PATH           1729
+#define IDC_MERGE20_MEMO_TEXT           1730
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1719,6 +1722,9 @@
 #define ID_MERGE20_DIR_CHECK_ALL        38932
 #define ID_MERGE20_DIR_UNCHECK_ALL      38933
 #define ID_MERGE20_CSV_EXPORT           38934
+#define ID_MERGE20_SESSION_SAVE         38935
+#define ID_MERGE20_SESSION_RESTORE      38936
+#define ID_MERGE20_MEMO_EDIT            38937
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2458,9 +2464,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        295
-#define _APS_NEXT_COMMAND_VALUE         38935
-#define _APS_NEXT_CONTROL_VALUE         1729
+#define _APS_NEXT_RESOURCE_VALUE        296
+#define _APS_NEXT_COMMAND_VALUE         38938
+#define _APS_NEXT_CONTROL_VALUE         1731
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif

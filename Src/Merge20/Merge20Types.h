@@ -11,6 +11,7 @@
  */
 #pragma once
 
+#include <vector>
 #include "UnicodeString.h"
 
 /** @brief Review state of one file (HTML tool REV, spec section 4(b)). */
@@ -44,13 +45,36 @@ enum class RiskLevel
 };
 
 /**
+ * @brief One per-diff judgment in a merge result pane (S8).
+ *
+ * A snapshot of one MergeResultSegment (see MergeResultPane.h) plus the
+ * diff-range identity it belongs to. `state` is the ResultSegmentState
+ * ordinal (Common=0, Auto=1, Chosen=2, Unresolved=3, Conflict=4,
+ * Edited=5); `op` is the OP_TYPE of the diff range (see DiffList.h).
+ * The begin/end line numbers are the real (non-ghost) line numbers of
+ * the diff range, used on restore to tell a changed diff from the one
+ * that was judged (spec section 6.1). Stored as plain ints so this
+ * header stays free of MergeDoc headers.
+ */
+struct Merge20DiffJudgment
+{
+	int diffIdx = -1; /**< Index in the diff list */
+	int op = 0;       /**< OP_TYPE of the diff range */
+	int begin[3] = { -1, -1, -1 }; /**< First real line of the range, per pane */
+	int end[3] = { -1, -1, -1 };   /**< Last real line of the range, per pane */
+	int state = 0;    /**< ResultSegmentState ordinal */
+	std::vector<int> srcPanes; /**< Chosen source panes (0/1/2), in order; empty when unresolved */
+};
+
+/**
  * @brief Per-file work state kept outside DIFFITEM (design section 2.4).
  *
  * DIFFITEM must not hold GUI work state (see the comment in DiffItem.h),
  * so this struct lives in a sidecar map keyed by relative path
  * (DIFFITEM::getItemRelativePath()). Only `review` is used by S1; the
  * other fields are filled in by later slices (S2: includeInOutput,
- * S4: classified/action/risk/counts/summary, S6/S8: memo).
+ * S4: classified/action/risk/counts/summary, S6/S8: memo, S8:
+ * diffJudgments).
  */
 struct Merge20FileState
 {
@@ -66,6 +90,7 @@ struct Merge20FileState
 	bool simpleCompare = false; /**< True when a simplified fallback compare was used */
 	String summary;    /**< Rule-based summary text */
 	String memo;       /**< Audit memo */
+	std::vector<Merge20DiffJudgment> diffJudgments; /**< Per-diff judgments of the merge result pane (S8). Empty when the file was never judged in a merge session, or when its merge doc was never opened. */
 	String leftEncoding;  /**< Left-side encoding, for display */
 	String rightEncoding; /**< Right-side encoding, for display */
 };

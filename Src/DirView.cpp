@@ -41,6 +41,8 @@
 #include "Merge20/Merge20BatchCheckDlg.h"
 #include "Merge20/Merge20CsvExport.h"
 #include "Merge20/Merge20CsvExportDlg.h"
+#include "Merge20/Merge20MemoDlg.h"
+#include "Merge20/Merge20SessionDoc.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
@@ -148,6 +150,11 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE, OnUpdateSave)
 	ON_COMMAND(ID_MERGE20_BATCH_CHECK, OnMerge20BatchCheck)
 	ON_COMMAND(ID_MERGE20_CSV_EXPORT, OnMerge20CsvExport)
+	ON_COMMAND(ID_MERGE20_SESSION_SAVE, OnMerge20SessionSave)
+	ON_COMMAND(ID_MERGE20_SESSION_RESTORE, OnMerge20SessionRestore)
+	ON_COMMAND(ID_MERGE20_MEMO_EDIT, OnMerge20MemoEdit)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
 	ON_COMMAND(ID_MERGE20_DIR_UNCHECK_ALL, OnMerge20DirUncheckAll)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_CHECK_ALL, OnUpdateMerge20DirCheck)
@@ -890,6 +897,23 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// CSV export, next to the batch check. Always offered.
 	String sMerge20CsvExport = _("Export diff list as CSV...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_CSV_EXPORT, sMerge20CsvExport.c_str());
+	// Merge20 (S8, design section 3.6, spec section 6.1): session
+	// save/restore, next to the batch check and CSV export. Always offered.
+	String sMerge20SessionSave = _("Save session");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_SESSION_SAVE, sMerge20SessionSave.c_str());
+	String sMerge20SessionRestore = _("Restore session...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_SESSION_RESTORE, sMerge20SessionRestore.c_str());
+	// Merge20 (S8, design section 3.5): audit-memo editor. Only when a
+	// single file row is selected (directories have no memo).
+	if (GetSelectedCount() == 1 && sel != -1)
+	{
+		const DIFFITEM& di = GetDiffItem(sel);
+		if (!di.diffcode.isDirectory())
+		{
+			String sMerge20MemoEdit = _("Edit audit memo...");
+			pPopup->AppendMenu(MF_STRING, ID_MERGE20_MEMO_EDIT, sMerge20MemoEdit.c_str());
+		}
+	}
 	if (bDirSelected)
 	{
 		String sMerge20DirCheckAll = _("Check all files under folder");
@@ -3005,6 +3029,13 @@ LRESULT CDirView::OnUpdateUIMessage(WPARAM wParam, LPARAM lParam)
 			m_pSavedUIState.reset();
 		}
 
+		// Merge20 (S8): offer to restore a saved session for this folder
+		// pair, once per document. Runs after the list was rebuilt and
+		// the focus/scroll position restored, so the session's display
+		// settings (filters, columns, focused file, scroll position)
+		// are applied last and stick.
+		Merge20SessionOfferRestore(*pDoc);
+
 		// If compare took more than TimeToSignalCompare seconds, notify user
 		m_elapsed = pDoc->GetElapsedTime();
 		SetTimer(TIMER_ID_STATUSBAR_UPDATE, 150, nullptr);
@@ -3416,6 +3447,217 @@ void CDirView::OnMerge20CsvExport()
 		return;
 	}
 	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
+}
+
+/**
+ * @brief Merge20 (S8, design section 3.6, spec section 6.1): save the
+ * current session (review states, output checks, memos, merge
+ * judgments, display settings) to the session file of this folder
+ * pair. The result (file path) is reported in a message box; a failed
+ * save is reported explicitly (spec section 7).
+ */
+void CDirView::OnMerge20SessionSave()
+{
+	CDirDoc* pDoc = GetDocument();
+	String filePath, errStr;
+	if (!Merge20SessionSaveDoc(*pDoc, filePath, errStr))
+	{
+		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+		return;
+	}
+	AfxMessageBox(strutils::format_string1(_("Session saved to:\n%1"), filePath).c_str(), MB_ICONINFORMATION);
+}
+
+/**
+ * @brief Merge20 (S8): restore a session from a file chosen in a file
+ * dialog (defaulting to this folder pair's session file). The file
+ * must belong to this folder pair; the restore report names the
+ * restored, reset and skipped files.
+ */
+void CDirView::OnMerge20SessionRestore()
+{
+	CDirDoc* pDoc = GetDocument();
+	String defaultPath;
+	Merge20SessionExistsForDoc(*pDoc, defaultPath);
+	String filePath;
+	if (!SelectFile(GetSafeHwnd(), filePath, true, defaultPath.c_str(), _T(""),
+		_T("JSON Files (*.json)|*.json|All Files (*.*)|*.*||"), _T("json")))
+		return;
+	Merge20Session session;
+	String errStr;
+	int skippedFiles = 0;
+	if (!Merge20SessionLoadForDoc(*pDoc, filePath, session, errStr, skippedFiles))
+	{
+		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+		return;
+	}
+	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(*pDoc, session);
+	AfxMessageBox(Merge20SessionFormatRestoreReport(result, skippedFiles).c_str(), MB_ICONINFORMATION);
+	UpdateMerge20StatusCount();
+}
+
+/**
+ * @brief Merge20 (S8): enable the session commands once a folder
+ * comparison has results.
+ */
+void CDirView::OnUpdateMerge20Session(CCmdUI* pCmdUI)
+{
+	pCmdUI->Enable(GetDocument()->HasDiffs() ? TRUE : FALSE);
+}
+
+/**
+ * @brief Merge20 (S8, design section 3.5): edit the audit memo of the
+ * single selected file. The memo column repaints after the edit; the
+ * memo is saved with the session and included in the CSV export.
+ */
+void CDirView::OnMerge20MemoEdit()
+{
+	const int sel = GetSingleSelectedItem();
+	if (sel == -1)
+		return;
+	const DIFFITEM& di = GetDiffItem(sel);
+	if (di.diffcode.isDirectory())
+		return;
+	CDirDoc* pDoc = GetDocument();
+	const String relPath = di.getItemRelativePath();
+	Merge20MemoDlg dlg(this, relPath, pDoc->GetMerge20Memo(di));
+	if (dlg.DoModal() != IDOK)
+		return;
+	pDoc->SetMerge20Memo(di, dlg.GetMemo());
+	UpdateDiffItemStatus(static_cast<UINT>(sel));
+}
+
+/**
+ * @brief Merge20 (S8): read the display settings the session save
+ * records: the show_* filters and tree mode, the column order/width
+ * strings, the focused file and the top visible row.
+ */
+void CDirView::Merge20GetDisplaySettings(Merge20SessionDisplay& display)
+{
+	display.showSkipped = m_dirfilter.show_skipped;
+	display.showUniqueLeft = m_dirfilter.show_unique_left;
+	display.showUniqueMiddle = m_dirfilter.show_unique_middle;
+	display.showUniqueRight = m_dirfilter.show_unique_right;
+	display.showBinaries = m_dirfilter.show_binaries;
+	display.showIdentical = m_dirfilter.show_identical;
+	display.showDifferent = m_dirfilter.show_different;
+	display.showDifferentLeftOnly = m_dirfilter.show_different_left_only;
+	display.showDifferentMiddleOnly = m_dirfilter.show_different_middle_only;
+	display.showDifferentRightOnly = m_dirfilter.show_different_right_only;
+	display.showMissingLeftOnly = m_dirfilter.show_missing_left_only;
+	display.showMissingMiddleOnly = m_dirfilter.show_missing_middle_only;
+	display.showMissingRightOnly = m_dirfilter.show_missing_right_only;
+	display.showEmptyFolders = m_dirfilter.show_empty_folders;
+	display.treeMode = m_bTreeMode;
+	display.reviewFilter[0] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_TODO);
+	display.reviewFilter[1] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_DONE);
+	display.reviewFilter[2] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_HOLD);
+	display.reviewFilter[3] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_SPECIAL);
+	display.reviewFilter[4] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_KEEP);
+	display.columnOrders = m_pColItems->SaveColumnOrders();
+	display.columnWidths = m_pColItems->SaveColumnWidths(std::bind(&CListCtrl::GetColumnWidth, m_pList, _1));
+	const int focused = GetFocusedItem();
+	if (focused >= 0)
+	{
+		const DIFFITEM* pKey = GetItemKey(focused);
+		if (pKey != nullptr && !IsDiffItemSpecial(pKey))
+			display.focusedPath = pKey->getItemRelativePath();
+	}
+	display.topIndex = m_pList->GetTopIndex();
+}
+
+/**
+ * @brief Merge20 (S8): apply the saved show_* filters and tree mode
+ * (same effect as toggling the filter bar by hand: the values are
+ * written back to the global options), then rebuild the list. The
+ * review filter has no UI yet (no filter UI exists); its saved values
+ * are recorded only.
+ */
+void CDirView::Merge20SetDisplayFilter(const Merge20SessionDisplay& display)
+{
+	m_dirfilter.show_skipped = display.showSkipped;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_SKIPPED, display.showSkipped);
+	m_dirfilter.show_unique_left = display.showUniqueLeft;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_UNIQUE_LEFT, display.showUniqueLeft);
+	m_dirfilter.show_unique_middle = display.showUniqueMiddle;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_UNIQUE_MIDDLE, display.showUniqueMiddle);
+	m_dirfilter.show_unique_right = display.showUniqueRight;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_UNIQUE_RIGHT, display.showUniqueRight);
+	m_dirfilter.show_binaries = display.showBinaries;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_BINARIES, display.showBinaries);
+	m_dirfilter.show_identical = display.showIdentical;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_IDENTICAL, display.showIdentical);
+	m_dirfilter.show_different = display.showDifferent;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_DIFFERENT, display.showDifferent);
+	m_dirfilter.show_different_left_only = display.showDifferentLeftOnly;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_DIFFERENT_LEFT_ONLY, display.showDifferentLeftOnly);
+	m_dirfilter.show_different_middle_only = display.showDifferentMiddleOnly;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_DIFFERENT_MIDDLE_ONLY, display.showDifferentMiddleOnly);
+	m_dirfilter.show_different_right_only = display.showDifferentRightOnly;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_DIFFERENT_RIGHT_ONLY, display.showDifferentRightOnly);
+	m_dirfilter.show_missing_left_only = display.showMissingLeftOnly;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_MISSING_LEFT_ONLY, display.showMissingLeftOnly);
+	m_dirfilter.show_missing_middle_only = display.showMissingMiddleOnly;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_MISSING_MIDDLE_ONLY, display.showMissingMiddleOnly);
+	m_dirfilter.show_missing_right_only = display.showMissingRightOnly;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_MISSING_RIGHT_ONLY, display.showMissingRightOnly);
+	m_dirfilter.show_empty_folders = display.showEmptyFolders;
+	GetOptionsMgr()->SaveOption(OPT_SHOW_EMPTY_FOLDERS, display.showEmptyFolders);
+	m_bTreeMode = display.treeMode;
+	m_dirfilter.tree_mode = display.treeMode;
+	GetOptionsMgr()->SaveOption(OPT_TREE_MODE, display.treeMode);
+	Redisplay();
+}
+
+/**
+ * @brief Merge20 (S8): apply the saved column order and widths
+ * (written back to the global options, as OnDestroy does, then
+ * reloaded like at startup).
+ */
+void CDirView::Merge20ApplyColumnSettings(const String& orders, const String& widths)
+{
+	const String ordersKey = GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_ORDERS : OPT_DIRVIEW3_COLUMN_ORDERS;
+	const String widthsKey = GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_WIDTHS : OPT_DIRVIEW3_COLUMN_WIDTHS;
+	GetOptionsMgr()->SaveOption(ordersKey, orders);
+	GetOptionsMgr()->SaveOption(widthsKey, widths);
+	m_pColItems->LoadColumnOrders(orders);
+	ReloadColumns();
+}
+
+/**
+ * @brief Merge20 (S8): restore the focused file and scroll position
+ * (same steps as RestoreUIState, but matched by relative path). Must
+ * run after the list was rebuilt, or the position is lost.
+ */
+void CDirView::Merge20RestoreViewPosition(const String& focusedPath, int topIndex)
+{
+	if (!focusedPath.empty())
+	{
+		const CDiffContext& ctxt = GetDiffContext();
+		for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)
+		{
+			const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
+			if (di.getItemRelativePath() != focusedPath)
+				continue;
+			for (size_t i = 0; i < m_listViewItems.size(); ++i)
+			{
+				if (m_listViewItems[i].lParam == reinterpret_cast<LPARAM>(&di))
+				{
+					m_pList->SetItemState(static_cast<int>(i), LVIS_FOCUSED | LVIS_SELECTED, LVIS_FOCUSED | LVIS_SELECTED);
+					m_pList->SetSelectionMark(static_cast<int>(i));
+					break;
+				}
+			}
+			break;
+		}
+	}
+	if (topIndex > 0 && topIndex < m_pList->GetItemCount())
+	{
+		CRect rc;
+		m_pList->GetItemRect(0, &rc, LVIR_BOUNDS);
+		int offsetY = topIndex * rc.Height();
+		m_pList->Scroll(CSize(0, offsetY));
+	}
 }
 
 void CDirView::OnUpdateMerge20DirCheck(CCmdUI* pCmdUI)

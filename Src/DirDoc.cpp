@@ -38,6 +38,7 @@
 #include "FilterErrorMessages.h"
 #include "DirActions.h"
 #include "DirScan.h"
+#include "Merge20/Merge20SessionDoc.h"
 #include "MessageBoxDialog.h"
 #include "DirCmpReport.h"
 #include "DiffWrapper.h"
@@ -113,6 +114,20 @@ BOOL CDirDoc::OnNewDocument()
  */
 void CDirDoc::OnCloseDocument()
 {
+	// Merge20 (S8, design section 3.6): auto-save the session on close
+	// when enabled. Merge docs are still open here, so their judgments
+	// are included through the refresh in the save. Skipped while a
+	// compare is running (the sidecar is incomplete then) and when
+	// nothing was compared. A failed save is reported (spec section 7),
+	// never lost silently.
+	if (m_pCtxt != nullptr &&
+		m_diffThread.GetThreadState() != CDiffThread::THREAD_COMPARING &&
+		GetOptionsMgr()->GetBool(OPT_MERGE20_SESSION_AUTOSAVE))
+	{
+		String filePath, errStr;
+		if (!Merge20SessionSaveDoc(*this, filePath, errStr))
+			AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+	}
 	if (m_pDirView)
 	{
 		if (CDirFrame* pf = m_pDirView->GetParentFrame())
@@ -662,6 +677,42 @@ void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
 }
 
 /**
+ * @brief Merge20 (S8): audit memo of one item, from the sidecar map.
+ * @param [in] di Difference item.
+ * @return Memo text, empty when the item has no entry yet (or when
+ * there is no compare context yet).
+ */
+String CDirDoc::GetMerge20Memo(const DIFFITEM& di) const
+{
+	if (m_pCtxt == nullptr)
+		return String();
+	return m_pCtxt->GetMerge20Memo(di.getItemRelativePath());
+}
+
+/**
+ * @brief Merge20 (S8): set the audit memo of one item in the sidecar map.
+ * @param [in] di Difference item.
+ * @param [in] memo New memo text.
+ */
+void CDirDoc::SetMerge20Memo(const DIFFITEM& di, const String& memo)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	m_pCtxt->SetMerge20Memo(di.getItemRelativePath(), memo);
+}
+
+/**
+ * @brief Merge20 (S8): refresh the diff judgments of all still-open
+ * merge docs into the sidecar map. Called before a session save, so a
+ * save covers work in open file compares too.
+ */
+void CDirDoc::RefreshMerge20DiffJudgments()
+{
+	for (auto pMergeDoc : m_MergeDocs)
+		Merge20SessionStashMergeDoc(*this, pMergeDoc);
+}
+
+/**
  * @brief Merge20 (S4, IDirDoc): store the classification computed by a
  * merge doc after a rescan.
  * @param [in] paths Merge doc's file paths, used to find the folder
@@ -757,6 +808,10 @@ void CDirDoc::AddMergeDoc(IMergeDoc * pMergeDoc)
 void CDirDoc::MergeDocClosing(IMergeDoc * pMergeDoc)
 {
 	ASSERT(pMergeDoc != nullptr);
+	// Merge20 (S8): stash the closing merge doc's diff judgments in
+	// the sidecar map before the doc (and its result pane) is gone,
+	// so a later session save still covers them.
+	Merge20SessionStashMergeDoc(*this, pMergeDoc);
 	if (POSITION pos = m_MergeDocs.CPtrList::Find(pMergeDoc))
 		m_MergeDocs.RemoveAt(pos);
 	else

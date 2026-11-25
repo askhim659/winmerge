@@ -32,6 +32,10 @@ public:
 	bool GetIncludeInOutput(const String& relPath) const;
 	/** @brief Set the output checkbox flag of one file, keeping the rest of its state. */
 	void SetIncludeInOutput(const String& relPath, bool include);
+	/** @brief Return the audit memo (empty when the file has no entry yet). */
+	String GetMemo(const String& relPath) const;
+	/** @brief Set the audit memo of one file, keeping the rest of its state. */
+	void SetMemo(const String& relPath, const String& memo);
 
 private:
 	std::map<String, Merge20FileState> m_states;
