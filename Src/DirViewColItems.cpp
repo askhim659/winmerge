@@ -71,6 +71,7 @@ const char *COLHDR_MENCODING    = N_("Middle Encoding");
 const char *COLHDR_NIDIFFS      = N_("Ignored Diff");
 const char *COLHDR_EXCLUDED     = N_("Ignored diffs");
 const char *COLHDR_REVIEWSTATE  = N_("Review State");
+const char *COLHDR_OUTPUT       = N_("Include in Output");
 const char *COLHDR_NSDIFFS      = N_("Differences");
 const char *COLHDR_BINARY       = NC_("DirView|ColumnHeader", "Binary");
 const char *COLHDR_UNPACKER     = N_("Unpacker");
@@ -127,6 +128,7 @@ const char *COLDESC_MENCODING   = N_("Middle side encoding.");
 const char *COLDESC_NIDIFFS     = N_("Number of ignored differences in file. Ignored and cannot be merged.");
 const char *COLDESC_EXCLUDED    = N_("Number of ignored differences in file (prediffer exclusions). Interim display for the excluded-line count; this is a diff count, not a line count.");
 const char *COLDESC_REVIEWSTATE = N_("Review state of the file: Not reviewed, Done, On hold, Needs manual work, or Keep as is. All files start as Not reviewed; nothing is applied automatically.");
+const char *COLDESC_OUTPUT      = N_("Whether the file is included in the output (ZIP / merged files). Checked means included. Done turns it on again, On hold and Keep as is turn it off.");
 const char *COLDESC_NSDIFFS     = N_("Number of differences in file (excluding ignored).");
 const char *COLDESC_BINARY      = N_("Shows an asterisk (*) if the file is binary.");
 const char *COLDESC_UNPACKER    = N_("Unpacker plugin name or pipeline.");
@@ -666,6 +668,51 @@ static int ColReviewStateSort(const CDiffContext *pCtxt, const void *p, const vo
 	if (l == r)
 		return 0;
 	return l < r ? -1 : 1;
+}
+
+/**
+ * @brief Format Output checkbox column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return A ballot-box glyph: checked when the file is included in the
+ * output, unchecked otherwise. Directory rows have no output flag and
+ * show nothing. This file stays ASCII, so the glyphs are written as
+ * escapes (U+2611 BALLOT BOX WITH CHECK, U+2610 BALLOT BOX).
+ *
+ * Merge20 (S2, design sections 3.2 and 6, spec section 4(b)).
+ * Note on the design's option (a) (state image list): a list-view item
+ * has a single state image, shown in the first column only, and the
+ * tree mode already uses state images 1/2 for the expand/collapse icon
+ * (DirView.cpp: ReflectGetdispinfo), so a state image cannot draw a
+ * checkbox inside a subitem column of this owner-data (virtual) list.
+ * The text glyph above is the design's option (b); the value itself is
+ * supplied dynamically through LVN_GETDISPINFO like every other column,
+ * and clicking the cell toggles it (CDirView::OnClick).
+ */
+static String ColOutputCheckGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.isDirectory())
+		return String();
+	return pCtxt->GetMerge20IncludeInOutput(di) ? _T("\x2611") : _T("\x2610");
+}
+
+/**
+ * @brief Compare Output checkbox column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, unchecked (and directory rows) before checked.
+ */
+static int ColOutputCheckSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	bool l = !ldi.isDirectory() && pCtxt->GetMerge20IncludeInOutput(ldi);
+	bool r = !rdi.isDirectory() && pCtxt->GetMerge20IncludeInOutput(rdi);
+	if (l == r)
+		return 0;
+	return l ? 1 : -1;
 }
 
 /**
@@ -1658,6 +1705,11 @@ static DirColInfo f_cols[] =
 	// after Extension) so the S1 acceptance check can see it without
 	// opening the column dialog first.
 	{ _T("Sreview"), nullptr, COLHDR_REVIEWSTATE, COLDESC_REVIEWSTATE, &ColReviewStateGet, &ColReviewStateSort, 0, 6, true, DirColInfo::ALIGN_LEFT },
+	// Merge20 (S2, design sections 3.2 and 7, spec section 4(b)): output
+	// checkbox column, same end-of-table note as the review column above.
+	// Shown by default (order 7, after the review column) so the linkage
+	// of spec section 4(b) is visible without opening the column dialog.
+	{ _T("Soutput"), nullptr, COLHDR_OUTPUT, COLDESC_OUTPUT, &ColOutputCheckGet, &ColOutputCheckSort, 0, 7, true, DirColInfo::ALIGN_CENTER },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
@@ -1719,6 +1771,10 @@ static DirColInfo f_cols3[] =
 	// f_cols above; default order is 7 here because Extension is 6 in
 	// the 3-way table.
 	{ _T("Sreview"), nullptr, COLHDR_REVIEWSTATE, COLDESC_REVIEWSTATE, &ColReviewStateGet, &ColReviewStateSort, 0, 7, true, DirColInfo::ALIGN_LEFT },
+	// Merge20 (S2): output checkbox column, 3-way table. Same note as in
+	// f_cols above; default order is 8 here because Extension is 6 and
+	// the review column is 7 in the 3-way table.
+	{ _T("Soutput"), nullptr, COLHDR_OUTPUT, COLDESC_OUTPUT, &ColOutputCheckGet, &ColOutputCheckSort, 0, 8, true, DirColInfo::ALIGN_CENTER },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
