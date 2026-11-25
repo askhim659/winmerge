@@ -393,10 +393,164 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
   `WinMerge-x64.zip`（26,037,934 バイト、ID 15013980458）、
   `WinMerge-x64-Setup-x64.exe`（39,509,228 バイト、ID 15011999981）。
 
+## 10. Phase 2 S2（連動ルール＋キー）— ブランチ `merge20/phase2-s2`
+
+（L6 で補完。元資料は `merge20-complete-plan.md` の進捗ログ
+（2026-11-25、S2 の項）のみ。当時はこのファイルに §10 がなく、
+§12 冒頭に「未記録」と注記されていた。以下の内容は進捗ログの
+記載を写したものであり、L6 で新たに調べた事実は含まない。
+Windows 実機での確認手順の個別記録は進捗ログには残っていない
+ため、ここには記載しない。）
+
+設計書 `merge20-phase2-design.md` §3.2 どおり。確認内容 5 状態と
+出力チェックの連動ルール、キー 1〜5・Space 順送り、出力セル
+クリックでの手動 ON／OFF 切替、行色。
+
+### 10.1 変更一覧
+
+- `Src/Merge20/Merge20FileStates.h/.cpp` — `HasState`／
+  `Get/SetIncludeInOutput` を追加。
+- `Src/DiffContext.h/.cpp` — `Get/SetMerge20IncludeInOutput`、
+  `SetMerge20ReviewState(DIFFITEM)`、`ApplyMerge20ReviewState`。
+  出力チェックの初期値：変更・旧のみ＝ON、新のみ・同一＝OFF。
+- `Src/DirDoc.h/.cpp` — フォワーダ。
+- `Src/DirViewColItems.cpp` — 新列「出力」（`regName Soutput`）。
+  ☑ U+2611／☐ U+2610 の文字表示。フォルダ行は空欄。ソートは
+  未チェック＜チェック。`f_cols` 既定順 7／`f_cols3` 既定順 8。
+  表の末尾に配置。
+- `Src/DirView.cpp` — `PreTranslateMessage` にキー 1〜5 と Space
+  順送り（一覧内のみ、ラベル編集中は無効、Ctrl/Alt/Shift 付きは
+  除外）。`OnClick` に出力セルクリックでの手動 ON／OFF 切替。
+  `GetColors` に行色：SPECIAL＝薄赤、HOLD＝薄黄、KEEP＝灰。
+  背景のみ変更し、差分色の文字色は残す。
+- `Translations/WinMerge/Japanese.po` — 訳を追加。
+
+連動ルールは HTML の `setRev`／`cycRev` と同一であることを実読で
+確認：DONE→ON（ただし 2-way の新のみファイルは ON にしない）、
+HOLD／KEEP→OFF、TODO／SPECIAL→変更なし。読み込み時の自動
+「済」化はなし。
+
+### 10.2 設計書・仕様書との食い違い（判断理由つき）
+
+1. **設計書 §3.2 の推奨案 (a)（ステートイメージリストによる自前
+   チェック描画）は採用せず。** リストビュー項目のステートイメージは
+   1 行に 1 つで第 1 列にしか表示されず、ツリーモードでは既に展開／
+   折畳みアイコンに使われているため。代わりにフォールバック案 (b)
+   （☑／☐ の文字表示）を採用し、クリックでの手動 ON／OFF 切替も
+   実装。値は `LVN_GETDISPINFO` で動的供給されるため仮想リストとの
+   整合性は保たれている。行色は固定色でテーマ対応は後回し
+   （設計書 §3.2 どおり）。
+
+### 10.3 CI 結果と修正（PR #7）
+
+- PR #7（`merge20/phase2-s2`、15 コミット）を検証のうえ API で
+  マージ（マージコミット 07922d2）。
+- CI 失敗 1 回：初回実行 45600362144 が error C2039
+  （`'isDirectory'` は DIFFITEM ではなく DIFFCODE のメンバ）。
+  3 箇所を `di.diffcode.isDirectory()` に修正。修正 1 件目だけの
+  実行 45602942908 は failure、2 件とも含む実行 45602987787 は
+  success、最終ドキュメントのみのコミットの実行 45605157867 も
+  success。
+- 実行 45605157867 は **success**。成果物 2 件（いずれも
+  2027-02-23 失効）：`WinMerge-x64.zip`（26,039,775 バイト、
+  ID 15017199207）、`WinMerge-x64-Setup-x64.exe`（39,520,662
+  バイト、ID 15017209085）。
+- 副次的注意：`commit_file.py` を短い間隔で連続実行すると 422
+  "Update is not a fast forward" になることがある（ref 更新直後の
+  GET が古い head を返す）。数秒待って再実行すれば解決する。
+
+## 11. Phase 2 S3（一括チェック＋件数表示）— ブランチ `merge20/phase2-s3`
+
+（L6 で補完。元資料は `merge20-complete-plan.md` の進捗ログ
+（2026-11-25、S3 の項）のみ。当時はこのファイルに §11 がなく、
+§12 冒頭に「未記録」と注記されていた。以下の内容は進捗ログの
+記載を写したものであり、L6 で新たに調べた事実は含まない。
+Windows 実機での確認手順の個別記録は進捗ログには残っていない
+ため、ここには記載しない。）
+
+設計書 `merge20-phase2-design.md` §3.3 どおり。一括チェック
+（確認内容の複数選択＋件数表示＋実行）と件数表示（「表示 N 件中
+M 件チェック」）、ディレクトリ単位の全チェック／全解除。
+
+### 11.1 変更一覧
+
+- 新規 `Src/Merge20/Merge20BatchCheckDlg.h/.cpp`（`CTrDialog`
+  派生）。確認内容 5 状態のチェックボックス（複数選択可）、対象
+  件数を実行前に表示（OK ボタンのラベル自体が「選択分を一括
+  チェック（N件）」）、「表示分すべてチェック」「全解除」を同じ
+  ダイアログに配置。未選択時は OK 無効。キャンセルでは無変更。
+  右クリックメニューから「一括チェック…」で起動。
+- 件数表示（`CDirView::GetMerge20StatusCountText()`／
+  `UpdateMerge20StatusCount()`）。「表示 N 件中 M 件チェック」。
+  分母＝表示中のファイル行数、分子＝そのうち出力チェック ON の
+  件数。
+- ディレクトリ単位の全チェック／全解除も実装（右クリックメニュー
+  に「配下をすべてチェック」「配下のチェックをすべて外す」
+  （ディレクトリ行選択時のみ）。DIFFITEM の `GetFirstChild()`／
+  `GetFwdSiblingLink()` による再帰走査のため、折りたたまれた
+  サブフォルダ配下も含む）。
+- `Translations/WinMerge/Japanese.po` — 11 件追加。
+- `Src/resource.h` — IDD 293、IDC 1719〜1726、コマンド
+  38931〜38933。
+- `Src/Merge.rc` — ダイアログテンプレート＋レイアウト登録。
+- `Src/Merge.vcxproj`／`.filters` — 新規ファイル登録。
+  `UnitTests.vcxproj` は不要（ダイアログは `DirView.cpp` から
+  だけ使われる）。
+
+### 11.2 T-2-2 の解消：ステータスバーの更新経路
+
+ステータスバーは `CDirFrame::m_wndStatusBar`（`CStatusBar`。
+設計書の推測の BasicFlatStatusBar ではなかった）。ペイン 0 が
+メッセージペインで、唯一の書き込み口は
+`CDirFrame::SetStatus()`、唯一の書き手は
+`CDirView::OnTimer(TIMER_ID_STATUSBAR_UPDATE)`（比較完了後
+150ms・選択変更時 100ms のワンショット）。対策は二重経路：
+(1) `OnTimer` のメッセージに件数テキストを追加（「選択表示 |
+表示 N 件中 M 件チェック」）して選択変更で消えないようにした、
+(2) `Redisplay()` 末尾と、出力列クリック・キー 1〜5・Space・
+一括チェック／ディレクトリ単位操作の直後に
+`UpdateMerge20StatusCount()` で直接書き込む。
+
+### 11.3 設計書・仕様書との食い違い（判断理由つき）
+
+1. **一括チェックの UI をメニュー方式ではなくダイアログにした。**
+   標準メニューは項目選択で閉じるため、複数選択＋件数確認＋実行
+   という HTML ポップアップと等価にならない。既存の ArchiveDlg
+   等と同じ作り。
+2. **範囲の判断（仕様書に明記がなく HTML を正本とした）：**
+   「選択分」「表示分すべてチェック」は表示中のファイルが対象、
+   「全解除」は比較全体の全ファイル（HTML の `batchChk(false)`
+   と同じ）。件数表示の分子は表示中のチェック済み件数（HTML の
+   `cntLbl` は全ファイル中のチェック済み件数だったが、仕様書
+   §3（3/4）の文言を優先）。件数表示の分母は「表示中のファイル
+   行数」（ディレクトリ行と「..」行は数えない）。
+
+### 11.4 CI 結果と修正（PR #8）
+
+- PR #8（`merge20/phase2-s3`、13 コミット）を検証のうえ API で
+  マージ（マージコミット 1dbe316）。
+- CI 失敗 2 回：実行 45609234086 が error C1010（ダイアログ
+  `.cpp` が `#include "StdAfx.h"` なのに `Merge.vcxproj` の登録を
+  pch.h グループ（STL のみ）にしていた。`ArchiveDlg.cpp` と同じ
+  素のエントリに修正）。実行 45611123171 が CVTRES CVT1100:
+  duplicate resource DIALOG 292（既に IDD_ARCHIVE。`resource.h`
+  の IDD 一覧は値順に並んでいない）。293 に変更。IDC
+  1719〜1726・コマンド 38931〜38933 は全 define 対象で空きを
+  確認済み。
+- **教訓**：新規 `.cpp` の PCH グループ（ダイアログは既定の
+  StdAfx.h グループ）と、リソース ID の空き確認は全 define を
+  値でソートすること。
+- 実行 45613020758 は **success**、その後のドキュメントのみの
+  コミットの実行 45614897524 も **success**。成果物 2 件（実行
+  45614897524、いずれも 2027-02-23 失効）：
+  `WinMerge-x64.zip`（26,047,167 バイト、ID 15022875796）、
+  `WinMerge-x64-Setup-x64.exe`（39,520,359 バイト、
+  ID 15022376890）。
+
 ## 12. Phase 2 S4（対応区分・リスク・ルールベース要約）— ブランチ `merge20/phase2-s4`
 
-（注：§10（S2）・§11（S3）はこのファイルには未記録。進捗は
-`merge20-complete-plan.md` の進捗ログ参照。）
+（注：§10（S2）・§11（S3）は L6 で補完済み。§10・§11 参照。
+元資料は `merge20-complete-plan.md` の進捗ログ。）
 
 ### 12.1 変更一覧
 
