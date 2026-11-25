@@ -1114,3 +1114,187 @@ WinMergeU.exe が従来どおり起動すること（回帰確認）のみ。
     Merge20Learn 16 件すべて OK）。ログ中の "FAILED" 4 件は翻訳文字列 ID
     （IDS_FILESAVE_FAILED 等）で、テスト失敗ではない。
   - CI 失敗 0 回（初回実行で success）。
+
+## 17. Phase 3 L2（学習の記録と候補計算）— ブランチ `merge20/phase3-l2`
+
+設計書 `merge20-phase3-design.md` §5 L2 どおり。候補提示 UI（L3）・学習モーダル（L4）・
+JSON 入出力 UI（L5）は含まない。自動適用の経路は作らない（仕様書 §4(c)）。
+
+### 17.1 変更一覧
+
+- `Src/MergeDoc.h` — 候補マップ `m_merge20LearnCandidates`
+  （`std::map<int, Merge20LearnCandidate>`、キー＝差分インデックス）と却下集合
+  `m_merge20LearnDismissed`（`std::set<String>`）を `CMergeDoc` に追加。
+  `m_resultSegments` とは別のメンバ。公開アクセサ
+  `GetMerge20LearnCandidates()`（const／非 const）と
+  `GetMerge20LearnDismissed()` を追加。`#include <set>` と
+  `#include "Merge20/Merge20Learn.h"` を追加（`Merge20Learn.h` は
+  `Merge20Classify.h`／`Merge20Session.h` しか引かないため、既存の
+  インクルード順に影響しない）。
+- `Src/Merge20/Merge20LearnDoc.h/.cpp` — L2 アダプタを実装（MFC アダプタ、
+  StdAfx.h グループの既定エントリのまま。新規ファイルなし）。
+  - `Merge20LearnLinesForDiff(doc, nDiff)` — 1 差分（1 `DIFFRANGE`）分の
+    差分行を構築。S4 の `Merge20ClassifyDoc` と同じゴースト安全な行取得
+    （`ComputeApparentLine` 経由）とペアリング（`OP_DIFF` は両側を順に
+    対にし、長い側の余りは片側空きの `OP_DIFF` 行として残す）。`OP_NONE`
+    行は含めない（HTML の `hunkKeyExact`／`hunkFeatKey` は差分行だけで作る
+    ため）。`OP_TRIVIAL` 行も含めない（無視差分には学習キーの材料になる
+    行テキストがなく、記録口は有意な差分にしか走らない）。
+  - `Merge20LearnRecordDiffJudgment(doc, nDiff)` — 1 差分の現在の判定を
+    L0 の `Merge20LearnRecordJudgment` に記録する（完全一致キーと特徴キー
+    の両方）。記録条件：学習 ON かつ 2-way かつ結果ペイン構築済みかつ有意な
+    差分かつセグメントの状態が `Chosen`。空選択で未解決に戻った差分や
+    `Auto` の差分は記録しない。その差分に表示されていた候補（あれば）を
+    `prevLearned` として渡すため、候補と違う方針を選ぶと旧方針 -1・新方針
+    +1 の訂正になる（HTML の `learnFromHunk` と同一）。`ex` はフォルダ
+    比較時は相対パス（セッションと同じ相対パス）、単独のファイル対では
+    ファイル名。`last` は当日日付。ストアはメモリ内だけを変更し、保存は
+    呼び出し元が 1 回だけ行う。
+  - `Merge20LearnRefreshCandidates(doc)` — 候補を再計算して候補マップに
+    だけ入れる。対象は 2-way・結果ペイン構築済み・セグメントが
+    `Unresolved`／`Conflict` の差分だけ。却下集合にある差分（同一性で判定）
+    には候補を付けない。OFF のときはマップをクリアして何も計算しない。
+    マップが変わったときだけ結果ビューを `Invalidate` する。
+    `Merge20LearnCandidate` に `operator==` がないため、マップの変化は
+    項目ごとに比較している（`strategy`／`via`／`n`／`srcPanes`）。
+  - `Merge20LearnRefreshAllOpenDocs()` — 開いている全テキストマージ文書の
+    候補を再計算する（`CMainFrame::GetAllMergeDocuments()`＋
+    `dynamic_cast<CMergeDoc*>`。バイナリ／画像／Web ページ文書は
+    `CMergeDoc` ではないため対象外）。設計書 §3.2 (c) の入口。
+  - 方針値と `srcPanes` の対応は設計書 §2.2 どおり（`INSERT_OLD`／
+    `REPLACE_WITH_OLD`→`{0}`、`KEEP_NEW`→`{1}`、`BOTH_OLD_NEW`→`{0,1}`）。
+    「不採用」はゴースト行が 0 行になる送信元を選ぶことで `<No Lines>`
+    （保存時に除外される）として表現する（実機確認 T-3-8 は L2／L3／L6
+    の実機確認項目として残る）。
+- `Src/MergeDocResultPane.cpp` — 3 つのフック。
+  - 記録口は `OnMergeChooseSource` だけに限定（設計書 §3.1 どおり）。
+    トグル後の各差分について `Merge20LearnRecordDiffJudgment` を呼び、
+    1 件でも記録されたら `Merge20LearnSaveStore` で `Merge20Learn.json`
+    に保存する（保存失敗時はメッセージボックスで明示。文言は L1 で追加済みの
+    ものを使うため新規の日本語文字列なし）。その後
+    `Merge20LearnRefreshAllOpenDocs()` で全文書の候補を再計算する
+    （判定済みの差分の候補が消え、新しいルールで他の差分に候補が付く）。
+    `ResultChooseSources` には記録を置かないため、一括承認（S5）・
+    自動マージ・セッション復元（S8）が学習に混ざることは構造的にない。
+  - `ResultChooseSources` 末尾：解決済み（`Chosen`／`Auto`）になった差分の
+    候補を消す。空選択で未解決に戻った差分の候補は残す。
+  - `StartMergeSession` 末尾（`Merge20SessionRestoreMergeDoc` の直後）：
+    候補を計算する。自動マージとセッション復元で解決済みになった差分には
+    候補が付かない。
+- `Src/MergeDoc.cpp` — `Rescan` 末尾に候補計算フック（成功・非バイナリのとき。
+  結果ペイン未構築時は `Merge20LearnRefreshCandidates` 内でスキップされ、
+  `StartMergeSession` で計算される。フォルダ文書がなくても動くため、S4 の
+  分類フックと違い `m_pDirDoc != nullptr` は条件にしない）。
+- `Src/MainFrm.cpp` — `CMainFrame::OnOptions`（IDOK。オプション確定時）に
+  `Merge20LearnRefreshAllOpenDocs()` を追加。OFF 切替で全候補マップが
+  クリアされ、ON 切替で再計算される（設計書 §3.5）。
+
+### 17.2 設計書・仕様書との食い違い（判断理由つき）
+
+1. **記録の逆写像の明確化**（設計書 §2.2 の表の曖昧さの解消）。表では
+   `INSERT_OLD` と `REPLACE_WITH_OLD` がどちらも `{0}` になるため、
+   記録時（`srcPanes`→方針値）には差分の種類で区別する：旧欠落のみの差分
+   （`OP_1STONLY`）の `{0}` は `INSERT_OLD`、書換（`OP_DIFF`）・新追加
+   （`OP_2NDONLY`）の `{0}` は `REPLACE_WITH_OLD`。HTML の既定値
+   （削除のみのハンクは旧挿入）と同じ。候補の提示時（方針値→`srcPanes`）
+   はどちらも `{0}` になるため、適用結果は同じ。
+2. **OFF 切替時の即時クリアの場所**（設計書 §3.5 の「OFF への切替時に全
+   マージ文書で候補マップを空にする」を実装する場所）。比較オプションの
+   ページ側（`PropCompare::OnOK`）には置かない。`CPreferencesDlg::OnOK`
+   （`Src/Common/PreferencesDlg.cpp:147`）を実読したところ、オプションの
+   保存（`SaveOptions()`→各ページの `WriteOptions()`）はページの
+   `OnOK` より後（`m_pphost.OnOK()` の後）に走るため、ページ側のフックでは
+   新しい設定値を読めない。代わりにオプション確定後の
+   `CMainFrame::OnOptions()`（IDOK、`ApplyDiffOptions()` の直後）に置いた。
+   ここではオプションは保存済みであり、`Merge20LearnIsEnabled()` が新しい
+   値を返す。なお `Rescan`／`StartMergeSession` のフックでも OFF 時は
+   マップをクリアするため、オプション画面を開かずに OFF になる経路
+   （モーダル内のトグルは L4）があっても、次回の再スキャン／セッション開始
+   でクリアされる。
+3. **却下の扱いは設計書の決定どおり**（親エージェントへの確認事項として
+   挙がっていたが、設計書 §2.3 の決定「却下は学習に記録せず、再スキャン
+   後も再表示しない（差分の同一性で抑止する）」で実装した）。却下は
+   `m_merge20LearnDismissed` に差分の同一性
+   （`op:begin[0]-end[0]:begin[1]-end[1]`）で覚え、再計算時にその差分には
+   候補を付けない。却下はセッションに保存しない（メモリ内のみ）。却下 UI
+   自体（コンテキストメニュー）は L3 の範囲のため、L2 では却下集合への
+   追加経路はまだない（集合は作られ、再計算で読まれるだけ）。
+4. **T-3-9 は解消**：`Rescan()` は UI スレッドからのみ呼ばれる。
+   `FlushAndRescan` の呼び出し元はすべて `CMergeDoc` のメンバ関数・
+   ビュー／コマンドハンドラ経由であり、バックグラウンドのフォルダ比較は
+   `CDiffContext` で行われ `CMergeDoc::Rescan` を呼ばない。S4 の分類フック
+   と同じ位置で候補計算を行うため、学習ストアへの比較スレッドからの
+   アクセスはない。
+5. **新規の単体テストなし**（L2 は MFC アダプタのため。S8 の
+   `Merge20SessionDoc.cpp` と同じ扱い）。候補計算・記録の中核
+   （`Match`／`Record`／閾値・訂正・出典管理）は L0 の 16 テストで検証済み
+   であり、CI でも全パスしている。方針値と `srcPanes` の往復写像は
+   `Merge20LearnDoc.cpp` の MFC アダプタ内にあり、GoogleTest からは
+   呼べないため、実機確認項目とした（§17.3）。
+6. **新規 UI 文字列・新規ファイルなし**。保存失敗の文言は L1 で追加済みの
+   `Merge20LearnSaveStore` の戻り値を使う。`.vcxproj`／`.filters`／
+   `Japanese.po`／`resource.h`／`Merge.rc` の変更なし。
+7. **3-way では記録も候補計算もしない**（設計書 §2.2・§3.2 は 2-way のみ。
+   R-3-17 と同じ判断）。3-way の `srcPanes`（0/1/2）には方針値の対応表が
+   ないため、`Merge20LearnRecordDiffJudgment` と
+   `Merge20LearnRefreshCandidates` は `m_nBuffers != 2` のとき何もしない。
+
+### 17.3 Windows 実機での確認手順（L2 受け入れテスト）
+
+L3 の候補提示 UI がまだ無いため、候補の存在は `Merge20Learn.json` の
+中身とデバッグ手段で確認する。CI 成果物の ZIP
+（`WinMerge-x64.zip`、実行 45674219728）を展開し、ポータブル版として
+使う（`WinMergeU.exe` と同じフォルダに `WinMergeU.ini` がある場合は
+ポータブル扱いになり、学習ファイルは `<progpath>\Merge20Learn\` にできる）。
+
+1. CI 成果物の ZIP を展開し、`WinMergeU.exe` が従来どおり起動すること
+   （回帰確認）。
+2. **学習ファイルの生成**：2-way のファイル対を開き、比較を開始
+   （マージセッションを開始）する。結果ペインで差分を 1 つ選び、キー
+   1（旧）または 2（新）でソースを選択する。`<progpath>\Merge20Learn\`
+   （ポータブル時）または `%APPDATA%\WinMerge\Merge20Learn\` に
+   `Merge20Learn.json` ができていること。ファイルを開き、記録した差分の
+   ルール（`key` が `EXACT|...`、`counts` に選んだ方針値が 1 件）が
+   入っていること。日本語（差分テキスト）が文字化けなく読めること
+   （UTF-8・BOM なし）。
+3. **学習データが増えること**：別の差分でもう 1 件判定すると、`counts`
+   の件数が増えること（同じパターンの差分なら同じルールの件数が増え、
+   違うパターンなら新しいルールが増える）。同じ差分で違う方針を選び直すと、
+   旧方針の件数が -1・新方針が +1 され、`lastStrat` が新しい方針になること
+   （訂正。L0 の単体テストでは検証済みだが、実機でも確認する）。
+4. **記録されない経路**：自動マージ（`/al` または自動マージボタン）で
+   解決された差分、一括承認（S5 未実装のため現状は「すべて選択」に相当する
+   操作）で解決された差分、セッション復元で復元された差分については、
+   `Merge20Learn.json` の件数が増えないこと。
+5. **再スキャン後の候補計算**（L3 の UI がまだ無いため、次の手順で確認する）：
+   手順 2〜3 で学習したパターンと同じ差分を含む別のファイル対を開き、
+   マージセッションを開始する。候補は画面にはまだ出ないが、デバッガで
+   `CMergeDoc::m_merge20LearnCandidates` を見ると、該当する差分インデックス
+   に候補（`strategy`／`via`＝`"exact"` または `"feat"`／`n`）が入っていること。
+   候補がある差分は未解決のまま残り、保存すると未解決の衝突セクションとして
+   書き出されること（候補が結果を変えていないことの確認）。
+6. **「不採用」の表現（T-3-8）**：旧欠落のみの差分で新側（キー 2）を選ぶと、
+   結果ペインに `<No Lines>` 行が 1 行表示され、保存時にその行が除外される
+   （旧行が結果に含まれない）こと。新追加のみの差分で旧側（キー 1）を選んだ
+   場合も同じこと。
+7. **OFF 時の停止**：ツール → オプション → 比較ページで「🎓 学習機能」の
+   チェックを外して OK を押す。その後で差分判定をしても
+   `Merge20Learn.json` の件数が増えないこと。ON に戻すと再び記録されること。
+   OFF にした直後に開いているマージ文書の候補マップは空になること
+   （デバッガで確認。次回の再スキャン／セッション開始でも空のまま）。
+8. 3-way のファイル対では、差分判定をしても `Merge20Learn.json` の件数が
+   増えないこと（L2 は 2-way のみ）。
+
+### 17.4 CI 結果（PR #14）
+
+- PR: https://github.com/askhim659/winmerge/pull/14（`merge20/phase3-l2` → `master`、6 コミット、未マージ）
+- 実行 45674219728（2026-11-25 18:20Z）：**success**。ジョブ build 139417301074。
+  - 成果物：`WinMerge-x64.zip` 26,158,937 バイト（ID 15052281110）、
+    `WinMerge-x64-Setup-x64.exe` 39,659,160 バイト（ID 15051991403）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：597 テスト全パス。Merge20Learn 新規 16 件すべて OK。
+    ログ中の "FAILED" は翻訳文字列 ID（`IDS_FILESAVE_FAILED` 等）で、
+    テスト失敗ではない。
+  - CI 失敗 0 回（初回実行で success）。
+  - `Merge20LearnDoc.cpp` が WinMergeU のビルド対象に含まれ、コンパイル
+    されていることをログで確認（`Merge20LearnDoc.obj` を生成）。

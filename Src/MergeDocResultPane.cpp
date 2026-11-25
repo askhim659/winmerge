@@ -28,6 +28,7 @@
 #include "Logger.h"
 #include "OptionsDiffOptions.h"
 #include "Merge20/Merge20SessionDoc.h"
+#include "Merge20/Merge20LearnDoc.h"
 #include "resource.h"
 #include <algorithm>
 
@@ -189,6 +190,10 @@ bool CMergeDoc::StartMergeSession(int nBasePane, bool bAutoMerge, bool bWithMess
 	// Merge20 (S8): restore the saved diff judgments for this file
 	// (from the folder compare sidecar, when a session was restored).
 	Merge20SessionRestoreMergeDoc(*this);
+	// Merge20 (Phase 3 L2, design section 3.2 (b)): compute the
+	// learning candidates after auto-merge and session restore, so
+	// only diffs still waiting for a decision get a candidate.
+	Merge20LearnRefreshCandidates(*this);
 	const String msg = _("Merge session started.") + (m_nBuffers == 2 ? _T("") : (_T("\n\n") + GetMergePaneRoles()));
 	if (bWithMessage)
 		ShowMessageBox(msg.c_str(), MB_OK | MB_ICONINFORMATION | MB_DONT_DISPLAY_AGAIN, IDS_MERGE_SESSION_STARTED);
@@ -1095,6 +1100,13 @@ void CMergeDoc::ResultChooseSources(int nDiff, const std::vector<int>& srcPanes,
 			m_resultSegments[i].nStartLine += nDelta;
 	}
 
+	// Merge20 (Phase 3 L2, design section 3.2): a resolved difference
+	// no longer has a learning candidate. An empty selection goes back
+	// to Unresolved/Conflict, so its candidate stays (the diff is
+	// still waiting for a decision).
+	if (seg.state == ResultSegmentState::Chosen || seg.state == ResultSegmentState::Auto)
+		m_merge20LearnCandidates.erase(nDiff);
+
 	if (m_pMergeResultView != nullptr && m_pMergeResultView->GetSafeHwnd() != nullptr)
 		m_pMergeResultView->Invalidate();
 }
@@ -1603,6 +1615,30 @@ void CMergeDoc::OnMergeChooseSource(UINT nID)
 	}
 
 	m_pMergeResultView->ShowCursor();
+
+	// Merge20 (Phase 3 L2, design section 3.1): record the explicit
+	// judgments made above. This is the ONLY record entry point:
+	// batch approval (S5), auto-merge and session restore (S8) go
+	// through ResultChooseSources directly and are never recorded.
+	// The store is saved once per command; a failed save is reported
+	// (spec section 7). Candidates of all open docs are then
+	// recomputed, so the just-judged diffs lose their candidate and
+	// other diffs can gain one from the new rule.
+	bool bLearnRecorded = false;
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		if (Merge20LearnRecordDiffJudgment(*this, nDiff))
+			bLearnRecorded = true;
+	}
+	if (bLearnRecorded)
+	{
+		String errStr;
+		if (!Merge20LearnSaveStore(errStr))
+			ShowMessageBox(errStr, MB_OK | MB_ICONWARNING);
+		Merge20LearnRefreshAllOpenDocs();
+	}
 }
 
 void CMergeDoc::OnUpdateMergeChooseSource(CCmdUI* pCmdUI)

@@ -27,6 +27,8 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
+#include "Merge20/Merge20Learn.h"
 
 class CLineFilterHelperMenu;
 class CMainFrame;
@@ -371,6 +373,12 @@ public:
 	void ResultChooseSources(int nDiff, const std::vector<int>& srcPanes, bool bGroupWithPrevious = false);
 	/** @brief Merge20 (S8): set the resolution state of one result segment (used when restoring a saved Auto judgment: ResultChooseSources marks it Chosen). */
 	void Merge20SetResultSegmentState(int nDiff, ResultSegmentState state);
+	/** @brief Merge20 (Phase 3 L2): learning candidates for this doc (diff index -> candidate). Candidates never touch m_resultSegments: a diff with a candidate stays Unresolved/Conflict until a person accepts it (spec section 4(c)). */
+	std::map<int, Merge20LearnCandidate>& GetMerge20LearnCandidates() { return m_merge20LearnCandidates; }
+	/** @brief Merge20 (Phase 3 L2): read-only view of the learning candidates. */
+	const std::map<int, Merge20LearnCandidate>& GetMerge20LearnCandidates() const { return m_merge20LearnCandidates; }
+	/** @brief Merge20 (Phase 3 L2): identities of diffs whose candidate was dismissed (dismissed diffs get no candidate when candidates are recomputed; the dismiss UI is L3). */
+	const std::set<String>& GetMerge20LearnDismissed() const { return m_merge20LearnDismissed; }
 	void ResultToggleSource(int nDiff, int srcPane, bool bGroupWithPrevious = false);
 	void ResultChooseAllConflicts(int srcPane);
 	bool SaveMergeResult(bool bSaveAs);
@@ -399,6 +407,8 @@ private:
 	CMergeResultView* m_pMergeResultView; /**< Merge result view, or nullptr */
 	std::vector<MergeResultSegment> m_resultSegments; /**< Segments covering the result buffer */
 	std::vector<int> m_resultDiffToSegment; /**< diff index -> segment index or -1 */
+	std::map<int, Merge20LearnCandidate> m_merge20LearnCandidates; /**< Merge20 (Phase 3 L2): learning candidate per diff index, kept apart from m_resultSegments so a candidate never changes the result (spec section 4(c)) */
+	std::set<String> m_merge20LearnDismissed; /**< Merge20 (Phase 3 L2): dismissed diff identities ("op:begin0-end0:begin1-end1"); a dismissed diff gets no candidate on recompute */
 	std::map<int, std::vector<MergeResultSegment>> m_resultSegUndo; /**< table before undo group (key: group start) */
 	std::map<int, std::vector<MergeResultSegment>> m_resultSegRedo; /**< table after undo group (key: group start) */
 	bool m_bResultBuilt; /**< Result buffer has been generated */
