@@ -1,0 +1,22 @@
+## Merge20 file filter for WinMerge
+## Excludes hidden files and hidden folders (names starting with a dot),
+## matching the folder-loading rule of the Merge20 tool
+## ("マージ支援20号": dot-files and dot-folders are not loaded).
+name: Merge20 (Exclude hidden files)
+desc: Merge20: exclude hidden files and folders (names starting with a dot)
+
+## This is an inclusive (loose) filter
+## (it lets through everything not specified)
+def: include
+
+## Filters for filenames begin with f:
+## Filters for directories begin with d:
+## (Inline comments begin with " ##" and extend to the end of the line)
+
+## Hidden folders: any folder whose name starts with a dot
+## (e.g. .git, .svn, .vs). The pattern is a regular expression tested
+## against the folder path: a backslash, a dot, then the folder name.
+d: \\\.[^\\]*$ ## Hidden folder
+
+## Hidden files: any file whose name starts with a dot (e.g. .gitignore)
+f: \\\.[^\\]*$ ## Hidden file

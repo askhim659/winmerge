@@ -16,10 +16,13 @@ namespace Options { namespace DiffOptions {
  */
 void Init(COptionsMgr *pOptionsMgr)
 {
-	pOptionsMgr->InitOption(OPT_CMP_IGNORE_WHITESPACE, (int)0, 0, 2);
+	pOptionsMgr->InitOption(OPT_CMP_IGNORE_WHITESPACE, (int)WHITESPACE_IGNORE_CHANGE, 0, 2);
 	pOptionsMgr->InitOption(OPT_CMP_IGNORE_BLANKLINES, false);
 	pOptionsMgr->InitOption(OPT_CMP_FILTER_COMMENTLINES, false);
-	pOptionsMgr->InitOption(OPT_CMP_IGNORE_CASE, false);
+	// Merge20: whitespace and case differences are frequent in merge work,
+	// so they are ignored by default (spec 3.1). WHITESPACE_IGNORE_CHANGE
+	// matches the HTML tool ("abc def" == "abc    def", but not "abcdef").
+	pOptionsMgr->InitOption(OPT_CMP_IGNORE_CASE, true);
 	pOptionsMgr->InitOption(OPT_CMP_IGNORE_NUMBERS, false);
 	pOptionsMgr->InitOption(OPT_CMP_IGNORE_EOL, false);
 	pOptionsMgr->InitOption(OPT_CMP_DIFF_ALGORITHM, (int)0, 0, 4);

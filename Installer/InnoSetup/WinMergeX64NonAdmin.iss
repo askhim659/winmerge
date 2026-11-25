@@ -409,6 +409,7 @@ Name: {app}\Filters\Merge_GnuC_loose.flt; Type: Files; Check: not IsComponentSel
 Name: {app}\Filters\Merge_VC_loose.flt; Type: Files; Check: not IsComponentSelected('Filters')
 Name: {app}\Filters\Merge_VB_loose.flt; Type: Files; Check: not IsComponentSelected('Filters')
 Name: {app}\Filters\SourceControl.flt; Type: Files; Check: not IsComponentSelected('Filters')
+Name: {app}\Filters\Merge20.flt; Type: Files; Check: not IsComponentSelected('Filters')
 Name: {app}\Filters\Symbian.flt; Type: Files; Check: not IsComponentSelected('Filters')
 Name: {app}\Filters\XML_html.flt; Type: Files; Check: not IsComponentSelected('Filters')
 Name: {app}\Filters\FileFilter.tmpl; Type: Files; Check: not IsComponentSelected('Filters')
@@ -607,6 +608,7 @@ Source: ..\..\Plugins\dlls\CompareMSPowerPointFiles.sct; DestDir: {app}\MergePlu
 Source: ..\..\Plugins\dlls\CompareMSVisioFiles.sct; DestDir: {app}\MergePlugins; Flags: IgnoreVersion CompareTimeStamp; Components: Plugins
 Source: ..\..\Plugins\dlls\ApplyPatch.sct; DestDir: {app}\MergePlugins; Flags: IgnoreVersion CompareTimeStamp; Components: Plugins
 Source: ..\..\Plugins\dlls\PrediffLineFilter.sct; DestDir: {app}\MergePlugins; Flags: IgnoreVersion CompareTimeStamp; Components: Plugins
+Source: ..\..\Plugins\dlls\Merge20Exclude.sct; DestDir: {app}\MergePlugins; Flags: IgnoreVersion CompareTimeStamp; Components: Plugins
 Source: ..\..\Plugins\dlls\IgnoreLeadingLineNumbers.sct; DestDir: {app}\MergePlugins; Flags: ignoreversion replacesameversion; Components: Plugins
 Source: ..\..\Plugins\dlls\AI.sct; DestDir: {app}\MergePlugins; Flags: ignoreversion replacesameversion; Components: Plugins
 Source: ..\..\Plugins\dlls\{#ARCH}\IgnoreColumns.dll; DestDir: {app}\MergePlugins; Flags: ignoreversion replacesameversion; Components: Plugins
