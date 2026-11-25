@@ -10938,12 +10938,12 @@ msgstr "ON/OFF切替"
 msgid "Sources (per import)"
 msgstr "出典（取込単位）"
 
-#. Merge20 (L4): learning dialog delete-source button (Merge.rc)
+#. Merge20 (L5): learning dialog delete-sources button, plural in L5 (Merge.rc)
 #: Src/Merge.rc
-msgid "Delete selected source"
+msgid "Delete selected sources"
 msgstr "選択したソースを削除"
 
-#. Merge20 (L4): learning dialog merged-export button, disabled until L5 (Merge.rc)
+#. Merge20 (L4): learning dialog merged-export button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Export merged sources"
 msgstr "🔗 選択したソースを統合して出力"
@@ -10953,22 +10953,23 @@ msgstr "🔗 選択したソースを統合して出力"
 msgid "Learned rules (top 50)"
 msgstr "学習したルール（上位50件）"
 
-#. Merge20 (L4): learning dialog sharing notice (Merge.rc)
+#. Merge20 (L4): learning dialog sharing notice (Merge.rc, also the export confirmation in L5)
 #: Src/Merge.rc
+#: Src/Merge20/Merge20LearnDlg.cpp
 msgid "Learning data contains source code fragments. Share only through approved internal channels. Do not take it outside the company or save it to a personal cloud."
 msgstr "学習データにはソースコードの断片が含まれます。共有はチーム内の承認された経路で行ってください。社外への持ち出し、個人クラウドへの保存は禁止です。"
 
-#. Merge20 (L4): learning dialog export button, disabled until L5 (Merge.rc)
+#. Merge20 (L4): learning dialog export button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Export learning data (JSON)"
 msgstr "📤 学習データを出力（JSON）"
 
-#. Merge20 (L4): learning dialog import button, disabled until L5 (Merge.rc)
+#. Merge20 (L4): learning dialog import button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Import learning data"
 msgstr "📥 学習データを取込（蓄積型）"
 
-#. Merge20 (L4): learning dialog clear button, disabled until L5 (Merge.rc)
+#. Merge20 (L4): learning dialog clear button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Clear learning data"
 msgstr "🗑️ 学習データをクリア"
@@ -11027,3 +11028,58 @@ msgstr "[%1] %2 - %3（%4）"
 #: Src/Merge20/Merge20LearnDlg.cpp
 msgid "Delete the learning data of \"%1\"? (Only this source's contribution is deleted.)"
 msgstr "「%1」の学習データを削除しますか？（この出典の分だけ削除されます）"
+
+#. Merge20 (L5): learning dialog multi-source delete confirmation (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Delete the learning data of %1 sources? (Only these sources' contributions are deleted.)"
+msgstr "%1件のソースの学習データを削除しますか？（これらの出典の分だけ削除されます）"
+
+#. Merge20 (L5): learning dialog export confirmation, after the sharing notice (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Export the learning data to:\n%1"
+msgstr "学習データを次のファイルに出力しますか：\n%1"
+
+#. Merge20 (L5): learning dialog export failure (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Could not export the learning data: %1"
+msgstr "学習データを出力できませんでした：%1"
+
+#. Merge20 (L5): learning dialog export success (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Exported the learning data (%1 rules) to:\n%2"
+msgstr "学習データを出力しました（%1件のルール）：\n%2"
+
+#. Merge20 (L5): learning dialog import failure (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Could not import the learning data: %1"
+msgstr "学習データを取込めませんでした：%1"
+
+#. Merge20 (L5): learning dialog import success, HTML importLearn toast (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Imported the learning data (%1: %2 new, %3 merged)"
+msgstr "学習データを取込ました（%1：新規%2件・合算%3件）"
+
+#. Merge20 (L5): learning dialog import skipped-rules note (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Skipped %1 rules (invalid format)."
+msgstr "%1件のルールをスキップしました（形式が正しくありません）。"
+
+#. Merge20 (L5): learning dialog merged-export success (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Exported the merged learning data (%1 rules from %2 sources) to:\n%3"
+msgstr "統合した学習データを出力しました（%2ソース・%1件のルール）：\n%3"
+
+#. Merge20 (L5): learning dialog merged-export with no rules (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "No learning data in the selected sources."
+msgstr "選択したソースに学習データがありません。"
+
+#. Merge20 (L5): learning dialog clear confirmation, HTML clearLearn (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Clear all learning data? (JSON files already shared with other workers are not affected.)"
+msgstr "学習データをすべてクリアしますか？（他の作業者と共有したJSONには影響しません）"
+
+#. Merge20 (L5): learning dialog clear success (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Cleared the learning data."
+msgstr "学習データをクリアしました"
