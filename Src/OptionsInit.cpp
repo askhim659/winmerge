@@ -214,6 +214,14 @@ void Init(COptionsMgr *pOptions)
 
 	pOptions->InitOption(OPT_MERGE_RESULT_PANE_ENABLED, true);
 
+	// Merge20 (S4): default risk keywords. Written with escapes so
+	// this file stays ASCII: \x7a0e tax, \x984d amount, \x7387 rate,
+	// \x7aef\x6570 rounding (as a word), \x91d1\x984d amount of money,
+	// \x7a0e\x984d tax amount, \x4e38\x3081 rounding (as a verb),
+	// \x56db\x6368\x4e94\x5165 round-half-up, plus SQL.
+	pOptions->InitOption(OPT_MERGE20_RISK_KEYWORDS,
+		_T("\x7a0e;\x984d;\x7387;\x7aef\x6570;\x91d1\x984d;\x7a0e\x984d;\x4e38\x3081;\x56db\x6368\x4e94\x5165;SQL"));
+
 	pOptions->InitOption(OPT_PROJECTS_PATH, _T(""));
 	pOptions->InitOption(OPT_USE_SYSTEM_TEMP_PATH, true);
 	pOptions->InitOption(OPT_CUSTOM_TEMP_PATH, _T(""));
