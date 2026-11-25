@@ -689,8 +689,8 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
 
 ### 13.4 CI 結果と修正（PR #10）
 
-- PR #10（`merge20/phase2-s6`、20 コミット：実装 19＋修正 1＋
-  本記録 1）。CI 実行 45630443647 は failure：`DirView.cpp(3397,3)`
+- PR #10（`merge20/phase2-s6`、21 コミット：実装 18＋修正 1＋
+  記録 2）。CI 実行 45630443647 は failure：`DirView.cpp(3397,3)`
   で error C2665（`AfxMessageBox` に合うオーバーロードがない）。
   原因は `_()` が `String` を返すのに `.c_str()` なしで
   `AfxMessageBox` に渡したこと（既存コードは `_(...).c_str()` と
