@@ -1,0 +1,485 @@
+<scriptlet>
+<implements type="Automation" id="dispatcher">
+  <property name="PluginEvent">
+    <get/>
+  </property>
+  <property name="PluginDescription">
+    <get/>
+  </property>
+  <property name="PluginFileFilters">
+    <get/>
+  </property>
+  <property name="PluginIsAutomatic">
+    <get/>
+  </property>
+  <property name="PluginExtendedProperties">
+    <get/>
+  </property>
+  <method name="PluginOnEvent"/>
+  <method name="PrediffBufferW"/>
+  <method name="ShowSettingsDialog"/>
+</implements>
+
+<script language="JScript">
+
+/*
+    Merge20 Exclude Words prediffer plugin for WinMerge.
+    (Merge20 is the fork of WinMerge built from the "Merge Shien 20-go" HTML tool.)
+
+    Purpose:
+      - Exclude lines matching an exclude-word rule, so they do not
+        produce a difference. In a plain (non-RegExp) rule, "%" stands
+        for any (possibly empty) string, e.g. "--1.0.8%" excludes
+        "--1.0.813.000" and "--1.0.800" (the HTML tool's exclude words).
+      - Ignore a version number written on the 2nd line of a file
+        (the HTML tool's "2nd-line version ignore", default ON).
+
+    How it works (BUFFER_PREDIFF): WinMerge runs this plugin on a copy
+    of each file before diffing. An excluded line is replaced by an empty
+    line, so a line present on both sides stops being a difference. The
+    line count is kept: a prediffer must not add/delete/move lines, so a
+    line that exists only on one side may still show up as an empty-line
+    difference. Counting the excluded lines per file (the HTML tool's
+    excluded-line count display) needs the main program and is not done here.
+
+    Settings are stored through mergeApp.GetOption/SaveOption under
+    "Plugins\Merge20Exclude.sct/": Count, Enabled<i>, IgnoreCase<i>,
+    UseRegExp<i>, Pattern<i> (i = 1..Count), and IgnoreL2 (bool).
+
+    Copyright (C) 2026 Merge20 contributors
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+*/
+
+var REGKEY_PATH = "Plugins\\Merge20Exclude.sct/";
+var fso = new ActiveXObject("Scripting.FileSystemObject");
+var wsh = new ActiveXObject("WScript.Shell");
+var mergeApp;
+
+// Default: ignore a 2nd-line version number (the HTML tool's default ON).
+var DEFAULT_IGNORE_L2 = true;
+
+function regRead(Key, DefaultValue) {
+  return mergeApp.GetOption(Key, DefaultValue);
+}
+
+function regWrite(Key, Value, TypeNm) {
+  mergeApp.SaveOption(Key, (TypeNm === "REG_DWORD") ? parseInt(Value, 10) : String(Value));
+}
+
+function get_PluginEvent() {
+  return "BUFFER_PREDIFF";
+}
+
+function get_PluginDescription() {
+  return "Merge20 Exclude Words (% wildcard, ignore 2nd-line version)";
+}
+
+function get_PluginFileFilters() {
+  // "." matches every file path: this is the same value WinMerge itself
+  // uses when a plugin has no PluginFileFilters property. The plugin
+  // therefore applies to all text files; each rule decides whether a
+  // line is excluded.
+  return ".";
+}
+
+function get_PluginIsAutomatic() {
+  return true;
+}
+
+function get_PluginExtendedProperties() {
+  return "MenuCaption=Apply Merge20 Exclude Words";
+}
+
+function PluginOnEvent(eventType, obj) {
+  mergeApp = obj;
+}
+
+/* ------------------------------------------------------------------ */
+/* Pure logic: no COM dependency, so it can be unit-tested with Node. */
+/* ------------------------------------------------------------------ */
+
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Plain-match rule: "%" stands for any (possibly empty) string, like the
+// HTML tool's exclude words ("--1.0.8%" excludes "--1.0.813.000").
+// The match is a substring search, i.e. the pattern is not anchored.
+function wildcardToRegExp(pattern, ignoreCase) {
+  var parts = pattern.split("%");
+  for (var i = 0; i < parts.length; i++)
+    parts[i] = escapeRegExp(parts[i]);
+  return new RegExp(parts.join(".*"), ignoreCase ? "i" : "");
+}
+
+// The HTML tool's isL2Ver(): the 2nd line looks like a version number
+// when it is non-empty, contains a digit, and contains no code keyword.
+var CODE_WORDS = /\b(package|import|public|private|class|void|int|long|String|return|if|for)\b/;
+function isVersionLine2(line) {
+  if (!line)
+    return false;
+  var s = line.replace(/^\s+|\s+$/g, "");
+  if (s === "")
+    return false;
+  if (!/\d/.test(s))
+    return false;
+  if (CODE_WORDS.test(s))
+    return false;
+  return true;
+}
+
+function ruleMatchesLine(line, pattern, useRegExp, ignoreCase) {
+  if (pattern === "")
+    return false;
+  try {
+    if (useRegExp)
+      return new RegExp(pattern, ignoreCase ? "i" : "").test(line);
+    return wildcardToRegExp(pattern, ignoreCase).test(line);
+  } catch (e) {
+    return false;
+  }
+}
+
+function loadRules() {
+  var rules = [];
+  var count = regRead(REGKEY_PATH + "Count", 0);
+  for (var i = 1; i <= count; i++) {
+    rules.push({
+      enabled: !!regRead(REGKEY_PATH + "Enabled" + i, true),
+      ignoreCase: !!regRead(REGKEY_PATH + "IgnoreCase" + i, false),
+      useRegExp: !!regRead(REGKEY_PATH + "UseRegExp" + i, false),
+      pattern: String(regRead(REGKEY_PATH + "Pattern" + i, ""))
+    });
+  }
+  return rules;
+}
+
+// Replace every excluded line by an empty line. The line count is kept
+// (a prediffer must not add/delete/move lines). See the header comment
+// for what this can and cannot hide.
+function processText(pText, rules, ignoreL2) {
+  var m = pText.match(/\r\n|\n|\r/);
+  var eol = (m != null) ? m[0] : "\r\n";
+  var lines = pText.split(eol);
+  var changed = false;
+  for (var j = 0; j < lines.length; j++) {
+    if (j === 1 && ignoreL2 && isVersionLine2(lines[j])) {
+      lines[j] = "";
+      changed = true;
+      continue;
+    }
+    for (var k = 0; k < rules.length; k++) {
+      var r = rules[k];
+      if (r.enabled && ruleMatchesLine(lines[j], r.pattern, r.useRegExp, r.ignoreCase)) {
+        lines[j] = "";
+        changed = true;
+        break;
+      }
+    }
+  }
+  return { text: changed ? lines.join(eol) : pText, changed: changed };
+}
+
+function PrediffBufferW(pText, pSize, pbChanged) {
+  var result = new ActiveXObject("Scripting.Dictionary");
+  if (pText == "") {
+    result.Add(0, true);
+    result.Add(1, "");
+    result.Add(2, 0);
+    result.Add(3, false);
+    return result.Items();
+  }
+  var rules = loadRules();
+  var ignoreL2 = !!regRead(REGKEY_PATH + "IgnoreL2", DEFAULT_IGNORE_L2);
+  var out = processText(pText, rules, ignoreL2);
+  result.Add(0, true);
+  result.Add(1, out.text);
+  result.Add(2, out.text.length);
+  result.Add(3, out.changed);
+  return result.Items();
+}
+
+function translate(text) {
+  var re = /\${([^}]+)}/g;
+  var matches;
+  while ((matches = re.exec(text)) != null) {
+    text = text.replace(matches[0], mergeApp.Translate(matches[1]));
+  }
+  return text;
+}
+
+function ShowSettingsDialog() {
+  var tname = fso.BuildPath(fso.GetSpecialFolder(2), fso.GetTempName() + ".hta");
+  var xmlfile = fso.BuildPath(fso.GetSpecialFolder(2), fso.GetTempName() + ".xml");
+  var tfile = fso.CreateTextFile(tname, true, true);
+  tfile.Write(translate(getResource("dialog1")));
+  tfile.Close();
+  exportSettingsToXMLFile(xmlfile);
+  var mshta = wsh.ExpandEnvironmentStrings("%SystemRoot%\\System32\\mshta.exe");
+  if (!fso.FileExists(mshta)) {
+    mshta = wsh.ExpandEnvironmentStrings("%SystemRoot%\\SysWOW64\\mshta.exe");
+  }
+  run(wsh, "\"" + mshta + "\" \"" + tname + "\"  \"" + xmlfile + "\"");
+  importSettingsFromXMLFile(xmlfile);
+  fso.DeleteFile(tname);
+  fso.DeleteFile(xmlfile);
+}
+
+function run(sh, cmd) {
+  sh.Run(cmd, 1, true);
+}
+
+function exportSettingsToXMLFile(filepath) {
+  var key_defvalues = {"Count" : 0, "IgnoreL2" : true};
+  var count = regRead(REGKEY_PATH + "Count", 0);
+  for (var i = 1; i < count + 1; i++) {
+    key_defvalues["Enabled" + i] = true;
+    key_defvalues["IgnoreCase" + i] = false;
+    key_defvalues["UseRegExp" + i] = false;
+    key_defvalues["Pattern" + i] = "";
+  }
+  var doc = new ActiveXObject("MSXML2.DOMDocument");
+  var fso = new ActiveXObject("Scripting.FileSystemObject");
+  var ts = fso.OpenTextFile(filepath, 2, true, -1);
+  var root = doc.createElement("properties");
+  for (var key in key_defvalues) {
+    var el = doc.createElement("property");
+    var val = regRead(REGKEY_PATH + key, key_defvalues[key]);
+    var cdata = doc.createCDATASection(val);
+    el.appendChild(cdata);
+    el.setAttribute("name", REGKEY_PATH + key);
+    el.setAttribute("type", typeof val);
+    root.appendChild(el);
+  }
+  doc.appendChild(root);
+  ts.Write(doc.xml);
+  ts.Close();
+}
+
+function importSettingsFromXMLFile(filepath) {
+  var fso = new ActiveXObject("Scripting.FileSystemObject");
+  var ts = fso.OpenTextFile(filepath, 1, true, -1);
+  var xml = ts.ReadAll();
+  var doc = new ActiveXObject("MSXML2.DOMDocument");
+  doc.async = false;
+  doc.loadXML(xml);
+  ts.Close();
+  var nodes = doc.documentElement.childNodes;
+  for (var i = 0; i < nodes.length; i++) {
+    regWrite(nodes[i].getAttribute("name"), nodes[i].text, (nodes[i].getAttribute("type") === "string") ? "REG_SZ" : "REG_DWORD");
+  }
+}
+
+</script>
+
+<resource id="dialog1">
+<![CDATA[
+<!DOCTYPE html>
+<html>
+  <head>
+    <HTA:APPLICATION ID="objHTA">
+    <title>${Merge20Exclude.sct WinMerge Plugin Options}</title>
+    <meta content="text/html" charset="UTF-16">
+    <style>
+    body { background-color: #f2f2f2; font-family: Arial, sans-serif; }
+    .container { margin: 2em; }
+    ul { list-style-type: none; margin: 0; padding: 0; }
+    li ul li { padding-left: 2em }
+    .btn-container-top { margin-bottom: 0.5em; text-align: left; }
+    .btn-container { margin-top: 1.5em; text-align: right; }
+    input[type="button"] { border: none; padding: 0.6em 2em; height: 2.5em; text-align: center; }
+    .btn { color: #fff; background-color: #0c5; }
+    .btn:hover { background-color: #0b4; }
+    .btn-ok { color: #fff; background-color: #05c; }
+    .btn-ok:hover { background-color: #04b; }
+    .btn-cancel { color: #333; background-color: #ddd; }
+    .btn-cancel:hover { background-color: #ccc; }
+    #table1 { border-collapse: collapse; border: 1px solid #ccc; }
+    .hint { font-size: 0.85em; color: #555; margin-top: 0.8em; }
+    </style>
+    <script type="text/javascript">
+      var REGKEY_PATH = "Plugins\\Merge20Exclude.sct/";
+      var xmlFilePath;
+      var settings = {};
+
+      function regRead(key, defaultValue) {
+        return settings.hasOwnProperty(key) ? settings[key] : defaultValue;
+      }
+
+      function regWrite(key, value, type) {
+        settings[key] = (type === "REG_DWORD") ? Number(value) : String(value);
+      }
+
+      function loadSettingsFromXMLFile(filepath) {
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        var ts = fso.OpenTextFile(filepath, 1, true, -1);
+        var xml = ts.ReadAll();
+        var doc = new ActiveXObject("MSXML2.DOMDocument");
+        doc.async = false;
+        doc.loadXML(xml);
+        ts.Close();
+        var nodes = doc.documentElement.childNodes;
+        for (var i = 0; i < nodes.length; i++) {
+          regWrite(nodes[i].getAttribute("name"), nodes[i].text, (nodes[i].getAttribute("type") === "string") ? "REG_SZ" : "REG_DWORD");
+        }
+        return settings;
+      }
+
+      function saveSettingsToXMLFile(filepath, settings) {
+        var doc = new ActiveXObject("MSXML2.DOMDocument");
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        var ts = fso.OpenTextFile(filepath, 2, true, -1);
+        var root = doc.createElement("properties");
+        for (var key in settings) {
+          if (settings.hasOwnProperty(key)) {
+            var el = doc.createElement("property");
+            var val = settings[key];
+            var cdata = doc.createCDATASection(val);
+            el.appendChild(cdata);
+            el.setAttribute("name", key);
+            el.setAttribute("type", typeof val);
+            root.appendChild(el);
+          }
+        }
+        doc.appendChild(root);
+        ts.Write(doc.xml);
+        ts.Close();
+      }
+
+      function insertRow(r) {
+        if (r == -1) {
+          r = table1.rows.length;
+        }
+        var newRow = table1.insertRow(r);
+        newRow.insertCell(-1).innerHTML = '<input type="checkbox" name="chkEnabled" ' + (regRead(REGKEY_PATH + "Enabled" + r, true) ? 'checked' : '') + ' />';
+        newRow.insertCell(-1).innerHTML = '<input type="checkbox" name="chkIgnoreCase" ' + (regRead(REGKEY_PATH + "IgnoreCase" + r, false) ? 'checked' : '') + ' />';
+        newRow.insertCell(-1).innerHTML = '<input type="checkbox" name="chkUseRegExp" ' + (regRead(REGKEY_PATH + "UseRegExp" + r, false) ? 'checked' : '') + ' />';
+        newRow.insertCell(-1).innerHTML = '<input class="textbox" type="text" name="txtPattern" value="" />'
+        newRow.cells[3].childNodes[0].value = regRead(REGKEY_PATH + "Pattern" + r,  "");
+      }
+
+      function deleteRow(r) {
+        if (table1.rows.length > 2) {
+          table1.deleteRow(r);
+        }
+      }
+
+      function checkRegExp() {
+        var msg = "";
+        for (var i = 0; i < table1.rows.length - 1; i++) {
+          if (document.getElementsByName("chkUseRegExp")[i].checked) {
+            try {
+              var re = new RegExp(document.getElementsByName("txtPattern")[i].value);
+            } catch (e) {
+              msg += "RegExp Pattern" + (i + 1) + ": error: " + e.message + "\r\n";
+            }
+          }
+        }
+        if (msg !== "") {
+          throw msg;
+        }
+      }
+
+      function onload() {
+        xmlFilePath = objHTA.commandLine.split('"')[3];
+        settings = loadSettingsFromXMLFile(xmlFilePath);
+
+        var dpi = window.screen.deviceXDPI;
+        var w = 800 * dpi / 96, h = 600 * dpi / 96;
+        window.resizeTo(w, h);
+        window.moveTo((screen.width - w) / 2, (screen.height - h) / 2);
+
+        document.getElementById("chkIgnoreL2").checked = regRead(REGKEY_PATH + "IgnoreL2", true);
+        var count = regRead(REGKEY_PATH + "Count", 1);
+        for (var i = 0; i < count; i++) {
+          insertRow(-1);
+        }
+      }
+
+      function btnOk_onclick() {
+        try {
+          checkRegExp();
+        } catch (e) {
+          alert(e);
+          return;
+        }
+        regWrite(REGKEY_PATH + "IgnoreL2", document.getElementById("chkIgnoreL2").checked, "REG_DWORD");
+        regWrite(REGKEY_PATH + "Count", table1.rows.length - 1, "REG_DWORD");
+        for (var i = 0; i < table1.rows.length - 1; i++) {
+          regWrite(REGKEY_PATH + "Enabled" + (i + 1), document.getElementsByName("chkEnabled")[i].checked, "REG_DWORD");
+          regWrite(REGKEY_PATH + "IgnoreCase" + (i + 1), document.getElementsByName("chkIgnoreCase")[i].checked, "REG_DWORD");
+          regWrite(REGKEY_PATH + "UseRegExp" + (i + 1), document.getElementsByName("chkUseRegExp")[i].checked, "REG_DWORD");
+          regWrite(REGKEY_PATH + "Pattern" + (i + 1), document.getElementsByName("txtPattern")[i].value, "REG_SZ");
+        }
+
+        saveSettingsToXMLFile(xmlFilePath, settings);
+
+        window.close();
+      }
+
+      function btnCancel_onclick() {
+        saveSettingsToXMLFile(xmlFilePath, {});
+
+        window.close();
+      }
+
+    </script>
+  </head>
+  <body onload="onload();">
+    <div class="container">
+      <div>
+        <label><input type="checkbox" id="chkIgnoreL2" /> Ignore 2nd line version number</label>
+      </div>
+      <div class="btn-container-top">
+        <ul>
+          <li>
+            <input type="button" class="btn" value="${Add}" onclick="insertRow(-1)" />
+            <input type="button" class="btn" value="${Delete}" onclick="deleteRow(-1)" />
+          </li>
+        </ul>
+      </div>
+      <ul>
+        <li>
+          <table id="table1" border="1">
+            <tr>
+              <th>
+                <label>${Enabled}</label>
+              </th>
+              <th>
+                <label>${Ignore Case}</label>
+              </th>
+              <th>
+                <label>${Use RegExp}</label>
+              </th>
+              <th>
+                <label>${Find what}</label>
+              </th>
+            </tr>
+          </table>
+        </li>
+      </ul>
+      <div class="hint">In a plain (non-RegExp) pattern, % matches any text. Example: --1.0.8% excludes --1.0.813.000 and --1.0.800. Excluded lines are blanked out before diffing; the line count is kept.</div>
+      <div class="btn-container">
+        <input type="button" class="btn-ok" onclick="btnOk_onclick();" value="${OK}" />
+        <input type="button" class="btn-cancel" onclick="btnCancel_onclick();" value="${Cancel}" />
+      </div>
+    </div>
+  </body>
+</html>
+]]>
+</resource>
+
+</scriptlet>

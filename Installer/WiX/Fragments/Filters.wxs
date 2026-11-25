@@ -73,6 +73,13 @@
           Vital="no" />
       </Component>
       
+      <Component Id="Merge20" Guid="*" Win64="$(var.Win64)">
+        <File Id="Merge20FLT" 
+          Name="Merge20.flt" 
+          Source="..\..\Filters\Merge20.flt" 
+          Vital="no" />
+      </Component>
+      
       <Component Id="SourceControl" Guid="*" Win64="$(var.Win64)">
         <File Id="SourceControlFLT" 
           Name="SourceControl.flt" 

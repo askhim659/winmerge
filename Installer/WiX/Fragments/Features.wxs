@@ -42,6 +42,7 @@
         <ComponentRef Id="Merge_GnuC_loose" />
         <ComponentRef Id="Merge_VB_loose" />
         <ComponentRef Id="Merge_VC_loose" />
+        <ComponentRef Id="Merge20" />
         <ComponentRef Id="SourceControl" />
         <ComponentRef Id="Symbian" />
         <ComponentRef Id="XML_html" />
