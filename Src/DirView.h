@@ -370,6 +370,8 @@ protected:
 	afx_msg void OnMerge20BatchCheck();
 	// Merge20 (S6): diff-list CSV export
 	afx_msg void OnMerge20CsvExport();
+	// Merge20 (Phase 3 L4): learning dialog
+	afx_msg void OnMerge20Learn();
 	// Merge20 (S8): session save/restore, audit-memo editor
 	afx_msg void OnMerge20SessionSave();
 	afx_msg void OnMerge20SessionRestore();

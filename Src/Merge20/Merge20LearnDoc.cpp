@@ -592,6 +592,20 @@ void Merge20LearnRefreshCandidates(CMergeDoc& doc)
 		doc.GetMergeResultView()->Invalidate();
 }
 
+int Merge20LearnCountOpenCandidates()
+{
+	int total = 0;
+	CMainFrame* pMainFrame = dynamic_cast<CMainFrame*>(AfxGetMainWnd());
+	if (pMainFrame == nullptr)
+		return 0;
+	for (IMergeDoc* pDoc : pMainFrame->GetAllMergeDocuments())
+	{
+		if (CMergeDoc* pMergeDoc = dynamic_cast<CMergeDoc*>(pDoc))
+			total += static_cast<int>(pMergeDoc->GetMerge20LearnCandidates().size());
+	}
+	return total;
+}
+
 void Merge20LearnRefreshAllOpenDocs()
 {
 	CMainFrame* pMainFrame = dynamic_cast<CMainFrame*>(AfxGetMainWnd());

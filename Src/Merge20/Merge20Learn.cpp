@@ -537,6 +537,14 @@ namespace
 
 } // namespace
 
+bool Merge20LearnDominant(const Merge20LearnRule& rule,
+	Merge20LearnStrategy& strat, int& best, int& total)
+{
+	// The matcher (Merge20LearnStore::Match) and the learning dialog
+	// (L4) share this one implementation (HTML `learnDominant`).
+	return DominantRule(rule, strat, best, total);
+}
+
 String Merge20LearnStrategyName(Merge20LearnStrategy strategy)
 {
 	return kStrategyNames[static_cast<int>(strategy)];
@@ -819,7 +827,7 @@ bool Merge20LearnStore::Match(const std::vector<Merge20DiffLine>& lines,
 		Merge20LearnStrategy strat;
 		int best = 0;
 		int total = 0;
-		if (DominantRule(*exact, strat, best, total) && best >= 1)
+		if (Merge20LearnDominant(*exact, strat, best, total) && best >= 1)
 		{
 			out.strategy = strat;
 			out.via = L"exact";
@@ -840,7 +848,7 @@ bool Merge20LearnStore::Match(const std::vector<Merge20DiffLine>& lines,
 			int total = 0;
 			// 80% with integers: best*5 >= total*4 (no floating point,
 			// matching the S8 JSON module, which stores integers only).
-			if (DominantRule(*feat, strat, best, total) && total >= 3 && best * 5 >= total * 4)
+			if (Merge20LearnDominant(*feat, strat, best, total) && total >= 3 && best * 5 >= total * 4)
 			{
 				out.strategy = strat;
 				out.via = L"feat";

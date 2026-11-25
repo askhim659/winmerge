@@ -282,6 +282,20 @@ private:
 };
 
 /**
+ * @brief Dominant strategy of one rule (HTML `learnDominant`).
+ *
+ * Merge20 (Phase 3 L4): the learning dialog shows each rule with the
+ * same dominant strategy and share the matcher uses, so the rule list
+ * and the candidate display can never disagree. The strategy with the
+ * most judgments wins; on a tie the latest choice (`lastStrat`) wins
+ * when it holds the maximum. `best` is the dominant strategy's count,
+ * `total` the rule's judgment count.
+ * @return False when the rule has no judgments.
+ */
+bool Merge20LearnDominant(const Merge20LearnRule& rule,
+	Merge20LearnStrategy& strat, int& best, int& total);
+
+/**
  * @brief Record one explicit judgment for a diff (HTML `learnFromHunk`).
  * Builds the exact key and, when present, the feature key, and records
  * the judgment for both (with the correction rule of Merge20LearnStore::Record).

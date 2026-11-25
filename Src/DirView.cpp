@@ -42,6 +42,7 @@
 #include "Merge20/Merge20CsvExport.h"
 #include "Merge20/Merge20CsvExportDlg.h"
 #include "Merge20/Merge20MemoDlg.h"
+#include "Merge20/Merge20LearnDlg.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
@@ -153,6 +154,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_SESSION_SAVE, OnMerge20SessionSave)
 	ON_COMMAND(ID_MERGE20_SESSION_RESTORE, OnMerge20SessionRestore)
 	ON_COMMAND(ID_MERGE20_MEMO_EDIT, OnMerge20MemoEdit)
+	ON_COMMAND(ID_MERGE20_LEARN, OnMerge20Learn)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
@@ -914,6 +916,10 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 			pPopup->AppendMenu(MF_STRING, ID_MERGE20_MEMO_EDIT, sMerge20MemoEdit.c_str());
 		}
 	}
+	// Merge20 (Phase 3 L4, design section 3.3, spec section 4(d)):
+	// learning dialog, at the end of the Merge20 group. Always offered.
+	String sMerge20Learn = _("Learning...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_LEARN, sMerge20Learn.c_str());
 	if (bDirSelected)
 	{
 		String sMerge20DirCheckAll = _("Check all files under folder");
@@ -3447,6 +3453,18 @@ void CDirView::OnMerge20CsvExport()
 		return;
 	}
 	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
+}
+
+/**
+ * @brief Merge20 (Phase 3 L4, design section 3.3): open the learning
+ * dialog (statistics, rules, sources, ON/OFF toggle). The dialog only
+ * displays and manages learning data; it never applies a candidate to
+ * a merge result (spec section 4(c)).
+ */
+void CDirView::OnMerge20Learn()
+{
+	Merge20LearnDlg dlg(this);
+	dlg.DoModal();
 }
 
 /**

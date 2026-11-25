@@ -116,6 +116,7 @@
 #define IDD_MERGE20_BATCH_CHECK         293
 #define IDD_MERGE20_CSV_EXPORT          294
 #define IDD_MERGE20_MEMO                295
+#define IDD_MERGE20_LEARN               296
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -781,6 +782,19 @@
 #define IDC_MERGE20_MEMO_PATH           1729
 #define IDC_MERGE20_MEMO_TEXT           1730
 #define IDC_MERGE20_LEARN_CHECK         1731
+#define IDC_MERGE20_LEARN_DESC          1732
+#define IDC_MERGE20_LEARN_STATE         1733
+#define IDC_MERGE20_LEARN_TOGGLE        1734
+#define IDC_MERGE20_LEARN_STATS         1735
+#define IDC_MERGE20_LEARN_LOAD_ERROR    1736
+#define IDC_MERGE20_LEARN_SOURCES       1737
+#define IDC_MERGE20_LEARN_DELETE_SOURCE 1738
+#define IDC_MERGE20_LEARN_MERGE_SOURCES 1739
+#define IDC_MERGE20_LEARN_RULES         1740
+#define IDC_MERGE20_LEARN_EXPORT        1741
+#define IDC_MERGE20_LEARN_IMPORT        1742
+#define IDC_MERGE20_LEARN_CLEAR         1743
+#define IDC_MERGE20_LEARN_NOTICE        1744
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1726,6 +1740,7 @@
 #define ID_MERGE20_SESSION_SAVE         38935
 #define ID_MERGE20_SESSION_RESTORE      38936
 #define ID_MERGE20_MEMO_EDIT            38937
+#define ID_MERGE20_LEARN                38938
 #define ID_MERGE20_LEARN_APPLY        38939
 #define ID_MERGE20_LEARN_DISMISS      38940
 #define IDS_SPLASH_GPLTEXT              38977
@@ -2467,9 +2482,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        296
+#define _APS_NEXT_RESOURCE_VALUE        297
 #define _APS_NEXT_COMMAND_VALUE         38941
-#define _APS_NEXT_CONTROL_VALUE         1732
+#define _APS_NEXT_CONTROL_VALUE         1745
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
