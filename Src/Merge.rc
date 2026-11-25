@@ -3051,7 +3051,7 @@ IDD_MERGE20_MEMO DIALOGEX 0, 0, 300, 130
 
 IDD_MERGE20_LEARN DIALOGEX 0, 0, 480, 314
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Learning"
+CAPTION "Learning (merge judgment history and sharing)"
 FONT 8, FONTNAME, 0, 0, 0x1
 BEGIN
     LTEXT           "Your merge judgments (insert old / keep new / replace with old / both old and new) are recorded as patterns. Later comparisons show matching differences as suggestions. Suggestions are never applied automatically: nothing changes until you accept one.",IDC_MERGE20_LEARN_DESC,7,7,466,30
