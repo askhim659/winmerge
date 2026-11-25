@@ -39,6 +39,9 @@
 #include "ConfirmFolderCopyDlg.h"
 #include "DirColsDlg.h"
 #include "Merge20/Merge20BatchCheckDlg.h"
+#include "Merge20/Merge20CsvExport.h"
+#include "Merge20/Merge20CsvExportDlg.h"
+#include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
 #include "ShellContextMenu.h"
@@ -144,6 +147,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_UPDATE_COMMAND_UI(ID_EDIT_UNDO, OnUpdateEditUndo)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE, OnUpdateSave)
 	ON_COMMAND(ID_MERGE20_BATCH_CHECK, OnMerge20BatchCheck)
+	ON_COMMAND(ID_MERGE20_CSV_EXPORT, OnMerge20CsvExport)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
 	ON_COMMAND(ID_MERGE20_DIR_UNCHECK_ALL, OnMerge20DirUncheckAll)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_CHECK_ALL, OnUpdateMerge20DirCheck)
@@ -882,6 +886,10 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	pPopup->AppendMenu(MF_SEPARATOR);
 	String sMerge20BatchCheck = _("Batch check...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_BATCH_CHECK, sMerge20BatchCheck.c_str());
+	// Merge20 (S6, design section 3.5, spec section 4(f)): diff-list
+	// CSV export, next to the batch check. Always offered.
+	String sMerge20CsvExport = _("Export diff list as CSV...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_CSV_EXPORT, sMerge20CsvExport.c_str());
 	if (bDirSelected)
 	{
 		String sMerge20DirCheckAll = _("Check all files under folder");
@@ -3369,6 +3377,45 @@ void CDirView::OnMerge20DirUncheckAll()
 	}
 	m_pList->Invalidate();
 	UpdateMerge20StatusCount();
+}
+
+/**
+ * @brief Merge20 (S6, design section 3.5, spec section 4(f)): export
+ * the diff list as a CSV file. The range dialog shows both ranges
+ * with their file counts; the save dialog defaults to
+ * DiffList_YYYY-MM-DD.csv, as in the HTML tool. Cancel in either
+ * dialog exports nothing. The result (row count and path) is
+ * reported in a message box.
+ */
+void CDirView::OnMerge20CsvExport()
+{
+	CDiffContext& ctxt = GetDiffContext();
+	int selectedOnly = 0, allDiffs = 0;
+	Merge20CsvCountRanges(ctxt, selectedOnly, allDiffs);
+	if (selectedOnly == 0 && allDiffs == 0)
+	{
+		AfxMessageBox(_("There are no files with differences to export.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	Merge20CsvExportDlg dlg(this, selectedOnly, allDiffs);
+	if (dlg.DoModal() != IDOK)
+		return;
+	// Default file name, as in the HTML tool (DiffList_YYYY-MM-DD.csv).
+	const String defaultName = _T("DiffList_") + String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d")).GetString()) + _T(".csv");
+	String filePath;
+	if (!SelectFile(GetSafeHwnd(), filePath, false, defaultName.c_str(), _T(""),
+		_T("CSV Files (*.csv)|*.csv|All Files (*.*)|*.*||"), _T("csv")))
+		return;
+	String errStr;
+	int exported = 0;
+	const Merge20CsvExportRange range = (dlg.GetRange() == Merge20CsvExportDlg::Range::SelectedOnly)
+		? Merge20CsvExportRange::SelectedOnly : Merge20CsvExportRange::AllDiffs;
+	if (!Merge20CsvExportToFile(ctxt, range, filePath, errStr, exported))
+	{
+		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+		return;
+	}
+	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
 }
 
 void CDirView::OnUpdateMerge20DirCheck(CCmdUI* pCmdUI)

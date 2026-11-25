@@ -367,6 +367,8 @@ protected:
 	afx_msg void OnUpdateDelete(CCmdUI* pCmdUI);
 	// Merge20 (S3): batch check dialog, per-directory check/uncheck
 	afx_msg void OnMerge20BatchCheck();
+	// Merge20 (S6): diff-list CSV export
+	afx_msg void OnMerge20CsvExport();
 	afx_msg void OnMerge20DirCheckAll();
 	afx_msg void OnMerge20DirUncheckAll();
 	afx_msg void OnUpdateMerge20DirCheck(CCmdUI* pCmdUI);

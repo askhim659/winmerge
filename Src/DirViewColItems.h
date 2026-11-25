@@ -49,6 +49,17 @@ struct DirColInfo
 extern const int g_ncols;
 extern const int g_ncols3;
 
+// Merge20 (S6): the CSV export reads the same display strings the
+// folder compare list shows, so the CSV and the list never disagree.
+// These forward to the static column getters in DirViewColItems.cpp.
+String Merge20CsvGetFileNameText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetDirText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetStatusText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetReviewText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetActionText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetRiskText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetSummaryText(const CDiffContext* pCtxt, const DIFFITEM& di);
+
 class DirViewColItems
 {
 public:
