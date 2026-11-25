@@ -2559,3 +2559,142 @@ D0 は基盤のため、実機で確認できる動作は計測ログとオプ�
     `WinMerge-x64-Setup-x64.exe` 39,689,124 バイト（ID 15070040560）。
     いずれも失効日 2027-02-23。
   - GoogleTest：**608 テスト全パス**（初回実行と同じ）。
+
+## 23. Phase 4 D1（専用モードの骨格）— ブランチ `merge20/phase4-d1`
+
+設計書 `merge20-phase4-design.md` §5.2 の D1 どおり。専用モードの入／出と
+専用バーの骨格までとし、バー内の詳細ボタン（Prev/Next・確認内容ボタン等）と
+自動非表示＋📌ピン・倍率引継ぎは D2 の範囲。C++ の変更はこの Linux VM では
+コンパイルできないため、CI でのビルド＋成果物確認が検証になる。
+
+### 23.1 変更一覧
+
+- `Src/resource.h` — 新規コマンド `ID_VIEW_MERGE20_DEDICATED_MODE`
+  38941（D0 の予約範囲から消費。ソートで空きを確認済み：38940 は
+  `ID_MERGE20_LEARN_DISMISS`、次は 38977 `IDS_SPLASH_GPLTEXT`）。
+  D0 の予約コメントを更新し、コマンドの空きを 38942〜38976 とした。
+  `_APS_NEXT_COMMAND_VALUE` を 38941→38942 へ更新した。
+- 新規 `Src/Merge20/Merge20DedBar.h/.cpp`（`CDiffViewBar` 前例の
+  `CSizingControlBarCF` 派生。StdAfx.h グループ、先頭 include は
+  `StdAfx.h`。`Merge.vcxproj`／`.filters` に登録。MFC バーのため
+  `UnitTests.vcxproj` には登録しない＝S3 の BatchCheckDlg と同じ扱い）：
+  専用バー。D1 は骨格のみ（キャプションだけで子コントロールなし）。
+  `Create`／`OnCreate`（`SCBS_EDGETOP | SCBS_EDGEBOTTOM |
+  SCBS_SIZECHILD`）／`OnLButtonDown`（ドック固定）／
+  `OnWindowPosChanged`（非表示時に `MSG_STORE_PANESIZES` を親へ通知）／
+  `SetFrameHwnd`／`UpdateResources`（`_("Dedicated Compare Mode")`）を
+  `CDiffViewBar` と同じ形で持つ。
+- `Src/MergeEditFrm.h/.cpp` — 専用モードの入／出：
+  - `SetDedicatedMode(bool)`／`IsDedicatedMode()`（公開）、
+    `EnterDedicatedMode()`／`ExitDedicatedMode()`（非公開）、
+    `m_bDedicatedMode` と入場時の保存状態（5 バーの表示有無・最大化状態）。
+  - 入場時：5 バー（`m_wndFilePathBar`／`m_wndLocationBar`／
+    `m_wndDetailBar`／`m_wndResultBar`／`m_wndStatusBar`）の表示状態を保存
+    して `ShowControlBar` で隠し、専用バーを表示し、MDI 子ウィンドウを
+    `MDIMaximize` で最大化する（WinMerge に全画面機能はないため）。
+    退場時：保存した表示状態と最大化状態へ戻す（最大化されていなければ
+    `MDIRestore`）。
+  - 入る／出る操作：表示メニューの「Dedicated Compare Mode」
+    （`ID_VIEW_MERGE20_DEDICATED_MODE`、チェック付きトグル。
+    `Merge.rc` の `IDR_MERGEDOCTYPE` の View ポップアップに
+    「Merge Result Pane」の次へ追加）。
+  - 状態は D0 の `OPT_MERGE20_DED_MODE` キーで保持する。
+    `OnCreate` の末尾で同キーが true なら `PostMessage(WM_COMMAND, ...)`
+    で次に開くファイル比較も専用モードで開く（作成完了後に送るため
+    `PostMessage`。`LoadOptions` の `ID_WINDOW_SPLIT` と同じ手法）。
+    セッション保存への配線は D11。
+  - 隠したバーのレイアウトが保存状態（`Settings`）に残らないための
+    3 点の防衛：(a) `OnStorePaneSizes` は専用モード中は遅延保存の
+    タイマを立てない、(b) `OnTimer` の `IDT_SAVEPOSITION` は専用モード中
+    は `SavePosition` を呼ばない、(c) `DestroyWindow` は破棄前に
+    `ExitDedicatedMode()` で通常レイアウトへ戻す（キーには触らないため
+    次のフレームの専用モード指定は残る）。
+  - 専用バーの生成は `OnCreateClient`（Diff ペイン生成の直後）、
+    上部へのドックと初期非表示は `OnCreate`（Diff ペインのドックの直後と
+    結果バーの初期非表示の直後）。`LoadState`／`SaveState`／
+    `UpdateResources`／`SetFrameHwnd` も既存バーと同じ位置に追加した。
+- `Translations/WinMerge/Japanese.po` — `msgid "Dedicated Compare Mode"`
+  → `msgstr "比較専用モード"` を末尾に追加（Merge20 形式のコメント付き。
+  `.rc` ラベルは英語のまま、`.po` 経由で日本語化＝L1 の教訓）。
+- 変更していないもの：`.github/workflows/*`、仕様書 PDF、
+  `17_v17.15.html`、S5（一括承認。U-0-2 待ちのため着手しない）。
+
+### 23.2 設計・仕様との食い違いと判断理由
+
+1. **T-4-1 の解消：専用モードは「子ウィンドウ内のバーだけ隠す」形に
+   落とした（設計書の許容する落とし先）。** 実読の結果：
+   - `CMainFrame` のメニューバー／ツールバーは `ShowControlBar` で隠す
+     前例がある（`OnViewMenuBar`（`MainFrm.cpp:2738`）、
+     `OnToolbarSize`（同:3328））。技術的には隠せる。
+   - しかし D1 では隠さない。理由：(1) メインメニューを隠すと D1 の
+     出る操作（表示メニュー）が使えなくなり、専用バーは骨格のみで
+     終了ボタンがまだ無い（D2 で付く）、(2) メインのステータスバー／
+     タブバーには子から呼べる公開アクセサが無い（`m_wndStatusBar`／
+     `m_wndTabBar` は protected で getter なし。`GetMenuBar()`／
+     `GetToolbar()` はあるが残り 2 本は無い）、(3) 4 本のバーの事前状態の
+     保存・復元と `OPT_SHOW_MENUBAR`／`OPT_SHOW_TOOLBAR` 等との干渉は、
+     終了ボタンが付く D2 で扱うのが安全。メイン側のバーを隠す場合は
+     D2 で `CMainFrame` に公開 API を追加する。
+   - したがって D1 の専用モードでは、メインのメニューバー／ツールバー／
+     タブバー／ステータスバーは表示されたままになる。仕様書 §3（4/4）の
+     「全画面」には及ばないが、D1 の受け入れ条件（専用モードに入り、
+     専用バーが表示され、通常モードへ戻れること）は満たす。
+2. **T-4-4 の解消：`m_wndSplitter` の 2 行構成。** 行 0 がメインの比較
+   グループ、行 1 はウィンドウ分割時（`ID_WINDOW_SPLIT`、
+   `LoadOptions` が行数＞1 のときに送る）の第 2 グループであり、
+   結果ペイン等ではないことを確認した（`SaveActivePane`／
+   `UpdateSplitter` が行を走査している）。専用モードはスプリッタに
+   触らない。
+3. **専用バーの終了ボタン（「🔙通常モードへ」）は D2 へ送った。**
+   設計書 §5.2 D1 の内容一覧には終了ボタンがあるが、タスクの D1 範囲は
+   「バーの骨格まで、詳細ボタンは D2」であり、出る操作は表示メニューで
+   用意したため、終了ボタンは D2（他のバー内ボタンと一緒）で付ける。
+   D1 の段階では専用モードの出方は表示メニューのみ。
+4. **ドック状態の汚染の防衛（§23.1 の (a)〜(c)）は設計書にない D1 独自の
+   追加である。** 理由：`CLocationBar`／`CDiffViewBar`／
+   `CMergeResultBar` は非表示時に `MSG_STORE_PANESIZES` を親へ送り、
+   300ms 後に `SavePosition` が `Settings` へドック状態を保存するため、
+   防衛なしでは「専用モードで隠した状態」が保存され、後から開く通常
+   モードのフレームがバーの隠れた状態で開いてしまう。実読で確認した
+   経路（`LocationBar.cpp:99`／`MergeResultBar.cpp:120`／
+   `DiffViewBar.cpp` の `OnWindowPosChanged`）に基づく。
+5. **GoogleTest の新規テストはなし。** D1 に純粋モジュールはない
+   （専用バーとフレームは MFC 依存）。件数は D0 と同じ 608 件のまま。
+
+### 23.3 Windows 実機での確認手順（D1 受け入れテスト）
+
+1. CI 成果物 ZIP の `WinMergeU.exe` をポータブル版で起動し、2 ファイル
+   比較を開く。
+2. 表示メニューに「比較専用モード」があること（英語 UI では
+   "Dedicated Compare Mode"）。選ぶと子ウィンドウが最大化され、
+   ファイルパスバー・ロケーションバー・Diff ペイン・マージ結果バー・
+   ステータスバーが隠れ、上部に専用バー（細い空のバー。D1 は骨格のみで
+   ボタンはまだ無い）が表示されること。メニュー項目にチェックが付くこと。
+   メインのメニューバー／ツールバー／タブバー／ステータスバーは表示された
+   ままであること（T-4-1 の落とし先。仕様書の「全画面」には及ばない）。
+3. 再度表示メニューから選ぶと通常モードへ戻り、隠したバー類が入場前と
+   同じ表示状態に戻ること。メニューのチェックが外れること。入場／退場を
+   10 回繰り返し、表示が崩れないこと。
+4. 専用モードのまま WinMerge を終了→再起動→ファイル比較を開くと、
+   専用モードで開くこと（`OPT_MERGE20_DED_MODE` の保持。`winmerge.ini`
+   の `[Merge20]` セクションに `DedMode=true` があること）。
+5. 専用モード中に別のファイル比較を開き、そのフレームで通常モードへ
+   戻っても、バーの表示が正しく戻ること（ドック状態の汚染がないこと）。
+   専用モードのフレームを閉じてから新しいファイル比較を開き、バー類が
+   通常どおり表示されること。
+6. 既存のファイル比較・フォルダ比較が従来どおり動くこと（回帰確認）。
+
+### 23.4 CI 結果（PR #20）
+
+- PR: https://github.com/askhim659/winmerge/pull/20（`merge20/phase4-d1` → `master`、9 コミット、未マージ）
+- 実行 45718793925（2026-11-25 23:06Z）：**success**。ジョブ build 139571558351。
+  - 成果物：`WinMerge-x64.zip` 26,198,061 バイト（ID 15070788931）、
+    `WinMerge-x64-Setup-x64.exe` 39,691,697 バイト（ID 15070998361）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：**608 テスト全パス**（`[  PASSED  ] 608 tests.`。D0 と
+    同数。D1 の新規テストはなし）。`[  FAILED  ]` は 0 件。
+  - `Merge20DedBar.obj` が生成され、`Merge20DedBar.cpp` が WinMergeU
+    の StdAfx.h グループ（`/Yu"stdafx.h"`）でコンパイルされていることを
+    ログで確認。D1 のファイルに関するコンパイル警告・エラーなし
+    （ログ中の警告は既存の Poco／xdiff／xutility 由来）。
+  - CI 失敗 0 回（初回実行で success）。
