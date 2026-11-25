@@ -59,6 +59,7 @@
 #include "DiffContext.h"
 #include "Logger.h"
 #include "Merge20/Merge20ClassifyDoc.h"
+#include "Merge20/Merge20LearnDoc.h"
 #include "SyntaxParserRegistry.h"
 #include "PluginMenu.h"
 #include "TableProps.h"
@@ -752,6 +753,19 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 			Merge20ParseRiskKeywords(GetOptionsMgr()->GetString(OPT_MERGE20_RISK_KEYWORDS)));
 		m_pDirDoc->SetMerge20Classification(m_filePaths, state);
 	}
+
+	// Merge20 (Phase 3 L2, design section 3.2 (a)): recompute the
+	// learning candidates after a successful rescan. Only 2-way text
+	// compares get candidates (same guard as the S4 classification,
+	// but a folder doc is not required: learning works for a lone
+	// file pair too). RefreshCandidates itself skips the computation
+	// while the result pane is not built yet (then StartMergeSession
+	// computes them) and clears the map while learning is OFF.
+	// Rescan runs on the UI thread only (T-3-9): the background
+	// folder compare works on CDiffContext, never on CMergeDoc, so
+	// the learning store is never touched from a compare thread.
+	if (nResult == RESCAN_OK && !bBinary)
+		Merge20LearnRefreshCandidates(*this);
 
 	return nResult;
 }
