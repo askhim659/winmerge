@@ -193,6 +193,13 @@ public:
 	 * HOLD and KEEP turn it OFF, TODO and SPECIAL leave it unchanged.
 	 */
 	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	/**
+	 * @brief Store the S4 classification of one file (action category,
+	 * risk, counts, summary, encodings) in the sidecar map, keeping
+	 * the stored review state, output flag and memo. Called by CDirDoc
+	 * when a merge doc reports a freshly computed classification.
+	 */
+	void SetMerge20Classification(const String& relPath, const Merge20FileState& state);
 	/** @brief Direct access to the sidecar map (for S2 and later slices). */
 	Merge20FileStates& GetMerge20FileStates() { return m_merge20FileStates; }
 	/** @brief Direct access to the sidecar map (const version). */

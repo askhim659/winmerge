@@ -105,6 +105,9 @@ public:
 	bool GetMerge20IncludeInOutput(const DIFFITEM& di) const;
 	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include);
 	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	// Merge20 (S4, IDirDoc): store the classification computed by a
+	// merge doc after a rescan (see IDirDoc::SetMerge20Classification).
+	void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) override;
 	void Redisplay();
 	virtual ~CDirDoc();
 	void SetDirView( CDirView *newView ); // TODO Perry

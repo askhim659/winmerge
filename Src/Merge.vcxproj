@@ -1044,6 +1044,8 @@
     <ClInclude Include="LineFilterHelper.h" />
     <ClInclude Include="LineFilterHelperMenu.h" />
     <ClInclude Include="Merge20\Merge20BatchCheckDlg.h" />
+    <ClInclude Include="Merge20\Merge20Classify.h" />
+    <ClInclude Include="Merge20\Merge20ClassifyDoc.h" />
     <ClInclude Include="Merge20\Merge20FileStates.h" />
     <ClInclude Include="Merge20\Merge20Types.h" />
     <ClInclude Include="MergeDiffNavigation.h" />
@@ -1333,6 +1335,12 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20BatchCheckDlg.cpp" />
+    <ClCompile Include="Merge20\Merge20Classify.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20ClassifyDoc.cpp" />
     <ClCompile Include="Merge20\Merge20FileStates.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

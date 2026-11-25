@@ -319,6 +319,14 @@ inline const String OPT_USERDATA_LOCATION {_T("Settings/UserDataLocation"s)};
 // Merge Result Pane
 inline const String OPT_MERGE_RESULT_PANE_ENABLED {_T("Settings/MergeResultPaneEnabled"s)};
 
+// Merge20 (S4, design section 3.1): risk keywords for the rule-based
+// summary. Semicolon-separated list of important words (tax, amount,
+// rate, rounding, SQL, ...). A diff line containing any of them counts
+// as one attention point for the risk level (spec section 3 (2/4)).
+// Editable in the settings (registry/INI value); a settings-page
+// editor is follow-up work.
+inline const String OPT_MERGE20_RISK_KEYWORDS {_T("Merge20/RiskKeywords"s)};
+
 /// Substitution Filters
 inline const String OPT_SUBSTITUTION_FILTERS_ENABLED {_T("Settings/SubstitutionFiltersEnabled"s)};
 

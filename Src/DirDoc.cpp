@@ -26,6 +26,7 @@
 #include "DirFrame.h"
 #include "MainFrm.h"
 #include "paths.h"
+#include "locality.h"
 #include "7zCommon.h"
 #include "OptionsDef.h"
 #include "OptionsMgr.h"
@@ -658,6 +659,58 @@ void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
 	if (m_pCtxt == nullptr)
 		return;
 	m_pCtxt->ApplyMerge20ReviewState(di, state);
+}
+
+/**
+ * @brief Merge20 (S4, IDirDoc): store the classification computed by a
+ * merge doc after a rescan.
+ * @param [in] paths Merge doc's file paths, used to find the folder
+ * compare item (same lookup as UpdateChangedItem, including the
+ * swapped-paths fallback).
+ * @param [in] state Classification result from Merge20ClassifyDoc.
+ *
+ * The existence category of the item refines the computed action:
+ * an old-only file becomes COPY_OLD_FILE and a new-only file becomes
+ * SKIP_NEW_FILE (the diff list alone cannot tell a whole old-only
+ * file from a missing-in-new hunk), with the summary reworded the
+ * way the HTML tool words it ("Old-only file (N lines)"). The risk
+ * stays as computed. The row is repainted so the new columns show
+ * up without a rescan; the review state and output flag are kept.
+ */
+void CDirDoc::SetMerge20Classification(const PathContext& paths, const Merge20FileState& state)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	DIFFITEM* pos = FindItemFromPaths(*m_pCtxt, paths);
+	if (pos == nullptr && paths.GetSize() >= 2)
+	{
+		PathContext pathsSwapped(paths);
+		std::swap(pathsSwapped[0], pathsSwapped[pathsSwapped.GetSize() - 1]);
+		pos = FindItemFromPaths(*m_pCtxt, pathsSwapped);
+	}
+	if (pos == nullptr)
+		return;
+	Merge20FileState st = state;
+	if (m_pCtxt->GetCompareDirs() < 3)
+	{
+		if (pos->diffcode.isSideFirstOnly())
+		{
+			st.action = ActionCategory::COPY_OLD_FILE;
+			st.summary = strutils::format_string1(_("Old-only file (%1 lines)"), locality::NumToLocaleStr(st.nMissing));
+		}
+		else if (pos->diffcode.isSideSecondOnly())
+		{
+			st.action = ActionCategory::SKIP_NEW_FILE;
+			st.summary = strutils::format_string1(_("New-only file (%1 lines)"), locality::NumToLocaleStr(st.nAdded));
+		}
+	}
+	m_pCtxt->SetMerge20Classification(pos->getItemRelativePath(), st);
+	if (m_pDirView != nullptr)
+	{
+		const int nIdx = m_pDirView->GetItemIndex(pos);
+		if (nIdx != -1)
+			m_pDirView->UpdateDiffItemStatus(nIdx);
+	}
 }
 
 void CDirDoc::InitStatusStrings()

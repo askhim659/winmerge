@@ -176,6 +176,29 @@ void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state
 }
 
 /**
+ * @brief Merge20 (S4): store the classification of one file.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] state Classification result from Merge20ClassifyDoc.
+ * Only the S4 fields are copied (action, risk, counts, summary,
+ * encodings, classified flag); the review state, output flag and memo
+ * that the user may already have set are kept.
+ */
+void CDiffContext::SetMerge20Classification(const String& relPath, const Merge20FileState& state)
+{
+	Merge20FileState& st = m_merge20FileStates.GetOrCreateState(relPath);
+	st.classified = true;
+	st.action = state.action;
+	st.risk = state.risk;
+	st.nMissing = state.nMissing;
+	st.nModified = state.nModified;
+	st.nAdded = state.nAdded;
+	st.nExcluded = state.nExcluded;
+	st.summary = state.summary;
+	st.leftEncoding = state.leftEncoding;
+	st.rightEncoding = state.rightEncoding;
+}
+
+/**
  * @brief Update info in item in result list from disk.
  * This function updates result list item's file information from actual
  * file in the disk. This updates info like date, size and attributes.
