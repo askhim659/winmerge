@@ -16,6 +16,7 @@
 #include "MergeStatusBar.h"
 #include "EditorFilepathBar.h"
 #include "DiffViewBar.h"
+#include "Merge20/Merge20DedBar.h"
 #include "MergeResultBar.h"
 #include "LocationBar.h"
 #include "LineFilterBar.h"
@@ -48,16 +49,26 @@ public:
 	void HideFilterBar();
 	CLineFilterBar* GetFilterBar() { return m_pFilterBar.get(); }
 	void ShowMergeResultPane(bool bVisible = true);
+	void SetDedicatedMode(bool bEnable);
+	bool IsDedicatedMode() const { return m_bDedicatedMode; }
 
 // Attributes
 protected:
 	CSplitterWndEx m_wndSplitter;
 	CEditorFilePathBar m_wndFilePathBar;
 	CDiffViewBar m_wndDetailBar;
+	CMerge20DedBar m_wndDedBar; /**< Dedicated-mode bar (Merge20 Phase 4 D1) */
 	CMergeEditSplitterView *m_pwndDetailMergeEditSplitterView;
 	CMergeResultBar m_wndResultBar;
 	CMergeResultView *m_pMergeResultView;
 	bool m_bResultBarVisible; /**< Last seen visibility of the merge result bar */
+	bool m_bDedicatedMode; /**< Dedicated compare mode (Merge20 Phase 4 D1) is active */
+	bool m_bDedWasMaximized; /**< Child frame was maximized before entering dedicated mode */
+	bool m_bDedFilePathBarVisible; /**< Saved visibility of the bars hidden in dedicated mode */
+	bool m_bDedLocationBarVisible;
+	bool m_bDedDetailBarVisible;
+	bool m_bDedResultBarVisible;
+	bool m_bDedStatusBarVisible;
 	CMergeStatusBar m_wndStatusBar;
 	CLocationBar m_wndLocationBar;
 	std::unique_ptr<CLineFilterBar> m_pFilterBar;
@@ -82,6 +93,8 @@ public:
 // Implementation
 private:
 	void SavePosition();
+	void EnterDedicatedMode();
+	void ExitDedicatedMode();
 	void SaveActivePane();
 	virtual ~CMergeEditFrame();
 	CSplitterWndEx& GetMergeEditSplitterWnd(int iRow)
@@ -102,6 +115,8 @@ private:
 	afx_msg void OnWindowPreserveSplitterPosition();
 	afx_msg void OnUpdateWindowPreserveSplitterPosition(CCmdUI* pCmdUI);
 	afx_msg void OnUpdateViewMergeResultBar(CCmdUI* pCmdUI);
+	afx_msg void OnViewMerge20DedicatedMode();
+	afx_msg void OnUpdateViewMerge20DedicatedMode(CCmdUI* pCmdUI);
 	afx_msg LRESULT OnStorePaneSizes(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnIdleUpdateCmdUI();
