@@ -692,7 +692,7 @@ static int ColReviewStateSort(const CDiffContext *pCtxt, const void *p, const vo
 static String ColOutputCheckGet(const CDiffContext *pCtxt, const void *p, int)
 {
 	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
-	if (di.isDirectory())
+	if (di.diffcode.isDirectory())
 		return String();
 	return pCtxt->GetMerge20IncludeInOutput(di) ? _T("\x2611") : _T("\x2610");
 }
@@ -708,8 +708,8 @@ static int ColOutputCheckSort(const CDiffContext *pCtxt, const void *p, const vo
 {
 	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
 	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
-	bool l = !ldi.isDirectory() && pCtxt->GetMerge20IncludeInOutput(ldi);
-	bool r = !rdi.isDirectory() && pCtxt->GetMerge20IncludeInOutput(rdi);
+	bool l = !ldi.diffcode.isDirectory() && pCtxt->GetMerge20IncludeInOutput(ldi);
+	bool r = !rdi.diffcode.isDirectory() && pCtxt->GetMerge20IncludeInOutput(rdi);
 	if (l == r)
 		return 0;
 	return l ? 1 : -1;
