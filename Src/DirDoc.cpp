@@ -598,6 +598,31 @@ void CDirDoc::ReloadItemStatus(DIFFITEM *diffPos, int idx)
 	}
 }
 
+/**
+ * @brief Merge20 (S1): review state of one item, from the sidecar map.
+ * @param [in] di Difference item.
+ * @return Review state, TODO when the item has no entry yet (or when there
+ * is no compare context yet).
+ */
+ReviewState CDirDoc::GetMerge20ReviewState(const DIFFITEM& di) const
+{
+	if (m_pCtxt == nullptr)
+		return ReviewState::TODO;
+	return m_pCtxt->GetMerge20ReviewState(di.getItemRelativePath());
+}
+
+/**
+ * @brief Merge20 (S1): set the review state of one item in the sidecar map.
+ * @param [in] di Difference item.
+ * @param [in] state New review state.
+ */
+void CDirDoc::SetMerge20ReviewState(const DIFFITEM& di, ReviewState state)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	m_pCtxt->SetMerge20ReviewState(di.getItemRelativePath(), state);
+}
+
 void CDirDoc::InitStatusStrings()
 {
 
