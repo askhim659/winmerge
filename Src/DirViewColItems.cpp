@@ -75,6 +75,7 @@ const char *COLHDR_OUTPUT       = N_("Include in Output");
 const char *COLHDR_ACTION       = N_("Action Category");
 const char *COLHDR_RISK         = N_("Risk");
 const char *COLHDR_SUMMARY      = N_("Summary");
+const char *COLHDR_MEMO         = N_("Memo");
 const char *COLHDR_NSDIFFS      = N_("Differences");
 const char *COLHDR_BINARY       = NC_("DirView|ColumnHeader", "Binary");
 const char *COLHDR_UNPACKER     = N_("Unpacker");
@@ -135,6 +136,7 @@ const char *COLDESC_OUTPUT      = N_("Whether the file is included in the output
 const char *COLDESC_ACTION      = N_("Action category of the file, derived from the existence category and the diff breakdown (missing / changed / added lines). Shown only after the file has been opened; unopened files show Not calculated.");
 const char *COLDESC_RISK        = N_("Risk level of the file: None, Medium, or High. One attention point (missing lines, changed lines, or an important keyword in the diff) means Medium; several overlapping points mean High.");
 const char *COLDESC_SUMMARY     = N_("Rule-based summary of the file: missing / changed / added line counts, detected changes (rounding, SQL, deleted if guard, condition/boundary, constants) and the affected functions. This is a deterministic pattern match, not generated AI: the same input always returns the same summary.");
+const char *COLDESC_MEMO        = N_("Audit memo for the file (free text for the reviewer's notes). The memo is included in the diff-list CSV; editing the memo is not implemented yet, so this column is empty for now.");
 const char *COLDESC_NSDIFFS     = N_("Number of differences in file (excluding ignored).");
 const char *COLDESC_BINARY      = N_("Shows an asterisk (*) if the file is binary.");
 const char *COLDESC_UNPACKER    = N_("Unpacker plugin name or pipeline.");
@@ -875,6 +877,79 @@ static int ColSummarySort(const CDiffContext *pCtxt, const void *p, const void *
 	if (!rs.classified)
 		return -1;
 	return ls.summary.compare(rs.summary);
+}
+
+/**
+ * @brief Format Memo column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return The audit memo of the file. Directory rows show nothing.
+ * The memo has no editing UI yet (S8), so this is empty for now; the
+ * column exists so the memo has a list counterpart for the diff-list
+ * CSV, which carries the memo column from the start.
+ *
+ * Merge20 (S6, design section 3.5, spec section 6.2).
+ */
+static String ColMemoGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	return st.memo;
+}
+
+/**
+ * @brief Compare Memo column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by memo text.
+ */
+static int ColMemoSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	return ls.memo.compare(rs.memo);
+}
+
+// Merge20 (S6): CSV text wrappers, forwarding to the static column
+// getters above so the CSV shows exactly what the list shows.
+String Merge20CsvGetFileNameText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColFileNameGet<String>(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetDirText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColPathGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetStatusText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColStatusGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetReviewText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColReviewStateGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetActionText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColActionCategoryGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetRiskText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColRiskGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetSummaryText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColSummaryGet(pCtxt, &di, 0);
 }
 
 /**
@@ -1880,6 +1955,12 @@ static DirColInfo f_cols[] =
 	{ _T("Saction"), nullptr, COLHDR_ACTION, COLDESC_ACTION, &ColActionCategoryGet, &ColActionCategorySort, 0, 8, true, DirColInfo::ALIGN_LEFT },
 	{ _T("Srisk"), nullptr, COLHDR_RISK, COLDESC_RISK, &ColRiskGet, &ColRiskSort, 0, 9, true, DirColInfo::ALIGN_CENTER },
 	{ _T("Ssummary"), nullptr, COLHDR_SUMMARY, COLDESC_SUMMARY, &ColSummaryGet, &ColSummarySort, 0, 10, true, DirColInfo::ALIGN_LEFT },
+	// Merge20 (S6, design sections 3.2 and 3.5, spec section 6.2):
+	// audit memo column, same end-of-table note as the review column
+	// above. Hidden by default (order -1): the memo has no editing UI
+	// yet, so the column would be empty; it is shown from the column
+	// dialog, and its values (once memos exist) appear in the CSV.
+	{ _T("Smemo"), nullptr, COLHDR_MEMO, COLDESC_MEMO, &ColMemoGet, &ColMemoSort, 0, -1, true, DirColInfo::ALIGN_LEFT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
@@ -1952,6 +2033,9 @@ static DirColInfo f_cols3[] =
 	{ _T("Saction"), nullptr, COLHDR_ACTION, COLDESC_ACTION, &ColActionCategoryGet, &ColActionCategorySort, 0, 9, true, DirColInfo::ALIGN_LEFT },
 	{ _T("Srisk"), nullptr, COLHDR_RISK, COLDESC_RISK, &ColRiskGet, &ColRiskSort, 0, 10, true, DirColInfo::ALIGN_CENTER },
 	{ _T("Ssummary"), nullptr, COLHDR_SUMMARY, COLDESC_SUMMARY, &ColSummaryGet, &ColSummarySort, 0, 11, true, DirColInfo::ALIGN_LEFT },
+	// Merge20 (S6): memo column for 3-way compares, same note as in
+	// f_cols above. Hidden by default (order -1).
+	{ _T("Smemo"), nullptr, COLHDR_MEMO, COLDESC_MEMO, &ColMemoGet, &ColMemoSort, 0, -1, true, DirColInfo::ALIGN_LEFT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
