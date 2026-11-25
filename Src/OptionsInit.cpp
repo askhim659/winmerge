@@ -222,6 +222,18 @@ void Init(COptionsMgr *pOptions)
 	pOptions->InitOption(OPT_MERGE20_RISK_KEYWORDS,
 		_T("\x7a0e;\x984d;\x7387;\x7aef\x6570;\x91d1\x984d;\x7a0e\x984d;\x4e38\x3081;\x56db\x6368\x4e94\x5165;SQL"));
 
+	// Merge20 (S8): session auto-save (default ON), learning (Phase 3,
+	// default ON), batch-approve dialog (S5, default shown), and the
+	// review-state filter defaults (default: show all).
+	pOptions->InitOption(OPT_MERGE20_SESSION_AUTOSAVE, true);
+	pOptions->InitOption(OPT_MERGE20_LEARNING_ENABLED, true);
+	pOptions->InitOption(OPT_MERGE20_BATCH_APPROVE_DIALOG, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_TODO, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_DONE, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_HOLD, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_SPECIAL, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_KEEP, true);
+
 	pOptions->InitOption(OPT_PROJECTS_PATH, _T(""));
 	pOptions->InitOption(OPT_USE_SYSTEM_TEMP_PATH, true);
 	pOptions->InitOption(OPT_CUSTOM_TEMP_PATH, _T(""));
