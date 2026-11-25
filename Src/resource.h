@@ -1743,6 +1743,7 @@
 #define ID_MERGE20_LEARN                38938
 #define ID_MERGE20_LEARN_APPLY        38939
 #define ID_MERGE20_LEARN_DISMISS      38940
+#define ID_VIEW_MERGE20_DEDICATED_MODE 38941
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2478,8 +2479,8 @@
 #define IDS_LOG_COPY_CHARS               44767
 
 // Merge20 (Phase 4 D0, design section 5.2/D0): resource IDs reserved
-// for the Phase 4 dialogs and commands. No IDs are consumed yet (D0
-// only reserves and verifies); D1-D9 allocate from these ranges.
+// for the Phase 4 dialogs and commands. D1 consumes 38941
+// (ID_VIEW_MERGE20_DEDICATED_MODE); D2-D9 allocate from these ranges.
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 297 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2487,8 +2488,9 @@
 //   taken; dialog IDs must skip those values.
 // - controls (IDC_*): from 1745 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603).
-// - commands (ID_*): from 38941 (_APS_NEXT_COMMAND_VALUE), free up
-//   to 38976 (38977 is IDS_SPLASH_GPLTEXT).
+// - commands (ID_*): from 38942 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
+//   D1; _APS_NEXT_COMMAND_VALUE is now 38942), free up to 38976
+//   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
 // Next default values for new objects
@@ -2497,7 +2499,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        297
-#define _APS_NEXT_COMMAND_VALUE         38941
+#define _APS_NEXT_COMMAND_VALUE         38942
 #define _APS_NEXT_CONTROL_VALUE         1745
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
