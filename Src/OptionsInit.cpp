@@ -227,6 +227,7 @@ void Init(COptionsMgr *pOptions)
 	// review-state filter defaults (default: show all).
 	pOptions->InitOption(OPT_MERGE20_SESSION_AUTOSAVE, true);
 	pOptions->InitOption(OPT_MERGE20_LEARNING_ENABLED, true);
+	pOptions->InitOption(OPT_MERGE20_LEARNING_OWNER, _T(""));
 	pOptions->InitOption(OPT_MERGE20_BATCH_APPROVE_DIALOG, true);
 	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_TODO, true);
 	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_DONE, true);
