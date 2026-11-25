@@ -92,7 +92,7 @@ bool Merge20LearnSaveStore(String& errStr);
  * @brief Merge20 (Phase 3 L5, design section 4.2): default file name
  * for a learning JSON export (HTML `exportLearn` / `exportUnifiedLearn`).
  * The HTML tool's file name (Japanese "Merge20 learning YYYY-MM-DD.json",
- * with "_統合_" ("merged") inserted for a merged export; see the .cpp
+ * with a "merged" marker inserted for a merged export; see the .cpp
  * for the exact form, written with \u escapes so the source stays ASCII).
  * The save dialog decides the folder (the desktop equivalent of the
  * HTML tool's browser download folder); only the file name is fixed.
