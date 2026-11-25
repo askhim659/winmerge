@@ -45,3 +45,13 @@ void Merge20FileStates::SetIncludeInOutput(const String& relPath, bool include)
 {
 	GetOrCreateState(relPath).includeInOutput = include;
 }
+
+String Merge20FileStates::GetMemo(const String& relPath) const
+{
+	return GetState(relPath).memo;
+}
+
+void Merge20FileStates::SetMemo(const String& relPath, const String& memo)
+{
+	GetOrCreateState(relPath).memo = memo;
+}
