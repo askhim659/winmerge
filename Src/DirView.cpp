@@ -1425,7 +1425,7 @@ void CDirView::OnClick(NMHDR* pNMHDR, LRESULT* pResult)
 			if (pKey != nullptr && !IsDiffItemSpecial(pKey))
 			{
 				const DIFFITEM &di = GetDiffItem(lvhti.iItem);
-				if (!di.isDirectory())
+				if (!di.diffcode.isDirectory())
 				{
 					CDirDoc *pDoc = GetDocument();
 					pDoc->SetMerge20IncludeInOutput(di, !pDoc->GetMerge20IncludeInOutput(di));
