@@ -7423,6 +7423,96 @@ msgstr "旧のみ存在（%1行）"
 msgid "New-only file (%1 lines)"
 msgstr "新のみ存在（%1行）"
 
+#. Merge20 (S6): folder compare context menu (DirView)
+#: Src/DirView.cpp
+msgid "Export diff list as CSV..."
+msgstr "差分一覧 CSV…"
+
+#. Merge20 (S6): no files to export (DirView)
+#: Src/DirView.cpp
+msgid "There are no files with differences to export."
+msgstr "差分のあるファイルがありません。"
+
+#. Merge20 (S6): export result (DirView)
+#: Src/DirView.cpp
+msgid "%1 files exported to %2"
+msgstr "%1件のファイルを %2 に出力しました"
+
+#. Merge20 (S6): CSV export dialog caption (Merge.rc)
+#: Src/Merge.rc
+msgid "Export Diff List as CSV"
+msgstr "差分一覧 CSV 出力"
+
+#. Merge20 (S6): CSV export dialog group box (Merge.rc)
+#: Src/Merge.rc
+msgid "Range to export"
+msgstr "出力する範囲"
+
+#. Merge20 (S6): CSV export dialog, selected-only range with count
+#: Src/Merge20/Merge20CsvExportDlg.cpp
+msgid "Checked files only (%1 files)"
+msgstr "選択分のみ（%1件）"
+
+#. Merge20 (S6): CSV export dialog, all-diffs range with count
+#: Src/Merge20/Merge20CsvExportDlg.cpp
+msgid "All files with differences (%1 files)"
+msgstr "差分全件（%1件）"
+
+#. Merge20 (S6): CSV export dialog explanation (Merge.rc)
+#: Src/Merge.rc
+msgid "The CSV has 13 fixed columns and is written as UTF-8 with a BOM, so it opens directly in Excel."
+msgstr "CSV は 13 列固定で、BOM 付き UTF-8 で書き出すため、Excel でそのまま開けます。"
+
+#. Merge20 (S6): CSV header, directory column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Directory"
+msgstr "ディレクトリ"
+
+#. Merge20 (S6): CSV header, file name column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "File name"
+msgstr "ファイル名"
+
+#. Merge20 (S6): CSV header, full path column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Full path"
+msgstr "フルパス"
+
+#. Merge20 (S6): CSV header, existence category column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Existence category"
+msgstr "存在区分"
+
+#. Merge20 (S6): CSV header, total diffs column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Total diffs"
+msgstr "差分計"
+
+#. Merge20 (S6): CSV header, missing lines column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Missing lines"
+msgstr "旧欠落"
+
+#. Merge20 (S6): CSV header, changed lines column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Changed lines"
+msgstr "変更"
+
+#. Merge20 (S6): CSV header, added lines column (Merge20CsvExport)
+#: Src/Merge20/Merge20CsvExport.cpp
+msgid "Added lines"
+msgstr "新追加"
+
+#. Merge20 (S6): folder compare "Memo" column (DirViewColItems)
+#: Src/DirViewColItems.cpp
+msgid "Memo"
+msgstr "メモ"
+
+#. Merge20 (S6): folder compare "Memo" column description (DirViewColItems)
+#: Src/DirViewColItems.cpp
+msgid "Audit memo for the file (free text for the reviewer's notes). The memo is included in the diff-list CSV; editing the memo is not implemented yet, so this column is empty for now."
+msgstr "ファイルの監査メモ（確認者の自由記述）。差分一覧 CSV に含めます。メモの編集はまだ実装されていないため、この列は今は空です。"
+
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
 msgid "Image files are identical"
