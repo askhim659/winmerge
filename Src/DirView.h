@@ -365,6 +365,11 @@ protected:
 	afx_msg void OnUpdateHideFilenames(CCmdUI* pCmdUI);
 	afx_msg void OnDelete();
 	afx_msg void OnUpdateDelete(CCmdUI* pCmdUI);
+	// Merge20 (S3): batch check dialog, per-directory check/uncheck
+	afx_msg void OnMerge20BatchCheck();
+	afx_msg void OnMerge20DirCheckAll();
+	afx_msg void OnMerge20DirUncheckAll();
+	afx_msg void OnUpdateMerge20DirCheck(CCmdUI* pCmdUI);
 	afx_msg void OnMarkedRescan();
 	afx_msg void OnUpdateStatusNum(CCmdUI* pCmdUI);
 	afx_msg void OnViewShowHiddenItems();
@@ -468,6 +473,12 @@ private:
 	void FixReordering();
 	void HeaderContextMenu(CPoint point, int i);
 	void ListContextMenu(CPoint point, int i);
+	// Merge20 (S3): batch check, per-directory check/uncheck, status count
+	void UpdateMerge20StatusCount();
+	String GetMerge20StatusCountText();
+	void Merge20CountDisplayedByReviewState(int counts[5]);
+	void Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include);
+	void Merge20SetOutputForAllFiles(bool include);
 	void ShowShellContextMenu(UINT id);
 	CShellContextMenu* GetCorrespondingShellContextMenu(HMENU hMenu) const;
 	void ReloadColumns();

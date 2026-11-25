@@ -38,6 +38,7 @@
 #include "LoadSaveCodepageDlg.h"
 #include "ConfirmFolderCopyDlg.h"
 #include "DirColsDlg.h"
+#include "Merge20/Merge20BatchCheckDlg.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
 #include "ShellContextMenu.h"
@@ -142,6 +143,11 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_EDIT_UNDO, OnEditUndo)
 	ON_UPDATE_COMMAND_UI(ID_EDIT_UNDO, OnUpdateEditUndo)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE, OnUpdateSave)
+	ON_COMMAND(ID_MERGE20_BATCH_CHECK, OnMerge20BatchCheck)
+	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
+	ON_COMMAND(ID_MERGE20_DIR_UNCHECK_ALL, OnMerge20DirUncheckAll)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_CHECK_ALL, OnUpdateMerge20DirCheck)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_UNCHECK_ALL, OnUpdateMerge20DirCheck)
 	ON_NOTIFY_REFLECT(LVN_COLUMNCLICK, OnColumnClick)
 	ON_NOTIFY_REFLECT(LVN_ITEMCHANGED, OnItemChanged)
 	ON_NOTIFY_REFLECT(LVN_BEGINLABELEDIT, OnBeginLabelEdit)
@@ -708,6 +714,10 @@ void CDirView::Redisplay()
 	SetRedraw(TRUE);
 	m_pList->SetItemCount(static_cast<int>(m_listViewItems.size()));
 	m_pList->Invalidate();
+	// Merge20 (S3): the displayed set just changed (compare finished,
+	// filter applied, refresh), so refresh the "N displayed, M checked"
+	// count. Redisplay() is the single place the visible rows are rebuilt.
+	UpdateMerge20StatusCount();
 }
 
 /**
@@ -864,6 +874,21 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	String s = _("Plugin Settings");
 	pPopup->AppendMenu(MF_SEPARATOR);
 	pPopup->AppendMenu(MF_POPUP, static_cast<int>(reinterpret_cast<uintptr_t>(menuPluginsHolder.m_hMenu)), s.c_str());
+
+	// Merge20 (S3, design section 3.2, spec sections 3 and 4(b)): batch
+	// check dialog and per-directory check/uncheck. The batch-check item
+	// is always offered; the directory items only when a directory row
+	// is among the selection (bDirSelected is computed above).
+	pPopup->AppendMenu(MF_SEPARATOR);
+	String sMerge20BatchCheck = _("Batch check...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_BATCH_CHECK, sMerge20BatchCheck.c_str());
+	if (bDirSelected)
+	{
+		String sMerge20DirCheckAll = _("Check all files under folder");
+		pPopup->AppendMenu(MF_STRING, ID_MERGE20_DIR_CHECK_ALL, sMerge20DirCheckAll.c_str());
+		String sMerge20DirUncheckAll = _("Uncheck all files under folder");
+		pPopup->AppendMenu(MF_STRING, ID_MERGE20_DIR_UNCHECK_ALL, sMerge20DirUncheckAll.c_str());
+	}
 
 	CFrameWnd *pFrame = GetTopLevelFrame();
 	ASSERT(pFrame != nullptr);
@@ -1430,6 +1455,7 @@ void CDirView::OnClick(NMHDR* pNMHDR, LRESULT* pResult)
 					CDirDoc *pDoc = GetDocument();
 					pDoc->SetMerge20IncludeInOutput(di, !pDoc->GetMerge20IncludeInOutput(di));
 					GetListCtrl().RedrawItems(lvhti.iItem, lvhti.iItem);
+					UpdateMerge20StatusCount();
 				}
 			}
 		}
@@ -2870,6 +2896,7 @@ BOOL CDirView::PreTranslateMessage(MSG* pMsg)
 					{
 						GetDocument()->ApplyMerge20ReviewState(dip, static_cast<ReviewState>(pMsg->wParam - '1'));
 						GetListCtrl().RedrawItems(sel, sel);
+						UpdateMerge20StatusCount();
 						return TRUE;
 					}
 					if (pMsg->wParam == VK_SPACE)
@@ -2877,6 +2904,7 @@ BOOL CDirView::PreTranslateMessage(MSG* pMsg)
 						ReviewState curState = GetDocument()->GetMerge20ReviewState(dip);
 						GetDocument()->ApplyMerge20ReviewState(dip, static_cast<ReviewState>((static_cast<int>(curState) + 1) % 5));
 						GetListCtrl().RedrawItems(sel, sel);
+						UpdateMerge20StatusCount();
 						return TRUE;
 					}
 				}
@@ -3158,6 +3186,13 @@ void CDirView::OnTimer(UINT_PTR nIDEvent)
 		{
 			msg = (items == 1) ? _("1 item selected") : strutils::format_string1(_("%1 items selected"), strutils::to_str(items));
 		}
+		// Merge20 (S3, design section 3.2, spec section 5.1): keep the
+		// "N displayed, M checked" count in the status bar at all times.
+		// This timer is the only writer of status pane 0 (see
+		// CDirFrame::SetStatus), so a selection change would otherwise
+		// wipe the count; append it here, and refresh it directly from
+		// Redisplay() and from every Merge20 state change (T-2-2).
+		msg = strutils::format_string2(_("%1 | %2"), msg, GetMerge20StatusCountText());
 		GetParentFrame()->SetStatus(msg.c_str());
 	}
 	else if (nIDEvent == TIMER_ID_DBLCLICK_OPEN)
@@ -3167,6 +3202,207 @@ void CDirView::OnTimer(UINT_PTR nIDEvent)
 	}
 	
 	__super::OnTimer(nIDEvent);
+}
+
+/**
+ * @brief Merge20 (S3, design section 3.2, spec section 5.1): text for the
+ * "N displayed, M checked" status bar count.
+ * @return e.g. "12 displayed, 5 checked". Directories and the ".." parent
+ * row have no output flag and are not counted; the denominator is the
+ * number of displayed file rows, so the current filter applies.
+ */
+String CDirView::GetMerge20StatusCountText()
+{
+	int displayed = 0;
+	int checked = 0;
+	CDirDoc* pDoc = GetDocument();
+	const int n = m_pList->GetItemCount();
+	for (int i = 0; i < n; ++i)
+	{
+		DIFFITEM* pKey = GetItemKey(i);
+		if (pKey == nullptr || IsDiffItemSpecial(pKey))
+			continue;
+		const DIFFITEM& di = GetDiffItem(i);
+		if (di.diffcode.isDirectory())
+			continue;
+		++displayed;
+		if (pDoc->GetMerge20IncludeInOutput(di))
+			++checked;
+	}
+	return strutils::format_string2(_("%1 displayed, %2 checked"), strutils::to_str(displayed), strutils::to_str(checked));
+}
+
+/**
+ * @brief Merge20 (S3): write the current count text to the status bar.
+ * Called from Redisplay() (the displayed set changed) and from every
+ * place that changes an output flag, so the count always follows
+ * filters and check operations (T-2-2).
+ */
+void CDirView::UpdateMerge20StatusCount()
+{
+	GetParentFrame()->SetStatus(GetMerge20StatusCountText().c_str());
+}
+
+/**
+ * @brief Merge20 (S3): count displayed files per review state.
+ * @param [out] counts Number of displayed files per state, indexed by
+ *              static_cast<int>(ReviewState). Displayed means the rows
+ *              currently in the list (the filter applies); directories and
+ *              the ".." parent row are skipped.
+ */
+void CDirView::Merge20CountDisplayedByReviewState(int counts[5])
+{
+	for (int i = 0; i < 5; ++i)
+		counts[i] = 0;
+	CDirDoc* pDoc = GetDocument();
+	const int n = m_pList->GetItemCount();
+	for (int i = 0; i < n; ++i)
+	{
+		DIFFITEM* pKey = GetItemKey(i);
+		if (pKey == nullptr || IsDiffItemSpecial(pKey))
+			continue;
+		const DIFFITEM& di = GetDiffItem(i);
+		if (di.diffcode.isDirectory())
+			continue;
+		++counts[static_cast<int>(pDoc->GetMerge20ReviewState(di))];
+	}
+}
+
+/**
+ * @brief Merge20 (S3): open the batch-check dialog and apply the choice.
+ * The dialog shows the matching file count before execution (spec section
+ * 4(b)) and only runs after the user confirms with OK (or one of the
+ * other action buttons); Cancel changes nothing. The "selected states"
+ * action covers displayed files only, as in the HTML tool's batchChkSel,
+ * which iterates the filtered files.
+ */
+void CDirView::OnMerge20BatchCheck()
+{
+	int counts[5] = {};
+	Merge20CountDisplayedByReviewState(counts);
+	Merge20BatchCheckDlg dlg(this, counts);
+	if (dlg.DoModal() != IDOK)
+		return;
+	CDirDoc* pDoc = GetDocument();
+	switch (dlg.GetAction())
+	{
+	case Merge20BatchCheckDlg::Action::Selected:
+	{
+		const int n = m_pList->GetItemCount();
+		for (int i = 0; i < n; ++i)
+		{
+			DIFFITEM* pKey = GetItemKey(i);
+			if (pKey == nullptr || IsDiffItemSpecial(pKey))
+				continue;
+			const DIFFITEM& di = GetDiffItem(i);
+			if (di.diffcode.isDirectory())
+				continue;
+			if (dlg.IsStateSelected(pDoc->GetMerge20ReviewState(di)))
+				pDoc->SetMerge20IncludeInOutput(di, true);
+		}
+		break;
+	}
+	case Merge20BatchCheckDlg::Action::CheckAllDisplayed:
+	{
+		const int n = m_pList->GetItemCount();
+		for (int i = 0; i < n; ++i)
+		{
+			DIFFITEM* pKey = GetItemKey(i);
+			if (pKey == nullptr || IsDiffItemSpecial(pKey))
+				continue;
+			const DIFFITEM& di = GetDiffItem(i);
+			if (!di.diffcode.isDirectory())
+				pDoc->SetMerge20IncludeInOutput(di, true);
+		}
+		break;
+	}
+	case Merge20BatchCheckDlg::Action::ClearAll:
+		// As in the HTML popup (batchChk(false) iterates all files),
+		// "Clear all checks" covers the whole comparison, including
+		// files hidden by the current filter or a collapsed folder.
+		Merge20SetOutputForAllFiles(false);
+		break;
+	case Merge20BatchCheckDlg::Action::None:
+		break;
+	}
+	m_pList->Invalidate();
+	UpdateMerge20StatusCount();
+}
+
+/**
+ * @brief Merge20 (S3, design section 3.2, spec section 3): set the output
+ * flag of every file below one directory row, recursively. The DIFFITEM
+ * tree is walked (not the visible list), so files in collapsed
+ * subfolders are included too. Directory rows themselves have no flag.
+ */
+void CDirView::Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include)
+{
+	CDirDoc* pDoc = GetDocument();
+	for (DIFFITEM* pChild = dir.GetFirstChild(); pChild != nullptr; pChild = pChild->GetFwdSiblingLink())
+	{
+		if (pChild->diffcode.isDirectory())
+			Merge20SetOutputForDirectory(*pChild, include);
+		else
+			pDoc->SetMerge20IncludeInOutput(*pChild, include);
+	}
+}
+
+void CDirView::OnMerge20DirCheckAll()
+{
+	for (DirItemIterator it = SelBegin(); it != SelEnd(); ++it)
+	{
+		const DIFFITEM& di = *it;
+		if (di.diffcode.isDirectory())
+			Merge20SetOutputForDirectory(di, true);
+	}
+	m_pList->Invalidate();
+	UpdateMerge20StatusCount();
+}
+
+void CDirView::OnMerge20DirUncheckAll()
+{
+	for (DirItemIterator it = SelBegin(); it != SelEnd(); ++it)
+	{
+		const DIFFITEM& di = *it;
+		if (di.diffcode.isDirectory())
+			Merge20SetOutputForDirectory(di, false);
+	}
+	m_pList->Invalidate();
+	UpdateMerge20StatusCount();
+}
+
+void CDirView::OnUpdateMerge20DirCheck(CCmdUI* pCmdUI)
+{
+	bool bDirSelected = false;
+	for (DirItemIterator it = SelBegin(); it != SelEnd(); ++it)
+	{
+		const DIFFITEM& di = *it;
+		if (di.diffcode.isDirectory())
+		{
+			bDirSelected = true;
+			break;
+		}
+	}
+	pCmdUI->Enable(bDirSelected);
+}
+
+/**
+ * @brief Merge20 (S3): set the output flag of every file in the whole
+ * comparison (depth-first walk of the DIFFITEM tree, so filtered-out and
+ * collapsed files are included too).
+ */
+void CDirView::Merge20SetOutputForAllFiles(bool include)
+{
+	if (m_pList->GetItemCount() == 0)
+		return;
+	CDiffContext& ctxt = GetDiffContext();
+	CDirDoc* pDoc = GetDocument();
+	for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)
+	{
+		const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
+		if (!di.diffcode.isDirectory())
+			pDoc->SetMerge20IncludeInOutput(di, include);
+	}
 }
 
 /**

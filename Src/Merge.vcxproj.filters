@@ -621,6 +621,9 @@
     <ClCompile Include="LocationBar.cpp">
       <Filter>MFCGui\MDIChild\TextTableCompare\Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20BatchCheckDlg.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20FileStates.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1405,6 +1408,9 @@
     </ClInclude>
     <ClInclude Include="MergeEditView.h">
       <Filter>MFCGui\MDIChild\TextTableCompare\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20BatchCheckDlg.h">
+      <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FileStates.h">
       <Filter>Merge20</Filter>
