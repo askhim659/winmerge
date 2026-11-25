@@ -449,6 +449,7 @@
     </ClCompile>
     <ClCompile Include="..\..\..\Src\CompareStats.cpp" />
     <ClCompile Include="..\..\..\Src\DiffContext.cpp" />
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20FileStates.cpp" />
     <ClCompile Include="..\..\..\Src\DiffFileData.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -878,6 +879,8 @@
     <ClInclude Include="..\..\..\Src\Common\coretools.h" />
     <ClInclude Include="..\..\..\Src\CompareStats.h" />
     <ClInclude Include="..\..\..\Src\DiffContext.h" />
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20FileStates.h" />
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20Types.h" />
     <ClInclude Include="..\..\..\Src\DiffFileData.h" />
     <ClInclude Include="..\..\..\Src\DiffItem.h" />
     <ClInclude Include="..\..\..\Src\DiffItemList.h" />
