@@ -335,6 +335,10 @@ inline const String OPT_MERGE20_RISK_KEYWORDS {_T("Merge20/RiskKeywords"s)};
 // the session file).
 inline const String OPT_MERGE20_SESSION_AUTOSAVE {_T("Merge20/SessionAutoSave"s)};
 inline const String OPT_MERGE20_LEARNING_ENABLED {_T("Merge20/LearningEnabled"s)};
+// Merge20 (Phase 3 L1, design section 4.3): this PC's learning source
+// id ("u-<GUID>", generated on first use). Never "self": the HTML tool
+// treats "self" specially, so the fork must not use it as an id.
+inline const String OPT_MERGE20_LEARNING_OWNER {_T("Merge20/LearningOwner"s)};
 inline const String OPT_MERGE20_BATCH_APPROVE_DIALOG {_T("Merge20/BatchApproveDialog"s)};
 inline const String OPT_MERGE20_SHOW_REVIEW_TODO {_T("Merge20/ShowReviewTodo"s)};
 inline const String OPT_MERGE20_SHOW_REVIEW_DONE {_T("Merge20/ShowReviewDone"s)};
