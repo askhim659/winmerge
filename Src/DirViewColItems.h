@@ -64,6 +64,7 @@ public:
 	bool IsColRmTime(int col) const;
 	bool IsColStatus(int col) const;
 	bool IsColStatusAbbr(int col) const;
+	bool IsColOutputCheck(int col) const;
 	bool IsColSortableWhileComparing(int col) const;
 	bool IsDefaultSortAscending(int col) const;
 	String GetColDisplayName(int col) const;
