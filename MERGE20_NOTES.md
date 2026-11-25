@@ -900,3 +900,105 @@ CI での gtest（`Merge20Session_test.cpp`、同内容）は 14.5 参照。
   - 成果物：`WinMerge-x64.zip` 26,133,366 バイト（ID 15040695967）、`WinMerge-x64-Setup-x64.exe` 39,622,714 バイト（ID 15040845810）。いずれも失効日 2027-02-23。
   - GoogleTest：581 テスト全パス。S8 新規 6 件（`Merge20Session.Utf8RoundTrip` / `JsonRoundTrip` / `JsonErrors` / `SessionRoundTrip` / `SessionFormatErrors` / `FileChanged`）すべて OK。
 - 注意：修正コミットごとに push したため、途中の実行 45648764458 / 45648785154 も走ったが、最終実行のみが全修正込み。実機確認は §14.4 の手順で行うこと。
+
+## 15. Phase 3 L0（学習コア・純粋モジュール）— ブランチ `merge20/phase3-l0`
+
+設計書 `merge20-phase3-design.md` §5 L0 どおり。UI・永続化・ON/OFF の読み手・
+記録フックは含まない（L1 以降）。候補の計算だけを行い、自動適用の経路は作らない
+（仕様書 §4(c)）。`OPT_MERGE20_LEARNING_ENABLED` の読み手は作っていない。
+
+### 15.1 変更一覧
+
+- 新規 `Src/Merge20/Merge20Learn.h/.cpp`（計 1,368 行。MFC 非依存・`_()` なし・
+  ASCII のみ。pch.h グループ。`Merge20Classify.cpp` と同じ作法）。
+  - 完全一致キー（HTML `hunkKeyExact` と同一。JS の `\s` 集合で空白を潰して
+    トリムし、`⇄`（U+21C4）で結んで `\n` 連結。OP_NONE 行は除外）。
+  - 特徴キー（HTML `hunkFeatKey` と同一。type は del／mod／add。優先順位は
+    round → ifdel → sql → tax → comment。ifdel・comment は旧側のみで判定）。
+  - 閾値判定（HTML `matchLearn` と同一。完全一致は 1 件以上、特徴一致は
+    3 件以上かつ賛成率 80% 以上。賛成率は整数比 `best*5 >= total*4` で判定し、
+    小数は使わない。S8 JSON モジュールが整数のみであることと整合する）。
+  - 訂正（HTML `learnFromHunk` と同一。候補と違う判定をすると旧方針に -1・
+    新方針に +1 し、`lastStrat` を新方針にする。`ex`／`last` も更新する。
+    訂正は自分の出典の件数だけに作用し、他出典の件数には触れない）。
+  - 出典管理（HTML と同一の構造。ルールごとに出典別 `sources` を持ち、
+    再取込は置換、出典単位の削除は寄与分だけ差し引く、統合出力は件数を合算して
+    出典情報を落とす。`self` という出典 ID はフォークでは作らない）。
+  - JSON v2 変換（S8 の `Merge20Session.h/.cpp` の DOM・パーサ・シリアライザ・
+    UTF-8 変換を流用。セッション専用の変換関数 `Merge20SessionToJson`／
+    `FromJson` は流用せず、学習用に `Merge20LearnToJson`／`FromJson`／
+    `ImportJson`／`MergedToJson` を新設。フォークの `app` は `"Merge20Learn"`、
+    取込時は HTML の `app`（`"マージ支援20号"`）も受理する）。
+  - `hashStr` の C++ への正確な移植（32bit 整数演算。UTF-16 コード単位で
+    ハッシュし、16 進はゼロ埋めなしの小文字。v1 ファイルの出典 ID
+    `file:<hashStr(ファイル名)>` に使う）。
+  - `Merge20LearnRecordJudgment`（HTML `learnFromHunk` 相当。完全一致キーと
+    特徴キーの両方に記録する。`last`（当日日付）は呼び出し側が渡す）。
+- 新規 `Testing/GoogleTest/Merge20/Merge20Learn_test.cpp`（16 テスト）。
+- `Src/Merge.vcxproj`／`.filters`、`Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／
+  `.filters` に新規ファイルを登録（Merge20Learn.cpp は pch.h グループ。
+  UnitTests 側の Src ファイルは S4 と同じく素のエントリ）。
+
+### 15.2 設計書・仕様書との食い違い（判断理由つき）
+
+1. **小数を含むルールの per-rule スキップは不可**（設計書 §4.1／§8 の想定と
+   異なる）。S8 パーサは整数以外をファイル全体のエラーにするため、そのような
+   ファイルは全体を拒否する（`Merge20LearnFromJson` は false を返す）。
+   仕様上は正しい v2 ファイルに小数は現れない（`counts`・`n` は整数）。
+   テスト `JsonErrors` で全体拒否を検証した。
+2. **重複キーは先勝ち**（T-3-2／U-3-4 を解消）。`ParseObject` は重複を許し
+   `Find` は先頭を返すことを実読で確認した（`Merge20Session.cpp:252-285`、
+   `:559-568`）。学習側の `counts` パーサも先頭の出現を採用する。
+3. **OP_TRIVIAL 行は特徴キーの type 判定で mod 扱い**（HTML に相当概念が
+   ないため。変更行のペアであることに変わりはない）。
+4. **round 正規表現は大文字小文字を区別する**（HTML と同一。S4 の
+   `RoundingRegex` は icase 付きのため流用していない。S4 の `SqlRegex` は
+   `join` を含むため、学習用の SQL 正規表現も HTML のパターンをそのまま
+   使った）。
+5. **FromJson は出典つきルールの集計 `counts` を出典の合計から再計算する**
+   （ストアの不変条件 `counts == 出典の合計` を保つため。ファイルの `counts`
+   と出典合計が違うファイルは、出典合計を正として読み込む。出典なしルールは
+   ファイルの `counts` をそのままファイル出典に帰属させる）。
+6. **ImportJson は HTML `importLearn` と同一の平坦化**（ルールの `sources`
+   は保持せず、ファイル全体を 1 出典として加算する。再取込は置換）。
+7. **`Merge20LearnCandidate` は `Merge20Learn.h` に置いた**（設計書 §3.2 は
+   `Merge20Types.h` としていたが、方針値 enum が `Merge20Learn.h` にあるため。
+   `diffIdx`／`srcPanes` は L2 のアダプタが埋める）。
+
+### 15.3 検証結果（ローカル g++ ハーネス＋Node ground truth）
+
+- **ローカル g++ ハーネス：16 テスト全合格。** スタブ `pch.h`／`UnicodeString.h`／
+  `DiffList.h`＋実物の `Merge20Session.cpp` でコンパイルし、テストファイルそのもの
+  を実行した。`-fshort-wchar` は libstdc++ の `wstring` と ABI が合わず使えない
+  ため使っていない（wchar_t 4 バイトで検証。`hashStr` の ground truth は BMP 文字
+  のみのため Windows と同じ結果になる）。
+- **Node ground truth：HTML の学習関数をそのまま Node で実行し突き合わせた。**
+  `hashStr` 6 件・完全一致キー 4 件・特徴キー 20 件・閾値境界（2/3・3/4・4/5・
+  7/9・8/10・3/3）・同数時の `lastStrat` 優先（挿入順の同数解決を含む）・訂正・
+  出典削除・統合・取込／再取込・v1 取込がすべて一致した。
+- **双方向チェック：フォークの出力 JSON を HTML の `importLearn`・`matchLearn` に
+  通し、候補が一致すること・再取込で二重計上されないことを確認した。** 逆方向
+  （HTML の実物 JSON をフォークで取込）も単体テストで確認した
+  （`HtmlJsonImport`・`V1Import`）。
+- **CI：実行 45660547413 success。GoogleTest 597 テスト全パス**（S8 の 581＋新規 16）。
+
+### 15.4 Windows 実機での確認手順（L0）
+
+L0 は UI・永続化・記録フックがないため、実機で確認できる動作はない。
+実機確認は L1（`Merge20Learn.json` の生成と ON/OFF）以降に回す。
+CI 成果物の ZIP を使って L0 の範囲で確認できることがあるとすれば、
+WinMergeU.exe が従来どおり起動すること（回帰確認）のみ。
+
+### 15.5 CI 結果（PR #12）
+
+- PR: https://github.com/askhim659/winmerge/pull/12（`merge20/phase3-l0` → `master`、7 コミット、未マージ）
+- 実行 45660547413（2026-11-25 17:03Z）：**success**。ジョブ build 139368899588。
+  - 成果物：`WinMerge-x64.zip` 26,132,691 バイト（ID 15045626867）、
+    `WinMerge-x64-Setup-x64.exe` 39,632,162 バイト（ID 15046410683）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：597 テスト全パス。Merge20Learn 新規 16 件
+    （`StrategyNames` / `HashStr` / `ExactKey` / `FeatureKey` /
+    `MatchThresholds` / `DominantTie` / `RecordCorrection` / `RemoveSource` /
+    `GetSources` / `MergeSources` / `SourceDisplayName` / `JsonRoundTrip` /
+    `HtmlJsonImport` / `V1Import` / `JsonErrors` / `MergedJson`）すべて OK。
+  - CI 失敗 0 回（初回実行で success）。
