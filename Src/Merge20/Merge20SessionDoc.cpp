@@ -61,11 +61,11 @@ namespace
 
 	String SessionKey(const String& leftPath, const String& rightPath, const String& thirdPath)
 	{
-		String key = makelower(leftPath);
+		String key = strutils::makelower(leftPath);
 		key += _T("|");
-		key += makelower(rightPath);
+		key += strutils::makelower(rightPath);
 		key += _T("|");
-		key += makelower(thirdPath);
+		key += strutils::makelower(thirdPath);
 		return key;
 	}
 
@@ -334,9 +334,9 @@ bool Merge20SessionLoadForDoc(CDirDoc& doc, const String& filePath, Merge20Sessi
 	const String left = ctxt.GetNormalizedPath(0);
 	const String right = nDirs > 1 ? ctxt.GetNormalizedPath(1) : String();
 	const String third = nDirs > 2 ? ctxt.GetNormalizedPath(2) : String();
-	if (makelower(loaded.leftPath) != makelower(left) ||
-		makelower(loaded.rightPath) != makelower(right) ||
-		makelower(loaded.thirdPath) != makelower(third))
+	if (strutils::makelower(loaded.leftPath) != strutils::makelower(left) ||
+		strutils::makelower(loaded.rightPath) != strutils::makelower(right) ||
+		strutils::makelower(loaded.thirdPath) != strutils::makelower(third))
 	{
 		errStr = _("This session file is for a different folder pair.");
 		return false;
