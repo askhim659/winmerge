@@ -2536,5 +2536,20 @@ D0 は基盤のため、実機で確認できる動作は計測ログとオプ�
 
 ### 22.5 CI 結果（PR #19）
 
-- PR: https://github.com/askhim659/winmerge/pull/19（`merge20/phase4-d0` → `master`、13 コミット、未マージ）
-- 実行待ち（PR 作成後に追記する）。
+- PR: https://github.com/askhim659/winmerge/pull/19（`merge20/phase4-d0` → `master`、14 コミット、未マージ）
+- 実行 45710452824（2026-11-25 22:07Z）：**success**。ジョブ build 139543187614。
+  - 成果物：`WinMerge-x64.zip` 26,196,063 バイト（ID 15067224671）、
+    `WinMerge-x64-Setup-x64.exe` 39,690,767 バイト（ID 15067722592）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：**608 テスト全パス**（`[  PASSED  ] 608 tests.`。L6 までの
+    600＋新規 8）。新規は `Merge20Measure` 7 件
+    （`ComputeResultWithScanPoint`／`ComputeResultWithoutScanPoint`／
+    `ComputeResultZeroElapsed`／`BeginListFinalizedFlow`／
+    `ListFinalizedWithoutBeginIsIgnored`／`BeginRestartsMeasurement`／
+    `FormatWithoutScanPointOmitsSplit`）と
+    `Merge20Phase4D0Options.KeyNames` 1 件。`[  FAILED  ]` は 0 件。
+  - `Merge20Measure.obj` が WinMergeU・UnitTests の両方で生成され、
+    `Merge20Measure_test.obj` も生成されていることをログで確認。
+    D0 のファイルに関するコンパイル警告なし（ログ中の警告は既存の
+    Poco／xutility 由来）。
+  - CI 失敗 0 回（初回実行で success）。
