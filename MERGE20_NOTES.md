@@ -176,3 +176,16 @@ push していない（gh 未ログイン、アカウント作成もしていな
 - **元の HTML（`17_v17.15.html`）と仕様書 PDF は変更していない**。
 - ライセンス: WinMerge は GPLv2。フォークも GPLv2 の条件に従うこと
   （仕様書 第8章参照）。
+
+
+## GitHub fork and CI
+
+- Fork: https://github.com/askhim659/winmerge (public).
+- CI workflow `.github/workflows/main.yml` (job `build`, windows-latest)
+  runs on push / pull request to `master` and uploads
+  `Build/Releases/*.zip` and `*.exe` as artifacts.
+- The fork's workflows were registered only after the first push to
+  `master`; API ref updates do not produce the push event Actions
+  listens to, so CI is triggered with pull requests.
+- Phase 1 was pushed through the Git Database API (the stored token
+  cannot be used for git-over-HTTPS password auth from this Linux VM).
