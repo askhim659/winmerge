@@ -138,6 +138,9 @@
     <ClCompile Include="..\Encoding\codepage_detect_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Encoding\Merge20EncodingRoundtrip_test.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\DirItem\DirItem_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
