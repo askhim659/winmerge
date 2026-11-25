@@ -113,7 +113,7 @@
 #define IDD_DARK_FONT_DIALOG            289
 #define IDD_COMPARISON_RESULT_FILTER    290
 #define IDD_FILTERS_MATCHINSIDE         291
-#define IDD_MERGE20_BATCH_CHECK         292
+#define IDD_MERGE20_BATCH_CHECK         293
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -2454,7 +2454,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        293
+#define _APS_NEXT_RESOURCE_VALUE        294
 #define _APS_NEXT_COMMAND_VALUE         38934
 #define _APS_NEXT_CONTROL_VALUE         1727
 #define _APS_NEXT_SYMED_VALUE           134
