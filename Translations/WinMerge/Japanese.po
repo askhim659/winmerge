@@ -10845,3 +10845,28 @@ msgstr "ベースURL"
 #: Strings.rc:344
 msgid "(pick a preset to fill in the field above)"
 msgstr "(上のフィールドに設定するプリセットを選択)"
+
+#. Merge20 (L1): learning on/off checkbox, compare options (PropCompare)
+#: Src/PropCompare.cpp
+msgid "Enable learning"
+msgstr "🎓 学習機能"
+
+#. Merge20 (L1): learning on/off explanation, compare options (PropCompare)
+#: Src/PropCompare.cpp
+msgid "When off, learning suggestions and recording stop."
+msgstr "OFF にすると候補提示と記録を停止します。"
+
+#. Merge20 (L1): this PC's learning source display name (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Learning on this PC (self)"
+msgstr "このPCで学習（自分）"
+
+#. Merge20 (L1): learning folder creation failure (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Cannot create the learning folder:\n%1"
+msgstr "学習フォルダを作成できません：\n%1"
+
+#. Merge20 (L1): learning save failure (Merge20LearnDoc)
+#: Src/Merge20/Merge20LearnDoc.cpp
+msgid "Cannot save the learning data:\n%1"
+msgstr "学習データを保存できません：\n%1"

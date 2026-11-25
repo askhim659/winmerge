@@ -1002,3 +1002,115 @@ WinMergeU.exe が従来どおり起動すること（回帰確認）のみ。
     `GetSources` / `MergeSources` / `SourceDisplayName` / `JsonRoundTrip` /
     `HtmlJsonImport` / `V1Import` / `JsonErrors` / `MergedJson`）すべて OK。
   - CI 失敗 0 回（初回実行で success）。
+
+## 16. Phase 3 L1（学習の永続化と ON/OFF）— ブランチ `merge20/phase3-l1`
+
+設計書 `merge20-phase3-design.md` §5 L1 どおり。記録フック（L2）・候補提示 UI（L3）・
+学習モーダル（L4）・JSON 入出力 UI（L5）は含まない。自動適用の経路は作らない
+（仕様書 §4(c)）。
+
+### 16.1 変更一覧
+
+- 新規 `Src/Merge20/Merge20LearnDoc.h/.cpp`（MFC アダプタ、StdAfx.h グループの
+  既定エントリ。`Merge20SessionDoc.cpp` と同じ作り）。
+  - `Merge20LearnGetDirectory()`／`Merge20LearnGetFilePath()` — 学習ファイルは
+    `Merge20Learn.json` 1 ファイル。INI（ポータブル）時は
+    `<progpath>\Merge20Learn\`、それ以外は `%APPDATA%\WinMerge\Merge20Learn\`。
+    セッションの `Merge20Sessions` とは別ディレクトリ（設計書 §3.4 どおり。
+    学習データはフォルダ組に紐づかないため混ぜない）。
+  - `Merge20LearnGetStore()` — 遅延読み込み。初回アクセス時にだけ読む。
+    ファイルが無い場合は空ストア、壊れている場合も空ストアとして扱い、
+    失敗を記憶する（起動を妨げない。失敗は学習モーダル（L4）で報告する）。
+  - `Merge20LearnGetLoadError()` — 遅延読み込みの失敗を返す（L4 用）。
+  - `Merge20LearnSaveStore()` — L0 の `Merge20LearnToJson` で書き出し、
+    一時ファイル＋リネームによる保存（S8 の `Merge20SessionSaveToFile` と
+    同じ方式。失敗時は直接書き込みにフォールバック）。フォルダが無い場合は
+    作成し、失敗時はメッセージボックス用の文言を返す（仕様書 §7）。
+  - `Merge20LearnIsEnabled()` — `OPT_MERGE20_LEARNING_ENABLED` の初の読み手
+    （S8 で追加済みだが読み手がなかった。L2 の記録関数・候補計算関数の先頭で
+    使うガードの土台）。
+  - `Merge20LearnGetOwnerId()` — `OPT_MERGE20_LEARNING_OWNER` から読む。
+    空の場合は `CoCreateGuid` で `u-<GUID>` を生成し、キーに保存して返す。
+    `self` という出典 ID は使わない（HTML が `self` を特別扱いするため）。
+  - `Merge20LearnGetOwnerDisplayName()` — 「このPCで学習（自分）」
+    （`_()` 経由で日本語訳つき）。
+- `Src/OptionsDef.h`／`Src/OptionsInit.cpp` — 新規キー
+  `OPT_MERGE20_LEARNING_OWNER`（`"Merge20/LearningOwner"`、既定は空文字）。
+  `OPT_MERGE20_LEARNING_ENABLED` は S8 で追加済み（既定 true）のため変更なし。
+- `Src/PropCompare.h`／`.cpp` — メンバ `m_bMerge20Learning`（既定 true）を追加し、
+  `BindOption(OPT_MERGE20_LEARNING_ENABLED, m_bMerge20Learning, IDC_MERGE20_LEARN_CHECK, DDX_Check)`
+  を 1 行追加。比較オプション画面に学習機能の ON/OFF トグルができた。
+- `Src/Merge.rc` — `IDD_PROPPAGE_COMPARE` にチェックボックス
+  「Enable learning」（y=234）と説明文 LTEXT
+  「When off, learning suggestions and recording stop.」（y=246）を追加。
+  ダイアログ下部（「Defaults」ボタンの上）に余白があった（T-3-6 は解消。
+  既存コントロールと重ならない）。
+- `Src/resource.h` — `IDC_MERGE20_LEARN_CHECK`＝1731（全 define を値でソートして
+  空きを確認。`_APS_NEXT_CONTROL_VALUE` は 1731→1732 に更新）。
+  `IDD_MERGE20_LEARN`＝296 は使っていない（L4 用に予約のまま）。
+- `Src/Merge.vcxproj`／`.filters` — `Merge20LearnDoc.h/.cpp` を登録
+  （`.cpp` は StdAfx.h グループの既定エントリ。`Merge20SessionDoc.cpp` と同じ）。
+  `UnitTests.vcxproj` には登録しない（MFC アダプタのため。S8 の
+  `Merge20SessionDoc.cpp` と同じ扱い）。
+- `Translations/WinMerge/Japanese.po` — 5 件追加（「Enable learning」→
+  「🎓 学習機能」、説明文→「OFF にすると候補提示と記録を停止します。」、
+  「Learning on this PC (self)」→「このPCで学習（自分）」、
+  学習フォルダ作成失敗・学習データ保存失敗の文言）。msgid の重複なし。
+
+### 16.2 設計書・仕様書との食い違い（判断理由つき）
+
+1. **L1 だけでは `Merge20Learn.json` が生成されない**（設計書 §5 L1 の受け入れ基準
+   「ファイルの生成までを確認する」との食い違い。判断理由：L1 の範囲は永続化の
+   土台（保存・読み込み関数と ON/OFF）までであり、保存を呼ぶ記録口は L2 で
+   初めてできる。L1 では `Merge20LearnGetStore()`／`Merge20LearnSaveStore()`／
+   `Merge20LearnGetOwnerId()` の呼び出し元がまだ存在しないため、実機で
+   ファイルが作られることはない。ファイル生成の実機確認は L2 に回す）。
+2. **OFF 切替時の候補クリアは L1 では実施しない**（設計書 §3.5 の「OFF への切替時に
+   全マージ文書で候補マップを空にして結果ビューを `Invalidate` する」との食い違い。
+   判断理由：候補マップ自体が L2 で初めて作られるため、L1 には消す対象がない。
+   トグルによるキーの切り替えまでが L1 の範囲。候補クリアは L2／L3 で実装する）。
+3. **T-3-4 は「前例なし・新規利用」で解消**：`CoCreateGuid` の利用前例は、
+   GitHub code search では 0 件だった（ただし `incomplete_results: true` のため
+   全リポジトリ grep ではない。取得済みの主要ファイル内には利用なし）。標準 Win32 API
+   の新規利用とし、失敗時のフォールバック（`u-local-YYYYMMDDHHMMSS`）も用意した。
+   新規依存はない（ole32 は MFC アプリが既にリンクしている）。
+4. **OPT_MERGE20_LEARNING_ENABLED に読み手がないことを再確認**：設計書 §3.5 の確認
+   範囲どおり、取得済みファイル内では `OptionsInit.cpp` の `InitOption` と
+   `OptionsDef.h` の定義のみ。GitHub code search でも 0 件（ただし上記と同じく
+   `incomplete_results: true`）。L1 で初の読み手 `Merge20LearnIsEnabled()` を追加した。
+5. **説明文はチェックボックスとは別の LTEXT 1 行にした**（設計書 §6 の「OFF にすると
+   候補提示と記録を停止します」を表示するため。チェックボックスのラベル自体を長く
+   する代わりに、説明文を下に置いた。ダイアログ下部に余白があったため重ならない）。
+6. **保存時の `sourceName` は固定ファイル名 `Merge20Learn.json`**（設計書 §4.2 の
+   「出力ファイル名」を内部ファイルに適用。L5 のエクスポート時は日付つきファイル名
+   を使う）。`exportedAt` はローカル時刻の `%Y-%m-%dT%H:%M:%S`（`Z` なし。UTC への
+   変換はしていない。表示・監査用であり、不一致でも拒否されない）。
+7. **`.rc` のラベルは英語のまま**（`Merge.rc` は ASCII のため絵文字・日本語は書けない。
+   既存の `.rc` 文字列と同じく `_()`／`.po` 経由で日本語化する。「Enable learning」→
+   「🎓 学習機能」）。
+
+### 16.3 Windows 実機での確認手順（L1 受け入れテスト）
+
+1. CI 成果物の ZIP を展開し、`WinMergeU.exe` が従来どおり起動すること（回帰確認）。
+2. ツール → オプション → 比較ページを開き、「🎓 学習機能」チェックボックスが
+   表示されること（既定で ON）。下に「OFF にすると候補提示と記録を停止します。」
+   と表示されること。
+3. チェックを外して OK を押し、オプションを閉じて再度開くと OFF が維持されること
+   （設定の永続化。レジストリ／INI の `Merge20/LearningEnabled` が false になること）。
+   ON に戻すと true に戻ること。
+4. **L1 だけでは `Merge20Learn.json` はまだ生成されないこと**（§16.2-1 のとおり。
+   これは仕様どおりであり、不具合ではない。ファイル生成は L2 で確認する）。
+5. ON/OFF を切り替えても既存の比較・セッション保存・復元が壊れないこと
+   （L1 は既存の動作に手を入れていない。オプションの読み書きと表示だけの変更）。
+
+### 16.4 CI 結果（PR #13）
+
+- PR: https://github.com/askhim659/winmerge/pull/13（`merge20/phase3-l1` → `master`、12 コミット、未マージ）
+- 実行 45666435275（2026-11-25 17:35Z）：**success**。ジョブ build 139389714022。
+  - 成果物：`WinMerge-x64.zip` 26,134,723 バイト（ID 15049525501）、
+    `WinMerge-x64-Setup-x64.exe` 39,637,392 バイト（ID 15047912693）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：597 テスト全パス（L0 と同じ件数。新規テストなし。
+    Merge20Learn 16 件すべて OK）。ログ中の "FAILED" 4 件は翻訳文字列 ID
+    （IDS_FILESAVE_FAILED 等）で、テスト失敗ではない。
+  - CI 失敗 0 回（初回実行で success）。

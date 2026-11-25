@@ -34,6 +34,7 @@ PropCompare::PropCompare(COptionsMgr *optionsMgr)
  , m_nDiffAlgorithm(0)
  , m_bIndentHeuristic(true)
  , m_bCompleteBlankOutIgnoredChanges(false)
+ , m_bMerge20Learning(true)
 {
 	BindOption(OPT_CMP_IGNORE_WHITESPACE, m_nIgnoreWhite, IDC_WHITESPACE, DDX_Radio);
 	BindOption(OPT_CMP_IGNORE_BLANKLINES, m_bIgnoreBlankLines, IDC_IGNBLANKS_CHECK, DDX_Check);
@@ -49,6 +50,7 @@ PropCompare::PropCompare(COptionsMgr *optionsMgr)
 	BindOption(OPT_CMP_DIFF_ALGORITHM, m_nDiffAlgorithm, IDC_DIFF_ALGORITHM, DDX_CBIndex);
 	BindOption(OPT_CMP_INDENT_HEURISTIC, m_bIndentHeuristic, IDC_INDENT_HEURISTIC, DDX_Check);
 	BindOption(OPT_CMP_COMPLETELY_BLANK_OUT_IGNORED_CHANGES, m_bCompleteBlankOutIgnoredChanges, IDC_COMPLETELY_BLANK_OUT_IGNORED_DIFFERENCES, DDX_Check);
+	BindOption(OPT_MERGE20_LEARNING_ENABLED, m_bMerge20Learning, IDC_MERGE20_LEARN_CHECK, DDX_Check);
 }
 
 void PropCompare::DoDataExchange(CDataExchange* pDX)
