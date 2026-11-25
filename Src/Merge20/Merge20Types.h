@@ -50,12 +50,13 @@ enum class RiskLevel
  * so this struct lives in a sidecar map keyed by relative path
  * (DIFFITEM::getItemRelativePath()). Only `review` is used by S1; the
  * other fields are filled in by later slices (S2: includeInOutput,
- * S4: action/risk/counts/summary, S6/S8: memo).
+ * S4: classified/action/risk/counts/summary, S6/S8: memo).
  */
 struct Merge20FileState
 {
 	ReviewState review = ReviewState::TODO;
 	bool includeInOutput = true; /**< Output checkbox. Initial value depends on the existence category (design section 3.2); S2 sets it. */
+	bool classified = false; /**< True once S4 classification ran for this file (file opened in a merge doc). Unopened files show "Not calculated" in the list. */
 	ActionCategory action = ActionCategory::NO_ACTION_IDENTICAL;
 	RiskLevel risk = RiskLevel::NONE;
 	int nMissing = 0;  /**< Missing-in-new (deleted) lines */
