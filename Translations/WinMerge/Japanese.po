@@ -7188,6 +7188,41 @@ msgstr "旧のみ"
 msgid "New only"
 msgstr "新のみ"
 
+#. Merge20 (S1): folder compare "Review State" column and its five states
+#: Src/DirViewColItems.cpp
+msgid "Review State"
+msgstr "確認内容"
+
+#. Merge20 (S1)
+#: Src/DirViewColItems.cpp
+msgid "Review state of the file: Not reviewed, Done, On hold, Needs manual work, or Keep as is. All files start as Not reviewed; nothing is applied automatically."
+msgstr "ファイルの確認内容：未確認、済、保留、個別対応要、現状維持。全ファイルは未確認から始まります。自動で適用されるものはありません。"
+
+#. Merge20 (S1)
+#: Src/DirViewColItems.cpp
+msgid "Not reviewed"
+msgstr "未確認"
+
+#. Merge20 (S1)
+#: Src/DirViewColItems.cpp
+msgid "Done"
+msgstr "済"
+
+#. Merge20 (S1)
+#: Src/DirViewColItems.cpp
+msgid "On hold"
+msgstr "保留"
+
+#. Merge20 (S1)
+#: Src/DirViewColItems.cpp
+msgid "Needs manual work"
+msgstr "個別対応要"
+
+#. Merge20 (S1)
+#: Src/DirViewColItems.cpp
+msgid "Keep as is"
+msgstr "現状維持"
+
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
 msgid "Image files are identical"

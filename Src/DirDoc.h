@@ -18,6 +18,7 @@
 #include "DirCmpReport.h"
 #include "IMDITab.h"
 #include "IDirDoc.h"
+#include "Merge20/Merge20Types.h"
 
 class CDirView;
 struct IMergeDoc;
@@ -94,6 +95,11 @@ public:
 	void UpdateResources();
 	void InitStatusStrings();
 	void ReloadItemStatus(DIFFITEM *diffPos, int idx);
+	// Merge20 (S1): review state of one item. The state lives in the
+	// CDiffContext sidecar map (see CDiffContext::GetMerge20ReviewState);
+	// these forwarders are the API the S2 key handling will use.
+	ReviewState GetMerge20ReviewState(const DIFFITEM& di) const;
+	void SetMerge20ReviewState(const DIFFITEM& di, ReviewState state);
 	void Redisplay();
 	virtual ~CDirDoc();
 	void SetDirView( CDirView *newView ); // TODO Perry

@@ -73,6 +73,26 @@ CDiffContext::CDiffContext(const PathContext & paths, int compareMethod)
 CDiffContext::~CDiffContext() = default;
 
 /**
+ * @brief Merge20 (S1): review state of one file from the sidecar map.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @return Review state, TODO when the file has no entry yet.
+ */
+ReviewState CDiffContext::GetMerge20ReviewState(const String& relPath) const
+{
+	return m_merge20FileStates.GetReviewState(relPath);
+}
+
+/**
+ * @brief Merge20 (S1): set the review state of one file in the sidecar map.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] state New review state.
+ */
+void CDiffContext::SetMerge20ReviewState(const String& relPath, ReviewState state)
+{
+	m_merge20FileStates.SetReviewState(relPath, state);
+}
+
+/**
  * @brief Update info in item in result list from disk.
  * This function updates result list item's file information from actual
  * file in the disk. This updates info like date, size and attributes.

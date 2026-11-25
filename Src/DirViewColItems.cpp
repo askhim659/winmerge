@@ -13,6 +13,7 @@
 #include "UnicodeString.h"
 #include "DiffItem.h"
 #include "DiffContext.h"
+#include "Merge20/Merge20Types.h"
 #include "locality.h"
 #include "paths.h"
 #include "I18n.h"
@@ -69,6 +70,7 @@ const char *COLHDR_RENCODING    = N_("Right Encoding");
 const char *COLHDR_MENCODING    = N_("Middle Encoding");
 const char *COLHDR_NIDIFFS      = N_("Ignored Diff");
 const char *COLHDR_EXCLUDED     = N_("Ignored diffs");
+const char *COLHDR_REVIEWSTATE  = N_("Review State");
 const char *COLHDR_NSDIFFS      = N_("Differences");
 const char *COLHDR_BINARY       = NC_("DirView|ColumnHeader", "Binary");
 const char *COLHDR_UNPACKER     = N_("Unpacker");
@@ -124,6 +126,7 @@ const char *COLDESC_RENCODING   = N_("Right side encoding.");
 const char *COLDESC_MENCODING   = N_("Middle side encoding.");
 const char *COLDESC_NIDIFFS     = N_("Number of ignored differences in file. Ignored and cannot be merged.");
 const char *COLDESC_EXCLUDED    = N_("Number of ignored differences in file (prediffer exclusions). Interim display for the excluded-line count; this is a diff count, not a line count.");
+const char *COLDESC_REVIEWSTATE = N_("Review state of the file: Not reviewed, Done, On hold, Needs manual work, or Keep as is. All files start as Not reviewed; nothing is applied automatically.");
 const char *COLDESC_NSDIFFS     = N_("Number of differences in file (excluding ignored).");
 const char *COLDESC_BINARY      = N_("Shows an asterisk (*) if the file is binary.");
 const char *COLDESC_UNPACKER    = N_("Unpacker plugin name or pipeline.");
@@ -608,6 +611,61 @@ static String ColExcludedGet(const CDiffContext *, const void *p, int)
 		s += locality::NumToLocaleStr(r);
 	}
 	return s;
+}
+
+/**
+ * @brief Format Review State column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return Short display string for the review state. The state is kept in
+ * the CDiffContext sidecar map keyed by relative path, not in DIFFITEM,
+ * so a file with no entry yet shows "Not reviewed" (the initial state).
+ * The list shows the short form ("Done", not "Done: safe-merge target");
+ * the full wording is in the UI where the state is set (S2).
+ * This file stays ASCII, so the check mark is written as an escape.
+ *
+ * Merge20 (S1, design sections 3.2 and 6, spec section 4(b)).
+ */
+static String ColReviewStateGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	switch (pCtxt->GetMerge20ReviewState(di.getItemRelativePath()))
+	{
+	case ReviewState::DONE:
+		{
+			String s = _T("\x2713");
+			s += _("Done");
+			return s;
+		}
+	case ReviewState::HOLD:
+		return _("On hold");
+	case ReviewState::SPECIAL:
+		return _("Needs manual work");
+	case ReviewState::KEEP:
+		return _("Keep as is");
+	case ReviewState::TODO:
+	default:
+		return _("Not reviewed");
+	}
+}
+
+/**
+ * @brief Compare Review State column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by ReviewState enum order
+ * (TODO < DONE < HOLD < SPECIAL < KEEP).
+ */
+static int ColReviewStateSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	int l = static_cast<int>(pCtxt->GetMerge20ReviewState(ldi.getItemRelativePath()));
+	int r = static_cast<int>(pCtxt->GetMerge20ReviewState(rdi.getItemRelativePath()));
+	if (l == r)
+		return 0;
+	return l < r ? -1 : 1;
 }
 
 /**
@@ -1592,6 +1650,14 @@ static DirColInfo f_cols[] =
 	{ _T("Rpath"), nullptr, COLHDR_RDIR, COLDESC_RDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Lext"), nullptr, COLHDR_LEXTENSION, COLDESC_LEXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Rext"), nullptr, COLHDR_REXTENSION, COLDESC_REXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
+	// Merge20 (S1, design sections 3.2 and 7, spec section 4(b)): review
+	// state column. Appended at the end of the table on purpose: DirDoc
+	// (CompareFilesIfFilesAreLarge) addresses columns 2, 3+i, 8+i, 10+i
+	// and 13+i by hardcoded logical index, so inserting a column before
+	// them would silently shift that dialog. Shown by default (order 6,
+	// after Extension) so the S1 acceptance check can see it without
+	// opening the column dialog first.
+	{ _T("Sreview"), nullptr, COLHDR_REVIEWSTATE, COLDESC_REVIEWSTATE, &ColReviewStateGet, &ColReviewStateSort, 0, 6, true, DirColInfo::ALIGN_LEFT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
@@ -1649,6 +1715,10 @@ static DirColInfo f_cols3[] =
 	{ _T("Lext"), nullptr, COLHDR_LEXTENSION, COLDESC_LEXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Mext"), nullptr, COLHDR_MEXTENSION, COLDESC_MEXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Rext"), nullptr, COLHDR_REXTENSION, COLDESC_REXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },
+	// Merge20 (S1): review state column, 3-way table. Same note as in
+	// f_cols above; default order is 7 here because Extension is 6 in
+	// the 3-way table.
+	{ _T("Sreview"), nullptr, COLHDR_REVIEWSTATE, COLDESC_REVIEWSTATE, &ColReviewStateGet, &ColReviewStateSort, 0, 7, true, DirColInfo::ALIGN_LEFT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },

@@ -13,6 +13,7 @@
 #include "FilterList.h"
 #include "SubstitutionList.h"
 #include "PropertySystem.h"
+#include "Merge20/Merge20FileStates.h"
 
 class PackingInfo;
 class PrediffingInfo;
@@ -151,6 +152,28 @@ public:
 
 	int GetCompareDirs() const { return m_paths.GetSize(); }
 
+	/**
+	 * @name Merge20 per-file work state (S1).
+	 * The review state (and later the output checkbox, action category,
+	 * risk, summary and memo) lives in a sidecar map keyed by relative
+	 * path, not in DIFFITEM (DiffItem.h forbids GUI state there). The map
+	 * lives here, in CDiffContext, rather than in CDirDoc as design
+	 * section 2.2 first sketched it: column getters only receive a
+	 * `const CDiffContext *` plus a DIFFITEM, and CDiffContext has no
+	 * back-pointer to CDirDoc, so a CDirDoc member would be unreachable
+	 * from the "Review State" column. CDirDoc owns the single CDiffContext
+	 * (m_pCtxt, reused across rescans), so the lifetime is the same.
+	 * CDirDoc exposes the same accessors for the key handling in S2.
+	 */
+	/** @brief Review state of one file (TODO when it has no entry yet). */
+	ReviewState GetMerge20ReviewState(const String& relPath) const;
+	/** @brief Set the review state of one file. */
+	void SetMerge20ReviewState(const String& relPath, ReviewState state);
+	/** @brief Direct access to the sidecar map (for S2 and later slices). */
+	Merge20FileStates& GetMerge20FileStates() { return m_merge20FileStates; }
+	/** @brief Direct access to the sidecar map (const version). */
+	const Merge20FileStates& GetMerge20FileStates() const { return m_merge20FileStates; }
+
 	void Swap(int idx1, int idx2)
 	{
 		String tmp;
@@ -216,6 +239,7 @@ public:
 	std::unique_ptr<PropertySystem> m_pPropertySystem; /**< pointer to Property System */
 	std::vector<std::map<std::vector<uint8_t>, DuplicateInfo>> m_duplicateValues; /**< Number of duplicate hash values */
 	std::vector<String> m_vCurrentlyHiddenItems; /**< The list of currently hidden items */
+	Merge20FileStates m_merge20FileStates; /**< Merge20 per-file work state (review state etc.), keyed by relative path; see GetMerge20ReviewState(). */
 	std::unique_ptr<FilterExpression> m_pAdditionalCompareExpression; /** Additional compare condition applied in folder comparison */
 	std::unique_ptr<RenameMoveDetection> m_pRenameMoveDetection; /** Move detection object */
 
