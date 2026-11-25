@@ -58,6 +58,7 @@
 #include "FilterEngine/FilterExpression.h"
 #include "DiffContext.h"
 #include "Logger.h"
+#include "Merge20/Merge20ClassifyDoc.h"
 #include "SyntaxParserRegistry.h"
 #include "PluginMenu.h"
 #include "TableProps.h"
@@ -733,6 +734,24 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 		identical = IDENTLEVEL::NONE;
 
 	GetParentFrame()->SetLastCompareResult(identical != IDENTLEVEL::ALL ? 1 : 0);
+
+	// Merge20 (S4, design section 3.1 stage 1): after a successful
+	// rescan, classify this file (action category, risk, rule-based
+	// summary) and cache the result in the folder compare sidecar, so
+	// the folder list can show it. Files never opened stay "not
+	// calculated", and opening 100-1000 files is never done in bulk
+	// (each classification only scans that file's diff lines). Only
+	// 2-way text compares are classified: 3-way diff ranges do not
+	// map onto OLD/NEW line counts, and binary compares have no
+	// meaningful diff list. Reclassifying on every rescan also keeps
+	// the cached result fresh after edits.
+	if (nResult == RESCAN_OK && !bBinary && m_nBuffers == 2 &&
+		m_pDirDoc != nullptr && m_pDirDoc->HasDiffs())
+	{
+		Merge20FileState state = Merge20ClassifyFromMergeDoc(*this,
+			Merge20ParseRiskKeywords(GetOptionsMgr()->GetString(OPT_MERGE20_RISK_KEYWORDS)));
+		m_pDirDoc->SetMerge20Classification(m_filePaths, state);
+	}
 
 	return nResult;
 }
