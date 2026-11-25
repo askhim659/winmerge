@@ -15,6 +15,7 @@
 #include "MergeConflictNavigation.h"
 #include "Merge.h"
 #include "MergeDoc.h"
+#include "Merge20/Merge20LearnDoc.h"
 #include "MergeEditView.h"
 #include "OptionsMgr.h"
 #include "OptionsDef.h"
@@ -375,6 +376,22 @@ void CMergeResultView::GetLineColors(int nLineIndex, CEColor & crBkgnd,
 	default:
 		break;
 	}
+
+	// Merge20 (Phase 3 L3, design section 2.3): a diff with a learning
+	// candidate is shown in purple so the suggestion is visible at a
+	// glance, without looking automatically decided: no pop-up text is
+	// drawn in the pane itself (the "Learning suggestion (exact match,
+	// N)" wording lives in the context menu, see OnContextMenu). The
+	// current (selected) diff keeps its selection color, like the
+	// bCurrent branch above. The purple is a fixed color, like the S2
+	// row colors; theme support is deferred. No blinking: there is no
+	// timer precedent in this view and no line-range invalidate helper,
+	// so a timer would force a full repaint of the editable pane every
+	// 900 ms (T-3-1, static fallback; see MERGE20_NOTES.md section 18).
+	if (!bCurrent && pSegment->diffIdx >= 0 &&
+		pDoc->GetMerge20LearnCandidates().find(pSegment->diffIdx) !=
+			pDoc->GetMerge20LearnCandidates().end())
+		crBkgnd = RGB(232, 213, 249);
 }
 
 /**
@@ -541,6 +558,42 @@ void CMergeResultView::OnContextMenu(CWnd* pWnd, CPoint point)
 	VERIFY(menu.LoadMenu(GetDocument()->GetFileCount() < 3 ? IDR_POPUP_MERGERESULTVIEW_2WAY : IDR_POPUP_MERGERESULTVIEW_3WAY));
 	I18n::TranslateMenu(menu.m_hMenu);
 	BCMenu* pSub = static_cast<BCMenu*>(menu.GetSubMenu(0));
+	// Merge20 (Phase 3 L3): when exactly one targeted diff has a
+	// learning candidate, show what will be applied in the menu item
+	// ("Apply Learning Suggestion (old, exact match, 2)"), so the
+	// person sees the strategy and the evidence before clicking.
+	// With several candidates, or none, the generic (translated)
+	// menu text stays.
+	if (pSub != nullptr && GetDocument()->GetFileCount() < 3)
+	{
+		CMergeDoc* pDoc = GetDocument();
+		int firstDiff = -1, lastDiff = -1;
+		if (pDoc != nullptr && pDoc->GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		{
+			const auto& candidates = pDoc->GetMerge20LearnCandidates();
+			int nApplyDiff = -1, nCandidateCount = 0;
+			for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+			{
+				if (candidates.find(nDiff) != candidates.end())
+				{
+					if (nApplyDiff < 0)
+						nApplyDiff = nDiff;
+					++nCandidateCount;
+				}
+			}
+			if (nApplyDiff >= 0 && nCandidateCount == 1)
+			{
+				const Merge20LearnCandidate& candidate = candidates.at(nApplyDiff);
+				const String label = strutils::format_string3(
+					_("Apply Learning Suggestion (%1, %2, %3)"),
+					Merge20LearnStrategyDisplayName(candidate.strategy),
+					Merge20LearnViaDisplayName(candidate.via),
+					strutils::format(_T("%d"), candidate.n));
+				pSub->ModifyMenu(ID_MERGE20_LEARN_APPLY, MF_BYCOMMAND | MF_STRING,
+					ID_MERGE20_LEARN_APPLY, label.c_str());
+			}
+		}
+	}
 	if (pSub != nullptr)
 		pSub->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON,
 			point.x, point.y, AfxGetMainWnd());

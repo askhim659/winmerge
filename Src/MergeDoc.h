@@ -379,6 +379,10 @@ public:
 	const std::map<int, Merge20LearnCandidate>& GetMerge20LearnCandidates() const { return m_merge20LearnCandidates; }
 	/** @brief Merge20 (Phase 3 L2): identities of diffs whose candidate was dismissed (dismissed diffs get no candidate when candidates are recomputed; the dismiss UI is L3). */
 	const std::set<String>& GetMerge20LearnDismissed() const { return m_merge20LearnDismissed; }
+	/** @brief Merge20 (Phase 3 L3): writable view of the dismissed identities (the dismiss command adds to it). */
+	std::set<String>& GetMerge20LearnDismissed() { return m_merge20LearnDismissed; }
+	/** @brief Merge20 (Phase 3 L3): the diff range the learning commands act on: the current diff when nothing is selected, else the selected diffs (same target rule as OnMergeChooseSource). @return False when the result pane has no target diff. */
+	bool GetMerge20LearnTargetDiffs(int& firstDiff, int& lastDiff);
 	void ResultToggleSource(int nDiff, int srcPane, bool bGroupWithPrevious = false);
 	void ResultChooseAllConflicts(int srcPane);
 	bool SaveMergeResult(bool bSaveAs);
@@ -571,6 +575,10 @@ protected:
 	afx_msg void OnUpdateMergeChooseSource(CCmdUI* pCmdUI);
 	afx_msg void OnMergeChooseAllConflicts(UINT nID);
 	afx_msg void OnUpdateMergeChooseAllConflicts(CCmdUI* pCmdUI);
+	afx_msg void OnMerge20LearnApply();
+	afx_msg void OnUpdateMerge20LearnApply(CCmdUI* pCmdUI);
+	afx_msg void OnMerge20LearnDismiss();
+	afx_msg void OnUpdateMerge20LearnDismiss(CCmdUI* pCmdUI);
 	afx_msg void OnMergeResultSave();
 	afx_msg void OnMergeResultSaveAs();
 	afx_msg void OnUpdateMergeResultSave(CCmdUI* pCmdUI);

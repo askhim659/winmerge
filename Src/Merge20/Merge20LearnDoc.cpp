@@ -478,6 +478,50 @@ bool Merge20LearnRecordDiffJudgment(CMergeDoc& doc, int nDiff)
 	return true;
 }
 
+String Merge20LearnStrategyDisplayName(Merge20LearnStrategy strategy)
+{
+	// HTML tool vocabulary (design section 2.2): the words the person
+	// sees in the "Apply learning suggestion" menu item.
+	switch (strategy)
+	{
+	case Merge20LearnStrategy::InsertOld:
+		return _("Insert old");
+	case Merge20LearnStrategy::KeepNew:
+		return _("Keep new");
+	case Merge20LearnStrategy::ReplaceWithOld:
+		return _("Replace with old");
+	case Merge20LearnStrategy::BothOldNew:
+		return _("Both old and new");
+	}
+	return _("Keep new");
+}
+
+String Merge20LearnViaDisplayName(const String& via)
+{
+	// Merge20LearnCandidate::via is "exact" or "feat" (Merge20Learn.h).
+	if (via == _T("feat"))
+		return _("Feature match");
+	return _("Exact match");
+}
+
+bool Merge20LearnDismissCandidate(CMergeDoc& doc, int nDiff)
+{
+	std::map<int, Merge20LearnCandidate>& candidates = doc.GetMerge20LearnCandidates();
+	const auto it = candidates.find(nDiff);
+	if (it == candidates.end())
+		return false;
+	// Remember the diff identity so a recompute never shows this
+	// candidate again (design section 2.3). The identity format lives
+	// here with DismissedKey; the set itself belongs to the doc.
+	if (nDiff >= 0 && nDiff < doc.m_diffList.GetSize())
+	{
+		if (const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff))
+			doc.GetMerge20LearnDismissed().insert(DismissedKey(*pRange));
+	}
+	candidates.erase(it);
+	return true;
+}
+
 void Merge20LearnRefreshCandidates(CMergeDoc& doc)
 {
 	std::map<int, Merge20LearnCandidate>& candidates = doc.GetMerge20LearnCandidates();

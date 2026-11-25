@@ -768,6 +768,13 @@ tchar_t CMergeDoc::GetResultLineMarker(int nLine) const
 	{
 	case ResultSegmentState::Conflict:
 	case ResultSegmentState::Unresolved:
+		// Merge20 (Phase 3 L3, design section 2.3): a diff with a
+		// learning candidate shows 'L' instead of '?' in the margin,
+		// so the suggestion is visible without opening the menu.
+		// 'L' is unused by the other markers ('1'/'2'/'3', '?', 'm').
+		if (pSegment->diffIdx >= 0 &&
+			m_merge20LearnCandidates.find(pSegment->diffIdx) != m_merge20LearnCandidates.end())
+			return _T('L');
 		return _T('?');
 	case ResultSegmentState::Edited:
 	{
@@ -1710,6 +1717,141 @@ void CMergeDoc::OnUpdateMergeChooseAllConflicts(CCmdUI* pCmdUI)
 		pCmdUI->m_nID == ID_MERGE_RESULT_CHOOSE_ALL_1ST ||
 		pCmdUI->m_nID == ID_MERGE_RESULT_CHOOSE_ALL_2ND;
 	pCmdUI->Enable(bValidSource && m_bResultBuilt && GetResultUnresolvedCount() > 0);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Merge20 (Phase 3 L3, design section 2.3): learning candidate commands
+// (result pane context menu). Accepting applies the candidate's own
+// strategy to the diff; dismissing hides the candidate until the next
+// recompute. Neither command changes the review state.
+
+bool CMergeDoc::GetMerge20LearnTargetDiffs(int& firstDiff, int& lastDiff)
+{
+	firstDiff = -1;
+	lastDiff = -1;
+	if (m_pMergeResultView == nullptr || !m_bResultBuilt)
+		return false;
+	// Same target rule as OnMergeChooseSource: the current diff when
+	// nothing is selected, else the selected diffs.
+	if (!m_pMergeResultView->IsSelection() && GetCurrentDiff() != -1)
+	{
+		firstDiff = lastDiff = GetCurrentDiff();
+		return true;
+	}
+	m_pMergeResultView->GetSelectedDiffs(firstDiff, lastDiff);
+	return firstDiff >= 0 && lastDiff >= 0;
+}
+
+// Does any diff in the range have a learning candidate?
+static bool HasMerge20LearnCandidateInRange(CMergeDoc& doc, int firstDiff, int lastDiff)
+{
+	const auto& candidates = doc.GetMerge20LearnCandidates();
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (candidates.find(nDiff) != candidates.end())
+			return true;
+	}
+	return false;
+}
+
+// Both candidate commands share one enable rule: at least one targeted
+// diff must have a candidate. They never show a check mark.
+static void UpdateMerge20LearnCommandUI(CMergeDoc& doc, CCmdUI* pCmdUI)
+{
+	int firstDiff = -1, lastDiff = -1;
+	const bool bEnabled = doc.GetMerge20LearnTargetDiffs(firstDiff, lastDiff) &&
+		HasMerge20LearnCandidateInRange(doc, firstDiff, lastDiff);
+	pCmdUI->Enable(bEnabled);
+	pCmdUI->SetCheck(FALSE);
+}
+
+void CMergeDoc::OnMerge20LearnApply()
+{
+	int firstDiff = -1, lastDiff = -1;
+	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		return;
+
+	// Apply each diff's own candidate strategy. ResultChooseSources
+	// erases the candidate (L2 hook) and marks the segment Chosen;
+	// the result buffer itself is only changed by this explicit
+	// command, never by the candidate being shown (spec section 4(c)).
+	if (m_pMergeResultView != nullptr)
+		m_pMergeResultView->HideCursor();
+	std::vector<int> appliedDiffs;
+	bool bGroupWithPrevious = false;
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		const auto it = m_merge20LearnCandidates.find(nDiff);
+		if (it == m_merge20LearnCandidates.end())
+			continue;
+		// Copy the panes first: ResultChooseSources erases the
+		// candidate from the map.
+		const std::vector<int> srcPanes = it->second.srcPanes;
+		ResultChooseSources(nDiff, srcPanes, bGroupWithPrevious);
+		appliedDiffs.push_back(nDiff);
+		bGroupWithPrevious = true;
+	}
+	if (m_pMergeResultView != nullptr)
+		m_pMergeResultView->ShowCursor();
+
+	// The acceptance itself is an explicit judgment, so it is recorded
+	// through the same record function OnMergeChooseSource uses
+	// (design section 2.3). Only the diffs applied above are recorded:
+	// a diff that was already Chosen before this command must not be
+	// counted again. The record is NOT placed in ResultChooseSources,
+	// so batch approval (S5), auto-merge and session restore (S8)
+	// still never record. The candidate is already erased by
+	// ResultChooseSources, so the record counts the acceptance once
+	// (+1); choosing a different strategy later still corrects it
+	// (-1/+1) through the same function.
+	bool bLearnRecorded = false;
+	for (int nDiff : appliedDiffs)
+	{
+		if (Merge20LearnRecordDiffJudgment(*this, nDiff))
+			bLearnRecorded = true;
+	}
+	if (bLearnRecorded)
+	{
+		String errStr;
+		if (!Merge20LearnSaveStore(errStr))
+			ShowMessageBox(errStr, MB_OK | MB_ICONWARNING);
+		Merge20LearnRefreshAllOpenDocs();
+	}
+}
+
+void CMergeDoc::OnUpdateMerge20LearnApply(CCmdUI* pCmdUI)
+{
+	UpdateMerge20LearnCommandUI(*this, pCmdUI);
+}
+
+void CMergeDoc::OnMerge20LearnDismiss()
+{
+	int firstDiff = -1, lastDiff = -1;
+	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		return;
+	// Dismissing only hides the candidate for this session: the diff
+	// identity goes into the dismissed set (a recompute never shows it
+	// again) and the candidate leaves the map. Nothing is recorded in
+	// the learning data (a dismissal is not a judgment) and the review
+	// state is untouched. The diff stays Unresolved.
+	bool bChanged = false;
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		if (Merge20LearnDismissCandidate(*this, nDiff))
+			bChanged = true;
+	}
+	if (bChanged && m_pMergeResultView != nullptr &&
+		m_pMergeResultView->GetSafeHwnd() != nullptr)
+		m_pMergeResultView->Invalidate();
+}
+
+void CMergeDoc::OnUpdateMerge20LearnDismiss(CCmdUI* pCmdUI)
+{
+	UpdateMerge20LearnCommandUI(*this, pCmdUI);
 }
 
 void CMergeDoc::OnMergeResultSave()

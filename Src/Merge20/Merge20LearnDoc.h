@@ -117,6 +117,31 @@ std::vector<Merge20DiffLine> Merge20LearnLinesForDiff(const CMergeDoc& doc, int 
 bool Merge20LearnRecordDiffJudgment(CMergeDoc& doc, int nDiff);
 
 /**
+ * @brief Merge20 (Phase 3 L3): display name of a judgment strategy
+ * ("Insert old" / "Keep new" / "Replace with old" / "Both old and
+ * new", translated through _()).
+ */
+String Merge20LearnStrategyDisplayName(Merge20LearnStrategy strategy);
+
+/**
+ * @brief Merge20 (Phase 3 L3): display name of a candidate's match
+ * ("Exact match" / "Feature match", translated through _()).
+ * The candidate's `via` is "exact" or "feat" (Merge20Learn.h).
+ */
+String Merge20LearnViaDisplayName(const String& via);
+
+/**
+ * @brief Merge20 (Phase 3 L3): dismiss the candidate of one diff.
+ *
+ * Adds the diff identity to the doc's dismissed set (so a recompute
+ * never shows the candidate again) and erases the candidate from the
+ * map. Records nothing in the learning data (a dismissal is not a
+ * judgment) and changes no review state. The caller invalidates the
+ * result view. @return True when a candidate was dismissed.
+ */
+bool Merge20LearnDismissCandidate(CMergeDoc& doc, int nDiff);
+
+/**
  * @brief Merge20 (Phase 3 L2, design section 3.2): recompute the
  * learning candidates of one doc into its candidate map
  * (CMergeDoc::GetMerge20LearnCandidates()).
