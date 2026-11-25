@@ -4,7 +4,7 @@ set path="%ProgramFiles%\7-zip";"%ProgramFiles(x86)%\7-zip";%path%
 7z > NUL
 if not %ERRORLEVEL% == 0 (
   echo 7-Zip is not installed
-  goto :eof
+  exit /b 1
 )
 @echo on
 
@@ -53,6 +53,13 @@ for %%p in (%urls_destdirs%) do (
   for /F "tokens=1,2 delims=!" %%u in ("%%p") do (
     if not exist "%downloadsdir%\%%~nxu" (
       powershell -command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest %%u -Outfile '%downloadsdir%\%%~nxu'"
+    )
+    rem NOTE (Merge20): fail loudly when a download did not produce a file.
+    rem A failed download used to be swallowed here; the missing tool then
+    rem broke msbuild much later (run 45573109576: no re2c/lemon).
+    if not exist "%downloadsdir%\%%~nxu" (
+      echo ERROR: Failed to download %%u
+      exit /b 1
     )
     if "%%~xu" == ".zip" (
       7z x "%downloadsdir%\%%~nxu" -aoa -o%%v
