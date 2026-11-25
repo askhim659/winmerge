@@ -27,6 +27,7 @@
 #include "OptionsDef.h"
 #include "Logger.h"
 #include "OptionsDiffOptions.h"
+#include "Merge20/Merge20SessionDoc.h"
 #include "resource.h"
 #include <algorithm>
 
@@ -185,6 +186,9 @@ bool CMergeDoc::StartMergeSession(int nBasePane, bool bAutoMerge, bool bWithMess
 
 	if (bAutoMerge)
 		ApplyAutoMergeToResult();
+	// Merge20 (S8): restore the saved diff judgments for this file
+	// (from the folder compare sidecar, when a session was restored).
+	Merge20SessionRestoreMergeDoc(*this);
 	const String msg = _("Merge session started.") + (m_nBuffers == 2 ? _T("") : (_T("\n\n") + GetMergePaneRoles()));
 	if (bWithMessage)
 		ShowMessageBox(msg.c_str(), MB_OK | MB_ICONINFORMATION | MB_DONT_DISPLAY_AGAIN, IDS_MERGE_SESSION_STARTED);
@@ -1093,6 +1097,24 @@ void CMergeDoc::ResultChooseSources(int nDiff, const std::vector<int>& srcPanes,
 
 	if (m_pMergeResultView != nullptr && m_pMergeResultView->GetSafeHwnd() != nullptr)
 		m_pMergeResultView->Invalidate();
+}
+
+/**
+ * @brief Merge20 (S8): set the resolution state of one result segment.
+ * @param [in] nDiff Index in the diff list.
+ * @param [in] state New state. Used when restoring a saved Auto
+ * judgment: ResultChooseSources marks the segment Chosen, and this
+ * puts the saved Auto state back (same content, same state). Only the
+ * state is changed; the content and source panes are left as chosen.
+ */
+void CMergeDoc::Merge20SetResultSegmentState(int nDiff, ResultSegmentState state)
+{
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= static_cast<int>(m_resultDiffToSegment.size()))
+		return;
+	const int nSegment = m_resultDiffToSegment[nDiff];
+	if (nSegment < 0 || nSegment >= static_cast<int>(m_resultSegments.size()))
+		return;
+	m_resultSegments[nSegment].state = state;
 }
 
 /**
