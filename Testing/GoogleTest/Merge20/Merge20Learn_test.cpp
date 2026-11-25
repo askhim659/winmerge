@@ -265,6 +265,45 @@ TEST(Merge20Learn, MatchThresholds)
 	EXPECT_FALSE(store.Match({ Line(OP_NONE, L"int a;", L"int a;") }, out));
 }
 
+TEST(Merge20Learn, ExactZeroRecords)
+{
+	// L6: design section 8 lists "exact match: 0 records -> no
+	// candidate" as a boundary case. The existing MatchThresholds
+	// test only exercises it implicitly (via the feature-miss path);
+	// pin it down explicitly. Node ground truth (HTML matchLearn):
+	// with no rule for the exact key, matchLearn returns null.
+	Merge20LearnStore store;
+	Merge20LearnCandidate out;
+	EXPECT_FALSE(store.Match(ModRows(), out));
+	// A feature rule for another key does not help the mod rows
+	// (they carry no feature), so there is still no candidate.
+	store.Add(SqlFeatKey(), Strat::KeepNew, L"self", L"x", 5);
+	EXPECT_FALSE(store.Match(ModRows(), out));
+}
+
+TEST(Merge20Learn, Feature79PercentBoundary)
+{
+	// L6: design section 8 lists "3 records at 79% -> no candidate"
+	// as a boundary case. 7/9 (77%) and 3/4 (75%) are covered by
+	// MatchThresholds; 15/19 (78.9%) is the closest miss to 80%,
+	// and 16/20 is exactly 80%. Node ground truth (HTML matchLearn,
+	// floating-point share >= 0.8) agrees: 15/19 -> null, 16/20 ->
+	// a feature candidate. The C++ check is the integer form
+	// best*5 >= total*4, so the two must agree on these values.
+	Merge20LearnStore store;
+	Merge20LearnCandidate out;
+	store.Add(SqlFeatKey(), Strat::KeepNew, L"self", L"x", 15);
+	store.Add(SqlFeatKey(), Strat::ReplaceWithOld, L"self", L"x", 4);
+	EXPECT_FALSE(store.Match(SqlRows(), out));
+	store.Clear();
+	store.Add(SqlFeatKey(), Strat::KeepNew, L"self", L"x", 16);
+	store.Add(SqlFeatKey(), Strat::ReplaceWithOld, L"self", L"x", 4);
+	ASSERT_TRUE(store.Match(SqlRows(), out));
+	EXPECT_EQ(out.strategy, Strat::KeepNew);
+	EXPECT_EQ(out.via, String(L"feat"));
+	EXPECT_EQ(out.n, 20);
+}
+
 TEST(Merge20Learn, DominantTie)
 {
 	// Node ground truth (HTML learnDominant): insertion order decides
@@ -542,6 +581,45 @@ TEST(Merge20Learn, HtmlJsonImport)
 	ASSERT_EQ(sources.size(), static_cast<size_t>(2));
 	EXPECT_EQ(sources[0].name, String(L"owner.json"));
 	EXPECT_EQ(sources[1].name, String(L"other.json"));
+}
+
+TEST(Merge20Learn, ChangedContentReimport)
+{
+	// L6: design section 8 lists "re-import with changed content is
+	// replaced" as part of the re-import rule. HtmlJsonImport only
+	// re-imports identical content; this test changes the counts of
+	// the same source (REPLACE_WITH_OLD 2 -> 5) and checks the store
+	// holds the new values instead of the sum. Node ground truth
+	// (HTML importLearn: removeLearnSource(srcId) first, then add):
+	// n becomes 6 (5 + 1), not 8.
+	Merge20LearnStore store;
+	Merge20LearnFileHeader header;
+	std::string err;
+	int skipped = -1;
+	int added = -1;
+	int merged = -1;
+	ASSERT_TRUE(Merge20LearnImportJson(HtmlExportJsonUtf8(),
+		L"\x30de\x30fc\x30b8\x652f\x63f4" L"20" L"\x53f7_\x5b66\x7fd2_2026-11-25.json",
+		store, header, err, skipped, added, merged));
+	const Merge20LearnRule* rule = store.FindRule(ModExactKey());
+	ASSERT_NE(rule, nullptr);
+	EXPECT_EQ(rule->n, 3);
+	std::string changed = HtmlExportJsonUtf8();
+	const std::string from = "\"REPLACE_WITH_OLD\":2";
+	const std::string to = "\"REPLACE_WITH_OLD\":5";
+	const size_t pos = changed.find(from);
+	ASSERT_NE(pos, std::string::npos);
+	changed.replace(pos, from.size(), to);
+	ASSERT_TRUE(Merge20LearnImportJson(changed,
+		L"\x30de\x30fc\x30b8\x652f\x63f4" L"20" L"\x53f7_\x5b66\x7fd2_2026-11-25.json",
+		store, header, err, skipped, added, merged));
+	rule = store.FindRule(ModExactKey());
+	ASSERT_NE(rule, nullptr);
+	EXPECT_EQ(CountOf(*rule, Strat::ReplaceWithOld), 5);
+	EXPECT_EQ(CountOf(*rule, Strat::KeepNew), 1);
+	EXPECT_EQ(rule->n, 6);
+	EXPECT_EQ(SourceCountOf(*rule,
+		L"u-11111111-2222-4333-8444-555555555555", Strat::ReplaceWithOld), 5);
 }
 
 TEST(Merge20Learn, V1Import)
