@@ -416,15 +416,22 @@ static String ColStatusGet(const CDiffContext *pCtxt, const void *p, int)
 	}
 	else if (di.diffcode.isSideFirstOnly())
 	{
-		s = strutils::format_string1(_("Left only: %1"),
-				di.getFilepath(0, pCtxt->GetNormalizedLeft()));
+		// Merge20 (S0): in a 2-way comparison show the HTML tool's
+		// existence-category name ("Old only") instead of "Left only: <path>".
+		// The full path is still visible in the Name/Path columns.
+		// 3-way comparisons keep the existing path-suffixed text.
+		if (nDirs < 3)
+			s = _("Old only");
+		else
+			s = strutils::format_string1(_("Left only: %1"),
+					di.getFilepath(0, pCtxt->GetNormalizedLeft()));
 	}
 	else if (di.diffcode.isSideSecondOnly())
 	{
 		if (nDirs < 3)
 		{
-			s = strutils::format_string1(_("Right only: %1"),
-					di.getFilepath(1, pCtxt->GetNormalizedRight()));
+			// Merge20 (S0): see the "Old only" comment above.
+			s = _("New only");
 		}
 		else
 		{
@@ -457,14 +464,10 @@ static String ColStatusGet(const CDiffContext *pCtxt, const void *p, int)
 	}
 	else if (di.diffcode.isResultSame())
 	{
-		if (di.diffcode.isText())
-			s = _("Text files are identical");
-		else if (di.diffcode.isBin())
-			s = _("Binary files are identical");
-		else if (di.diffcode.isImage())
-			s = _("Image files are identical");
-		else
-			s = _("Identical");
+		// Merge20 (S0): show the HTML tool's existence-category name
+		// ("Identical") for all identical items. The file kind (text /
+		// binary / image) is still visible in the Binary/Extension columns.
+		s = _("Identical");
 	}
 	else if (di.diffcode.isResultDiff()) // diff
 	{
@@ -476,16 +479,12 @@ static String ColStatusGet(const CDiffContext *pCtxt, const void *p, int)
 				: ucr::toTString(expr.name);
 			s = strutils::format_string1(_("Files are different (expr: %1)"), exprText);
 		}
-		else if (di.diffcode.isText())
-			s = _("Text files are different");
-		else if (di.diffcode.isBin())
-			s = _("Binary files are different");
-		else if (di.diffcode.isImage())
-			s = _("Image files are different");
-		else if (di.diffcode.isDirectory())
-			s = _("Folders are different");
 		else
-			s = _("Files are different");
+			// Merge20 (S0): show the HTML tool's existence-category name
+			// ("Changed") instead of the file-kind sentence. The
+			// expression-diff case above is kept as-is because it carries
+			// the expression name.
+			s = _("Changed");
 		if (nDirs > 2)
 			bAddCompareFlags3WayString = true;
 	}
@@ -704,12 +703,18 @@ static String ColStatusAbbrGet(const CDiffContext *pCtxt, const void *p, int opt
 	}
 	else if (di.diffcode.isSideFirstOnly())
 	{
-		id = N_("Left Only");
+		// Merge20 (S0): 2-way comparisons use the HTML tool's
+		// existence-category names ("Old only" / "New only").
+		// 3-way comparisons keep the existing names.
+		if (nDirs < 3)
+			id = N_("Old only");
+		else
+			id = N_("Left Only");
 	}
 	else if (di.diffcode.isSideSecondOnly())
 	{
 		if (nDirs < 3)
-			id = N_("Right Only");
+			id = N_("New only");
 		else
 			id = N_("Middle Only");
 	}
@@ -735,7 +740,8 @@ static String ColStatusAbbrGet(const CDiffContext *pCtxt, const void *p, int opt
 	}
 	else if (di.diffcode.isResultDiff())
 	{
-		id = N_("Different");
+		// Merge20 (S0): same existence-category name as ColStatusGet.
+		id = N_("Changed");
 	}
 
 	return id ? I18n::tr(id) : _T("");

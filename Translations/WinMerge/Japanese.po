@@ -7168,6 +7168,21 @@ msgstr "(パス不一致)"
 msgid "Text files are different"
 msgstr "テキスト ファイルは異なります"
 
+#. Merge20 (S0): existence-category names from the HTML tool
+#: Src/DirViewColItems.cpp
+msgid "Changed"
+msgstr "変更"
+
+#. Merge20 (S0)
+#: Src/DirViewColItems.cpp
+msgid "Old only"
+msgstr "旧のみ"
+
+#. Merge20 (S0)
+#: Src/DirViewColItems.cpp
+msgid "New only"
+msgstr "新のみ"
+
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
 msgid "Image files are identical"
