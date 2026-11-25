@@ -327,6 +327,21 @@ inline const String OPT_MERGE_RESULT_PANE_ENABLED {_T("Settings/MergeResultPaneE
 // editor is follow-up work.
 inline const String OPT_MERGE20_RISK_KEYWORDS {_T("Merge20/RiskKeywords"s)};
 
+// Merge20 (S8, design section 3.6): session auto-save, learning
+// (Phase 3 key prepared in Phase 2), batch-approve dialog (S5 key
+// prepared in Phase 2; always shown, no "don't show again"), and the
+// review-state filter defaults (no filter UI exists yet; the keys are
+// ready for the future filter UI, and their values are recorded in
+// the session file).
+inline const String OPT_MERGE20_SESSION_AUTOSAVE {_T("Merge20/SessionAutoSave"s)};
+inline const String OPT_MERGE20_LEARNING_ENABLED {_T("Merge20/LearningEnabled"s)};
+inline const String OPT_MERGE20_BATCH_APPROVE_DIALOG {_T("Merge20/BatchApproveDialog"s)};
+inline const String OPT_MERGE20_SHOW_REVIEW_TODO {_T("Merge20/ShowReviewTodo"s)};
+inline const String OPT_MERGE20_SHOW_REVIEW_DONE {_T("Merge20/ShowReviewDone"s)};
+inline const String OPT_MERGE20_SHOW_REVIEW_HOLD {_T("Merge20/ShowReviewHold"s)};
+inline const String OPT_MERGE20_SHOW_REVIEW_SPECIAL {_T("Merge20/ShowReviewSpecial"s)};
+inline const String OPT_MERGE20_SHOW_REVIEW_KEEP {_T("Merge20/ShowReviewKeep"s)};
+
 /// Substitution Filters
 inline const String OPT_SUBSTITUTION_FILTERS_ENABLED {_T("Settings/SubstitutionFiltersEnabled"s)};
 
