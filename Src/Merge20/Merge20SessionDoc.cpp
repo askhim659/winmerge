@@ -23,6 +23,7 @@
 #include "IniOptionsMgr.h"
 #include "Environment.h"
 #include "paths.h"
+#include "UnicodeString.h"
 #include "MergeApp.h"
 #include "I18n.h"
 #include <map>
