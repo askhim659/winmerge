@@ -369,6 +369,8 @@ public:
 
 	void ResultChooseSource(int nDiff, int srcPane, bool bGroupWithPrevious = false);
 	void ResultChooseSources(int nDiff, const std::vector<int>& srcPanes, bool bGroupWithPrevious = false);
+	/** @brief Merge20 (S8): set the resolution state of one result segment (used when restoring a saved Auto judgment: ResultChooseSources marks it Chosen). */
+	void Merge20SetResultSegmentState(int nDiff, ResultSegmentState state);
 	void ResultToggleSource(int nDiff, int srcPane, bool bGroupWithPrevious = false);
 	void ResultChooseAllConflicts(int srcPane);
 	bool SaveMergeResult(bool bSaveAs);
