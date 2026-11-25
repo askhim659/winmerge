@@ -393,266 +393,152 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
   `WinMerge-x64.zip`（26,037,934 バイト、ID 15013980458）、
   `WinMerge-x64-Setup-x64.exe`（39,509,228 バイト、ID 15011999981）。
 
-## 10. Phase 2 S2（連動ルール＋キー）— ブランチ `merge20/phase2-s2`
+## 12. Phase 2 S4（対応区分・リスク・ルールベース要約）— ブランチ `merge20/phase2-s4`
 
-設計書 `merge20-phase2-design.md` §7 の S2 に従う（§3.2 のうち連動ルール・
-キー操作・出力チェック列・行色）。C++ の変更はこの Linux VM では
-コンパイルできないため、CI でのビルド＋成果物確認が検証になる。
+（注：§10（S2）・§11（S3）はこのファイルには未記録。進捗は
+`merge20-complete-plan.md` の進捗ログ参照。）
 
-### 10.1 変更内容
+### 12.1 変更一覧
 
-- `Src/Merge20/Merge20FileStates.h`／`.cpp`：`HasState`（エントリの有無）、
-  `GetIncludeInOutput`／`SetIncludeInOutput`（出力チェック旗）を追加。
-- `Src/DiffContext.h`／`.cpp`：`GetMerge20IncludeInOutput(const DIFFITEM&)`／
-  `SetMerge20IncludeInOutput(const DIFFITEM&, bool)`、
-  `SetMerge20ReviewState(const DIFFITEM&, ReviewState)`（初回エントリ作成時に
-  出力チェック初期値を存在区分から決めて記録する）、
-  `ApplyMerge20ReviewState(const DIFFITEM&, ReviewState)`（連動ルール付き設定）
-  を追加。初期値は設計書 §3.2 どおり：変更・旧のみ＝ON、新のみ・同一＝OFF。
-  連動ルールは HTML の `setRev`／`cycRev` と同一：DONE→ON（ただし 2-way の
-  新のみファイルは ON にしない）、HOLD／KEEP→OFF、TODO／SPECIAL→変更なし。
-- `Src/DirDoc.h`／`.cpp`：上記のフォワーダ
-  （`Get/SetMerge20IncludeInOutput`、`ApplyMerge20ReviewState`）を追加。
-  `SetMerge20ReviewState` は DIFFITEM 版を使うように変更（初期値の記録のため）。
-- `Src/DirViewColItems.cpp`：新列「出力」（regName `Soutput`、英語
-  `Include in Output`）。表示は ☑（U+2611）／☐（U+2610）の文字で、
-  フォルダ行は空欄。ソートは未チェック＜チェック。`f_cols`（既定表示順 7、
-  確認内容列の次）と `f_cols3`（既定表示順 8）の両方に追加し、表の末尾に配置
-  （S1 と同じ理由：`CompareFilesIfFilesAreLarge` のハードコード列番号）。
-  `IsColOutputCheck` ヘルパーを `DirViewColItems.h`／`.cpp` に追加。
-- `Src/DirView.cpp`：(1) `PreTranslateMessage` にキー 1〜5（未確認／済／保留／
-  個別対応要／現状維持）と Space 順送り（TODO→DONE→HOLD→SPECIAL→KEEP→TODO）
-  を追加。フォルダ比較一覧内のみで有効（`!IsLabelEdit()` かつフォーカス行あり）。
-  修飾子付き（Ctrl／Alt／Shift）は除外し、加速子との競合を避ける。エディタ内では
-  有効にしない（設計書 §1.3 #3）。(2) `OnClick` に出力列セルのクリック切替を
-  追加（`SubItemHitTest` で列を判定し、`IsColOutputCheck` の列だけ切替える。
-  フォルダ行と「..」行は対象外。仮想リストのため行の再描画で反映）。
-  (3) `GetColors` に確認内容ごとの行色を追加：SPECIAL＝薄赤背景
-  RGB(255,200,200)、HOLD＝薄黄背景 RGB(255,255,180)、KEEP＝灰背景
-  RGB(230,230,230)、TODO／DONE＝従来色。背景だけを変え、差分状態の文字色は
-  そのまま残す（両立）。固定色で、テーマ対応は後回し（設計書 §3.2）。
-- `Translations/WinMerge/Japanese.po`：`Include in Output`→`出力`、列説明文の訳
-  を追加（S0・S1 と同じ msgid 参照の方針）。
-- 新規 `.cpp` ファイルはないため `Merge.vcxproj`／`UnitTests.vcxproj` の変更は
-  不要（S1 の LNK2019 の教訓に該当しない）。
+- 新規 `Src/Merge20/Merge20Classify.h/.cpp`（純粋モジュール、MFC・`_()` なし）：
+  HTML `17_v17.15.html` の `runAnalysis` 分類と `analyzeInsights` を移植。
+  差分行（OP_1STONLY＝旧欠落／OP_DIFF＝書換／OP_2NDONLY＝追加／OP_TRIVIAL＝
+  除外／OP_NONE＝文脈行＝ハンク直上の関数定義行）から対応区分・リスク・
+  洞察（端数処理・SQL・ifガード削除・条件／境界・定数・影響関数）を算出。
+  リスクは注意点の数：欠落あり＝1点、変更あり＝1点、差分行内にリスク重要語＝
+  1点。0点＝なし、1点＝中、2点以上＝高。洞察はリスク点に加えない
+  （デモの純粋な定数変更が「中」のままになるよう HTML と一致させた）。
+  洞察は検出順に最大 4 件、影響関数は最大 5 件。
+- 新規 `Src/Merge20/Merge20ClassifyDoc.h/.cpp`（アダプタ、MFC を使う）：
+  `CMergeDoc` の DIFFRANGE から差分行を構築（行テキストは
+  `ComputeApparentLine` 経由でゴースト安全に取得。OP_DIFF は両側を順に
+  対にし、長い側の余りは片側空きの OP_DIFF 行として残す。OP_TRIVIAL は
+  両側の大きい方を行数として数える）。要約文を `_()` で合成。
+  要約の1行目：`欠落：N行 / 変更：M行 / 追加：K行`（除外行があれば
+  ` / 除外：E行` を追加）。続いて洞察（`⚠ ` 付き）、重要語ヒットなら
+  `⚠ 重要語を含む`、影響関数があれば `影響する関数: fn1, fn2`。
+- `Src/Merge20/Merge20Types.h`：`Merge20FileState` に `classified` を追加
+  （未開封ファイルは false のまま）。
+- `Src/DiffContext.h/.cpp`：`SetMerge20Classification(relPath, state)` を追加。
+  S4 項目だけをサイドカーに格納し、確認内容・出力フラグ・メモは保持する。
+- `Src/IDirDoc.h`／`Src/DirDoc.h/.cpp`：`SetMerge20Classification(paths, state)`
+  を追加。`UpdateChangedItem` と同じ `FindItemFromPaths`（＋左右入替の
+  フォールバック）で項目を探し、存在区分で対応区分を上書きする
+  （2-way のみ：旧のみ→COPY_OLD_FILE、要約は `旧のみ存在（N行）`、
+  新のみ→SKIP_NEW_FILE、要約は `新のみ存在（N行）`。リスクは計算通り）。
+  格納後に `GetItemIndex`＋`UpdateDiffItemStatus` で行を再描画する。
+- `Src/MergeDoc.cpp`：`Rescan()` 末尾にフックを追加。成功（RESCAN_OK）・
+  非バイナリ・2 バッファ・dir doc あり・差分ありのときだけ
+  `Merge20ClassifyFromMergeDoc` で分類し `m_pDirDoc` に渡す。
+  `ShowMergeDoc` が rescan 前に dir doc を設定するため、初回 rescan でも
+  渡せる。再スキャンごとに再分類するので編集後も新鮮。3-way は未分類
+  （DIFFRANGE が OLD／NEW の行数に対応しないため）。
+- `Src/DirViewColItems.cpp`：新列 3 つ（regName `Saction`／`Srisk`／`Ssummary`、
+  見出し「Action Category」／「Risk」／「Summary」）。`f_cols`／`f_cols3`
+  とも表末尾（出力列の後、デバッグ列の前）に追加。既定で表示。
+  既定順は 2-way が 8／9／10、3-way が 9／10／11。
+  未分類ファイルは「Not calculated」（→未計算）、フォルダ行は空欄。
+  ソートは対応区分・リスクを enum 順、要約を文字列順。未分類は最後に寄せる。
+- `Src/OptionsDef.h`／`Src/OptionsInit.cpp`：新オプション
+  `Merge20/RiskKeywords`（`Merge20/RiskKeywords`）。既定値は
+  `税;額;率;端数;金額;税額;丸め;四捨五入;SQL`（ソースは `\x` 逃しで
+  ASCII のまま）。差分行への部分一致（大文字小文字を区別しない）。
+  設定画面の編集 UI は S4 では未実装（レジストリ／INI 値の編集）。
+- `Src/Merge.vcxproj`／`.filters`、`Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／
+  `.filters`：新規ファイルを登録。`Merge20Classify.cpp` は pch.h グループ
+  （PCH Use＋pch.h＋2.pch、Merge20FileStates.cpp と同じ）。
+  `Merge20ClassifyDoc.cpp` は StdAfx.h グループの既定エントリ
+  （§12.4 の C1189 修正参照）。テストは
+  `Testing/GoogleTest/Merge20/Merge20Classify_test.cpp`（新規）。
+- `Testing/GoogleTest/Merge20/Merge20Classify_test.cpp`：10 テスト。
+  HTML の loadDemo サンプル 3 件は、HTML 自身の diffFast＋analyzeInsights を
+  Node で実行した ground truth と一致することを検証（件数・対応区分・
+  リスク・洞察の順序・定数の旧→新・影響関数名）。ほかに追加のみ・同一・
+  旧欠落のみ・重要語による高への昇格・SQL 洞察（リスク点なし）・
+  除外行・関数名マッチ・重要語パース。
+- `Translations/WinMerge/Japanese.po`：S4 の訳 27 件を追加。列の説明文に
+  「生成AIではなく決定論的なパターンマッチ」である旨を明記。
+  流用した既存訳：「同一」（Identical）、「なし」（None）。
 
-### 10.2 設計からの変更点（重要）：出力チェック列は文字表示＋クリック切替
+### 12.2 設計書・仕様書との食い違い（判断理由つき）
 
-- 設計書 §3.2 の推奨案 (a)（ステートイメージリストによる自前チェック描画）は
-  採用しなかった。実コードで確認したところ、リストビュー項目のステートイメージ
-  は 1 行に 1 つで第 1 列にしか表示されず、しかもツリーモードでは既に展開／折畳み
-  アイコン（state image 1／2）に使われている（`DirView.cpp: ReflectGetdispinfo`）。
-  したがってサブ項目列にステートイメージでチェックボックスを描くことはできない。
-- 代わりに設計書のフォールバック案 (b)（☑／☐ の文字表示）を採用し、クリックでの
-  手動 ON／OFF 切替も実装した（`CDirView::OnClick`）。値は他の列と同じく
-  `LVN_GETDISPINFO`（`ReflectGetdispinfo` → `ColGetTextToDisplay`）で動的供給
-  されるため、仮想リスト構造（T-2-4）との整合性は保たれている。
-- 設計書とのその他の食い違いはない。確認内容キー 1〜5・Space の有効範囲は
-  設計書 §1.3 #3 の結論どおりフォルダ比較一覧のみ（専用モードは Phase 4）。
+- 段階 1（開封時計算＋キャッシュ、未開封は「未計算」）どおり。フォルダ
+  比較リスト表示時点では DIFFITEM に内訳がないため、一括で全ファイルを
+  計算する段階 2 は実装していない（100〜1000 ファイル規模で UI が固まる
+  ため）。
+- 追加のみ／新のみファイルに重要語が含まれると「中」になる。HTML は
+  「なし」。仕様書 §3 (2/4) の数え方（注意点が 1 つなら「中」）を正とした。
+- OP_DIFF ブロックで両側の行数が違う場合、長い側の余りの旧行は変更行として
+  数えるが、if ガード削除の検査はしない（HTML の余り 'del' 行は検査する）。
+  影響は小さい（余り行の if 削除が洞察に出ないだけ）。
+- 定数変更の要約は `->`（ASCII）で表示し、HTML の `→` とは異なる。
+  `_()` の msgid は narrow 文字列のため `\x2192` は矢印として残らない。
+  日本語訳側は `→` を使っている（`定数の変更（%1 → %2）`）。
+- タスク文にあった HTML の `analyzeSemanticInsights` は 17_v17.15.html には
+  存在しない。`analyzeInsights` のみを移植した。
+- HTML は読み込み時に MERGE_CLEAN_OLD を自動で「済」にするが、仕様書
+  §4(c) に反するためフォークでは行わない（S1 の方針どおり）。
+- リスク重要語の編集 UI（設定画面）は未実装。オプション値の直接編集のみ。
+  後続作業として残す。
 
-### 10.3 API でのコミット時の注意（S2 で発生）
+### 12.3 Windows 実機での確認手順（S4 受け入れテスト）
 
-- `commit_file.py` を短い間隔で連続実行すると、2 件目が 422
-  "Update is not a fast forward" で失敗することがある（1 件目の ref 更新直後に
-  GET した head が古い値を返す。GitHub 側の結果整合性の遅延とみられる）。
-  失敗したコミット自体は作成済みだが ref が進んでいないため、数秒待って同じ
-  `commit_file.py` を再実行すればよい（同じ内容の blob が再利用され、新しい
-  commit が現在の head の子として作られる）。孤立したコミットは無害。
-  以後の教訓：コミット間に数秒の間隔を置くこと。
+1. CI 成果物 ZIP の `WinMergeU.exe` で、HTML のデモと同じ 2 フォルダ比較を
+   開く（HouseValuationService.java、FixedAssetEngine.java、
+   NoticeFormMapper.java、LegacyExporter.java（旧のみ）、CloudSync.java
+   （新のみ）を含むフォルダ対）。
+2. 開く前：全ファイルの「対応区分」「リスク」「要約」列が「未計算」と
+   表示されること。フォルダ行は空欄であること。
+3. HouseValuationService.java をダブルクリックで開く。一覧に戻ると
+   対応区分が「要判断（欠落＋変更）」、リスクが「高」、要約が
+   `欠落：2行 / 変更：1行 / 追加：0行 / ⚠ 定数の変更（20250401001289 → 20261116009988） / ⚠ if条件の削除（旧独自ロジックの消失） / ⚠ 条件・境界の変更 / 影響する関数: calc`
+   と表示されること（HTML の表示と突き合わせる。矢印は `→`）。
+4. FixedAssetEngine.java を開く：対応区分「要判断（欠落＋変更）」、
+   リスク「高」、要約に `欠落：4行 / 変更：2行` と
+   `定数の変更（00010402998 → 00020805112）`／`端数処理の変更`／
+   `if条件の削除`／`条件・境界の変更`／`影響する関数: computeTax` が
+   出ること。
+5. NoticeFormMapper.java を開く：対応区分「要判断（同一書換）」、
+   リスク「中」（純粋な定数変更だけでは「高」にならないこと）、
+   要約に `変更：2行` と `定数の変更（10002345 → 20009876）` と
+   `影響する関数: getForm` が出ること。
+6. LegacyExporter.java（旧のみ）を開く：対応区分「旧のみファイル」、
+   リスク「中」、要約 `旧のみ存在（N行）`。CloudSync.java（新のみ）を
+   開く：対応区分「新のみファイル」、リスク「なし」、要約 `新のみ存在（N行）`。
+7. 「対応区分」「リスク」「要約」の列ヘッダでソートできること
+   （未計算のファイルが最後に寄ること）。
+8. ファイルを開いたまま編集して保存し、一覧に戻ると要約が更新されること
+   （再スキャンごとに再分類される）。
+9. 3 フォルダ比較でも同じ 3 列が出ること。3-way でファイルを開いても
+   「未計算」のまま変わらないこと（3-way は分類対象外）。
+10. 列選択ダイアログで 3 列を非表示／再表示できること。列の説明文に
+    「生成AIではなく決定論的なパターンマッチ」と書かれていること。
 
-### 10.4 S2 で未実施のこと（S3 以降）
+### 12.4 CI 結果と修正（PR #9）
 
-- 一括チェック・件数表示（S3）、対応区分・リスク・要約（S4）、一括承認（S5）、
-  CSV（S6）、ZIP（S7）、セッション保存（S8）には着手していない。
-- U-0-2（2-way 自動マージの挙動確認）は Windows 実機での確認が必要なため、
-  このスライスでは扱っていない（S5 着手前）。
+- PR #9（`merge20/phase2-s4`、23 コミット：実装 20＋修正 2＋本記録 1）。CI 実行 45621871575 は
+  failure：`Merge20ClassifyDoc.cpp` のコンパイルで error C1189
+  （`afxstr.h can only be used in MFC projects`）。原因は
+  `Merge20ClassifyDoc.cpp`（MergeDoc.h 等の MFC ヘッダを使う）を
+  pch.h グループ（STL のみ）に登録したこと。S3 の教訓（ダイアログ .cpp は
+  StdAfx.h グループの既定エントリ）と同じ落とし穴。
+  修正：`Merge20ClassifyDoc.cpp` の先頭 include を `pch.h` から `StdAfx.h` に
+  変更し、`Merge.vcxproj` の登録を既定エントリ（PCH 指定なし）に変更
+  （2 コミット）。`Merge20Classify.cpp`（MFC を使わない純粋モジュール）は
+  pch.h グループのまま問題ない。
+  以後の教訓：MFC ヘッダを使う新規 .cpp は StdAfx.h グループの既定エントリ
+  にし、先頭 include も `StdAfx.h` にすること。pch.h グループは
+  MFC を使わない純粋モジュール専用。
+- 修正後の実行 45623766720 は success。成果物 2 件（いずれも
+  2027-02-23 失効）：`WinMerge-x64.zip`（26,080,885 バイト、
+  ID 15026149062）、`WinMerge-x64-Setup-x64.exe`（39,562,669 バイト、
+  ID 15026982955）。
+- 中間の実行 45623731510（修正 2 コミットのうち 1 件目だけのヘッド）は
+  失敗見込みのため無視した（2 件目を含む最終ヘッドの実行で検証）。
 
-### 10.5 Windows 実機での確認手順（S2 受け入れテスト）
+### 12.5 S4 で未実施のこと（S5 以降）
 
-1. CI 成果物 ZIP の `WinMergeU.exe` で 2 フォルダ比較を開く（変更・旧のみ・
-   新のみ・同一の 4 種を含むこと）。
-2. 一覧に「出力」列が表示され、初期値が「変更・旧のみ＝☑、新のみ・同一＝☐」
-   であること。フォルダ行は空欄であること。
-3. フォーカス行でキー 2（済）を押すと確認内容が「✓済」になり、出力が ☑ に
-   なること。ただし新のみファイルでキー 2 を押しても出力は ☐ のままであること。
-4. キー 3（保留）／キー 5（現状維持）を押すと出力が ☐ になること。
-   キー 4（個別対応要）／キー 1（未確認）では出力が変わらないこと。
-5. Space を繰り返し押すと確認内容が未確認→済→保留→個別対応要→現状維持→
-   未確認と順送りされ、連動ルールが 3・4 と同じになること。
-6. 出力列のセルをクリックすると ☑／☐ が手動で切り替わること。確認内容は
-   変わらないこと。フォルダ行の出力セルをクリックしても何も変わらないこと。
-7. 行色：個別対応要の行が薄赤、保留の行が薄黄、現状維持の行が灰色の背景に
-   なること。済・未確認の行は従来の差分色のままであること。
-8. 列ヘッダの「出力」でソートできること。列選択ダイアログで「出力」列を
-   非表示／再表示できること。3 フォルダ比較でも同じ列が出ること。
-9. 再スキャン（F5）後も確認内容と出力チェックが変わらないこと。
-10. ファイル比較エディタを開き、数字キー 1〜5 と Space を押すと文字が入力
-    されること（確認内容が変わらないこと）。
-
-### 10.6 CI 結果と修正（PR #7）
-
-- PR #7（`merge20/phase2-s2`、12 コミット＋修正 2 コミット）。CI 実行 45600362144 は
-  failure：`Src/DirView.cpp(1428,13): error C2039: 'isDirectory': is not a member
-  of 'DIFFITEM'`。原因は `isDirectory()` が `DIFFITEM` ではなく `DIFFCODE` の
-  メンバであることの見誤り（`DiffItem.h:88` の `isDirectory()` は `struct DIFFCODE`
-  内の定義。既存コードは `di.diffcode.isDirectory()` と書いている）。
-  同じ誤りが `DirViewColItems.cpp` の出力列 getter／sorter にもあったため、
-  3 箇所すべてを `di.diffcode.isDirectory()`（sorter は `ldi`／`rdi`）に修正。
-  以後の教訓：`DIFFITEM` の述語は `diffcode.` 経由（`isSideFirstOnly`／
-  `isResultSame` 等も同じ）。`DiffItem.h` の grep 結果は struct 名を確認すること。
-- 修正コミットごとに CI が走り、1 件目の修正だけを含む実行 45602942908 は
-  failure（DirView.cpp の修正がまだ入っていないため当然）、2 件とも含む実行
-  45602987787 は success。成果物 2 件（いずれも 2027-02-23 失効）：
-  `WinMerge-x64.zip`（26,039,876 バイト、ID 15016932460）、
-  `WinMerge-x64-Setup-x64.exe`（39,517,186 バイト、ID 15017521005）。
-
-## 11. Phase 2 S3（一括チェック＋件数表示）— ブランチ `merge20/phase2-s3`
-
-設計書 `merge20-phase2-design.md` §7 の S3 に従う（§3.2 のうち一括チェック・
-ディレクトリ単位の全チェック／全解除・件数表示）。C++ の変更はこの Linux VM では
-コンパイルできないため、CI でのビルド＋成果物確認が検証になる。
-
-### 11.1 変更内容
-
-- `Src/Merge20/Merge20BatchCheckDlg.h`／`.cpp`（新規）：一括チェックダイアログ
-  （`CTrDialog` 派生）。確認内容 5 状態のチェックボックス（HTML v17.5 の
-  ポップアップと同じ複数選択）、対象件数の表示（OK ボタンのラベル自体が
-  「選択分を一括チェック（N件）」になり、件数行にも「N件のファイルが対象です」と
-  出る）、「表示分すべてチェック」「全解除」ボタンを同じダイアログに置く。
-  何も選択していない間は OK が無効（空実行できない）。キャンセルでは何も変わらない。
-  戻り値は `Action`（`Selected`／`CheckAllDisplayed`／`ClearAll`／`None`）。
-- `Src/resource.h`：`IDD_MERGE20_BATCH_CHECK`（292）、
-  `IDC_MERGE20_BATCH_TODO`〜`KEEP`（1719〜1723、連続値で `ON_CONTROL_RANGE` 用）、
-  `IDC_MERGE20_BATCH_COUNT`（1724）、`IDC_MERGE20_BATCH_CHECK_ALL`（1725）、
-  `IDC_MERGE20_BATCH_CLEAR_ALL`（1726）、コマンド `ID_MERGE20_BATCH_CHECK`（38931）、
-  `ID_MERGE20_DIR_CHECK_ALL`（38932）、`ID_MERGE20_DIR_UNCHECK_ALL`（38933）を追加。
-  `_APS_NEXT_*` も更新（resource 293、command 38934、control 1727）。
-- `Src/Merge.rc`：`IDD_MERGE20_BATCH_CHECK` のダイアログテンプレートを追加
-  （300×148、チェックボックス 5 個＋件数行＋ボタン 4 個。英語リテラルで、
-  実行時に `CTrDialog::OnInitDialog` → `I18n::TranslateDialog` で翻訳される）
-  と、レイアウト／マージン欄への登録（`AFX_DIALOG_LAYOUT` と `, DIALOG` 欄）。
-- `Src/DirView.h`／`.cpp`：
-  (1) 右クリックメニュー（`ListContextMenu`）に「一括チェック…」を常時追加し、
-  ディレクトリ行が選択されている場合のみ「配下をすべてチェック」「配下の
-  チェックをすべて外す」を追加（既存の `bDirSelected` 判定を流用。プラグイン設定
-  サブメニューと同じ `AppendMenu` 方式）。コマンドはメッセージマップに登録
-  （`ON_COMMAND`／`ON_UPDATE_COMMAND_UI`）。
-  (2) `OnMerge20BatchCheck`：表示中のファイルを確認内容別に数えてダイアログを開き、
-  承認後のみ実行する。「選択分」は表示中のファイルのうち選択した確認内容のものだけを
-  ON にする（HTML の `batchChkSel` はフィルタ後の `filtFiles` を対象にするのと同じ）。
-  「表示分すべてチェック」は表示中の全ファイルを ON にする。「全解除」は比較全体の
-  全ファイルを OFF にする（HTML の `batchChk(false)` が全ファイルを対象にするのと同じ。
-  フィルタで隠れたファイルや折りたたまれたフォルダ配下も含む）。
-  (3) ディレクトリ単位の操作（`Merge20SetOutputForDirectory`）：`DIFFITEM` の
-  `GetFirstChild()`／`GetFwdSiblingLink()` による再帰走査で、配下の全ファイルの
-  出力チェックを入れる／外す。表示一覧ではなくツリーを歩くため、折りたたまれた
-  サブフォルダ配下も含まれる。ディレクトリ行自体には出力フラグがない。
-  (4) 件数表示：`GetMerge20StatusCountText()`（「表示 N 件中 M 件チェック」。
-  分母は表示中のファイル行数、分子はそのうち出力チェック ON の件数。ディレクトリ行と
-  「..」行は数えない）と `UpdateMerge20StatusCount()` を追加。`Redisplay()` の末尾
-  （表示行の再構築直後）、出力列のクリック切替（`OnClick`）、キー 1〜5・Space
-  （`PreTranslateMessage`）、一括チェック／ディレクトリ単位操作の直後に呼ぶ。
-  (5) `Merge20SetOutputForAllFiles`：`CDiffContext`（`DiffItemList`）の
-  `GetFirstDiffPosition()`／`GetNextDiffPosition()` による深さ優先走査で比較全体の
-  全ファイルを対象にする（「全解除」用）。
-- `Src/Merge.vcxproj`／`Src/Merge.vcxproj.filters`：新規ダイアログ 2 ファイルを
-  `Merge20` フィルタに登録（`.cpp` は `DiffContext.cpp` と同じ PCH 設定）。
-  `UnitTests.vcxproj` への登録は不要（ダイアログは `DirView.cpp` からだけ使われ、
-  UnitTests は `DirView.cpp` をコンパイルしない。S1 の LNK2019 の教訓に該当しない）。
-- `Translations/WinMerge/Japanese.po`：新規文字列 11 件の訳を追加（ダイアログの
-  タイトル・説明・ボタン、右クリックメニュー 3 件、ステータスバー件数表示。
-  S0〜S2 と同じ msgid 参照の方針。チェックボックスの 5 状態名は S1 の訳を流用）。
-
-### 11.2 T-2-2 の解消：件数表示のステータスバー更新経路
-
-- 設計書 §5 の T-2-2（表示場所の特定）は解消した。フォルダ比較のステータスバーは
-  `CDirFrame::m_wndStatusBar`（`CStatusBar`。設計書の推測にあった
-  `BasicFlatStatusBar` ではない）。ペイン 0 は伸縮するメッセージペインで、
-  書き込み口は `CDirFrame::SetStatus(const tchar_t*)`（`DirFrame.cpp:151`、
-  `m_wndStatusBar.SetPaneText(0, szStatus)`）だけである。
-- ペイン 0 の唯一の書き手は `CDirView::OnTimer(TIMER_ID_STATUSBAR_UPDATE)`
-  （比較完了後に 150ms、選択変更時に 100ms のワンショットタイマ。従来は
-  「経過時間」または「N items selected」を表示していた）。選択が変わるたびに
-  件数表示が上書きで消えてしまうため、`OnTimer` のメッセージに件数テキストを
-  「`選択表示 | 表示 N 件中 M 件チェック`」の形で追加し、かつ `Redisplay()` と
-  すべての Merge20 状態変更直後に `UpdateMerge20StatusCount()` で直接書き込む
-  二重の経路にした。これで件数表示はフィルタ・チェック操作に追従する。
-- HTML の `cntLbl`（`表示:N / 選択:M`）との違い：仕様書 §3（3/4）の文言どおり
-  分母＝表示中の件数、分子＝そのうちチェック済みの件数とした（HTML の分子は
-  全ファイル中のチェック済み件数だったが、仕様書を優先した）。
-
-### 11.3 設計からの変更点・判断事項
-
-- 一括チェックの UI は、設計書 §3.2 の「右クリックメニュー体系に倣うポップアップ」
-  をダイアログとして実装した。メニュー方式では、複数選択のたびにメニューが閉じて
-  開き直しになる（標準メニューは項目選択で閉じる）ため、HTML のポップアップ
-  （チェックボックスを複数付けたまま件数を確認して実行）と等価にならない。
-  ダイアログは既存の `ArchiveDlg`／`ComparisonResultFilterDlg` と同じ作り
-  （`CTrDialog`＋`Merge.rc` テンプレート＋`resource.h` の ID）で、件数の事前表示と
-  確認後の実行（OK／キャンセル）をそのまま満たす。右クリックメニューからの起動は
-  設計書の「既存の右クリックメニュー体系に倣う」を満たす。
-- 「全解除」の範囲は比較全体（HTML の `batchChk(false)` と同じ）とし、
-  「表示分すべてチェック」「選択分を一括チェック」の範囲は表示中のファイルとした。
-  仕様書 §4(b)・§3（3/4）は範囲を明記していないため、HTML の挙動を正本とした。
-  この違いはダイアログの説明文と本記録に明記してある。
-- 件数表示の分母は「表示中のファイル行数」とした（ディレクトリ行は出力フラグを
-  持たないため数えない）。フィルタで隠れたファイルは分母・分子のどちらにも入らない。
-
-### 11.4 S3 で未実施のこと（S4 以降）
-
-- 対応区分・リスク・要約（S4）、一括承認（S5）、CSV（S6）、ZIP（S7）、
-  セッション保存（S8）には着手していない。
-- U-0-2（2-way 自動マージの挙動確認）は Windows 実機での確認が必要なため、
-  このスライスでは扱っていない（S5 着手前）。
-
-### 11.5 Windows 実機での確認手順（S3 受け入れテスト）
-
-1. CI 成果物 ZIP の `WinMergeU.exe` で 2 フォルダ比較を開く（100 ファイル規模、
-   サブフォルダを含むこと。確認内容の 5 状態が混ざるようにキー 1〜5 で事前に
-   付けておく）。
-2. フォルダ比較ウィンドウ下部のステータスバーに「表示 N 件中 M 件チェック」が
-   常時表示されること。N は一覧のファイル行数と一致し、M は ☑ の数と一致すること。
-   （選択行数を変えても件数表示が消えないこと。「経過時間」表示の直後にも
-   件数表示が付いていること。）
-3. 出力列のセルをクリックして ☑／☐ を切り替えると、ステータスバーの M が
-   すぐに変わること。キー 2（済）／3（保留）／5（現状維持）でも M が連動して
-   変わること。
-4. 比較結果フィルタ（例：「異なるファイルのみ」）や表示フィルタで表示件数を絞ると、
-   N が絞り込み後の件数になり、M も表示中のチェック済み件数になること。
-5. 行を右クリックし「一括チェック…」を選ぶ。ダイアログで確認内容を複数
-   （例：済＋個別対応要）にチェックすると、OK ボタンのラベルが
-   「選択分を一括チェック（N件）」になり、件数行にも同じ N 件が表示されること。
-   何も選択していない間は OK が押せないこと。キャンセルでは何も変わらないこと。
-   OK を押すと、該当するファイルだけが ☑ になり、他は変わらないこと。
-   ステータスバーの M が増えていること。
-6. 同じダイアログで「表示分すべてチェック」を押すと、表示中の全ファイルが ☑ に
-   なること。「全解除」を押すと、フィルタで隠れているファイルも含め全ファイルが
-   ☐ になること（隠れたファイルはフィルタを外して確認する）。
-7. ディレクトリ行を右クリックすると「配下をすべてチェック」「配下のチェックを
-   すべて外す」が出ること（ファイル行だけの選択では出ないこと）。折りたたんだ
-   サブフォルダの配下ファイルも含めて ☑／☐ が変わること（フォルダを展開して確認する）。
-8. 再スキャン（F5）後も件数表示と出力チェックが変わらないこと。
-   3 フォルダ比較でも同じ操作ができること。
-
-### 11.6 CI 結果と修正（PR #8）
-
-- PR #8（`merge20/phase2-s3`、10 コミット＋修正 2 コミット）。CI 実行 45609234086 は
-  failure：`Src/Merge20/Merge20BatchCheckDlg.cpp(92,1): error C1010: unexpected end
-  of file while looking for precompiled header`。原因は、ダイアログの `.cpp` が
-  `#include "StdAfx.h"` なのに `Merge.vcxproj` への登録を `Merge20FileStates.cpp` と
-  同じ `pch.h` グループ（`WinMergeU2.pch`）で書いたこと。`pch.h` は STL のみで MFC を
-  含まないため、MFC を使うダイアログは `StdAfx.h` グループでコンパイルしなければならない。
-  以後の教訓：新規 `.cpp` の PCH グループは、使うヘッダで決める。MFC（`CTrDialog` 等）
-  を使うものは `ArchiveDlg.cpp` と同じ素のエントリ（既定の `StdAfx.h` グループ）にし、
-  `pch.h` グループは MFC を使わないものだけにする。`Merge20FileStates.cpp` が
-  `pch.h` なのは MFC を使わないからである。
-- 修正後の実行 45611123171 は failure：`CVTRES : fatal error CVT1100: duplicate
-  resource. type:DIALOG, name:292`。原因は、ダイアログ ID に 292 を使ったが 292 は
-  すでに `IDD_ARCHIVE` だったこと。`resource.h` の IDD 一覧は値順に並んでおらず、
-  末尾だけ見て「最大値 291」と判断したのが誤りだった（`IDD_ARCHIVE` 292 は一覧の
-  途中にあった）。ID 293 に変更して修正。以後の教訓：リソース ID の空き確認は
-  一覧の末尾ではなく全 define を値でソートして確認すること（IDD／IDC／コマンド ID
-  のすべて）。IDC 1719〜1726 とコマンド 38931〜38933 は全 define 対象で空きを確認済み。
-- 3 回目の実行 45613020758 は success。成果物 2 件（いずれも 2027-02-23 失効）：
-  `WinMerge-x64.zip`（26,047,171 バイト、ID 15022205819）、
-  `WinMerge-x64-Setup-x64.exe`（39,530,112 バイト、ID 15022012096）。
+- リスク重要語の設定画面エディタ（オプション値の直接編集のみ可能）。
+- 段階 2 の一括計算（未開封ファイルの事前分類）。
+- S5（一括承認）の安全マージ定義そのもの。S4 の対応区分・リスクは
+  S5 の入力になる型（Merge20Types.h）として用意済み。
