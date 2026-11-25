@@ -487,11 +487,6 @@ private:
 	void Merge20CountDisplayedByReviewState(int counts[5]);
 	void Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include);
 	void Merge20SetOutputForAllFiles(bool include);
-	// Merge20 (S8): display settings for the session save/restore
-	void Merge20GetDisplaySettings(Merge20SessionDisplay& display);
-	void Merge20SetDisplayFilter(const Merge20SessionDisplay& display);
-	void Merge20ApplyColumnSettings(const String& orders, const String& widths);
-	void Merge20RestoreViewPosition(const String& focusedPath, int topIndex);
 	void ShowShellContextMenu(UINT id);
 	CShellContextMenu* GetCorrespondingShellContextMenu(HMENU hMenu) const;
 	void ReloadColumns();
@@ -502,6 +497,11 @@ private:
 	int GetDefColumnWidth() const { return MulDiv(DefColumnWidth, CClientDC(const_cast<CDirView *>(this)).GetDeviceCaps(LOGPIXELSX), 72); };
 
 public:
+	// Merge20 (S8): display settings for the session save/restore
+	void Merge20GetDisplaySettings(Merge20SessionDisplay& display);
+	void Merge20SetDisplayFilter(const Merge20SessionDisplay& display);
+	void Merge20ApplyColumnSettings(const String& orders, const String& widths);
+	void Merge20RestoreViewPosition(const String& focusedPath, int topIndex);
 	DirItemIterator Begin() const { return DirItemIterator(m_pIList.get()); }
 	DirItemIterator End() const { return DirItemIterator(); }
 	DirItemIterator RevBegin() const { return DirItemIterator(m_pIList.get(), -1, false, true); }
