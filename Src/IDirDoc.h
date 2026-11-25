@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UnicodeString.h"
+#include "Merge20/Merge20Types.h"
 
 class PathContext;
 struct IMergeDoc;
@@ -22,6 +23,11 @@ struct IDirDoc
 	virtual bool IsArchiveFolders() const = 0;
 	virtual bool HasDiffs() const = 0;
 	virtual void UpdateChangedItem(const PathContext& paths, unsigned nDiffs, unsigned nTrivialDiffs, bool bIdentical) = 0;
+	// Merge20 (S4): store the classification of one file (action
+	// category, risk, rule-based summary) computed by its merge doc
+	// after a rescan. `paths` are the merge doc's file paths, used to
+	// find the folder-compare item.
+	virtual void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) = 0;
 	virtual void ApplyDisplayRoot(int nIndex, String& sText) = 0;
 	virtual bool CompareFilesIfFilesAreLarge(int nFiles, const FileLocation ifileloc[]) = 0;
 	virtual bool MoveableToNextDiff() = 0;
