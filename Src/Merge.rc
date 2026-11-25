@@ -80,6 +80,8 @@ BEGIN
         MENUITEM "Choose Right\tCtrl+Shift+&2/Alt+&2",         ID_MERGE_RESULT_CHOOSE_2ND
         MENUITEM "Choose Left for All Unresolved Conflicts",   ID_MERGE_RESULT_CHOOSE_ALL_1ST
         MENUITEM "Choose Right for All Unresolved Conflicts",  ID_MERGE_RESULT_CHOOSE_ALL_2ND
+        MENUITEM "Apply Learning Suggestion", ID_MERGE20_LEARN_APPLY
+        MENUITEM "Dismiss Learning Suggestion", ID_MERGE20_LEARN_DISMISS
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
