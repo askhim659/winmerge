@@ -651,6 +651,9 @@
     <ClCompile Include="Merge20\Merge20LearnDlg.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Measure.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20MemoDlg.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1470,6 +1473,9 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20LearnDlg.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20Measure.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20MemoDlg.h">
