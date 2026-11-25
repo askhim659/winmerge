@@ -633,3 +633,26 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
    サブフォルダの配下ファイルも含めて ☑／☐ が変わること（フォルダを展開して確認する）。
 8. 再スキャン（F5）後も件数表示と出力チェックが変わらないこと。
    3 フォルダ比較でも同じ操作ができること。
+
+### 11.6 CI 結果と修正（PR #8）
+
+- PR #8（`merge20/phase2-s3`、10 コミット＋修正 2 コミット）。CI 実行 45609234086 は
+  failure：`Src/Merge20/Merge20BatchCheckDlg.cpp(92,1): error C1010: unexpected end
+  of file while looking for precompiled header`。原因は、ダイアログの `.cpp` が
+  `#include "StdAfx.h"` なのに `Merge.vcxproj` への登録を `Merge20FileStates.cpp` と
+  同じ `pch.h` グループ（`WinMergeU2.pch`）で書いたこと。`pch.h` は STL のみで MFC を
+  含まないため、MFC を使うダイアログは `StdAfx.h` グループでコンパイルしなければならない。
+  以後の教訓：新規 `.cpp` の PCH グループは、使うヘッダで決める。MFC（`CTrDialog` 等）
+  を使うものは `ArchiveDlg.cpp` と同じ素のエントリ（既定の `StdAfx.h` グループ）にし、
+  `pch.h` グループは MFC を使わないものだけにする。`Merge20FileStates.cpp` が
+  `pch.h` なのは MFC を使わないからである。
+- 修正後の実行 45611123171 は failure：`CVTRES : fatal error CVT1100: duplicate
+  resource. type:DIALOG, name:292`。原因は、ダイアログ ID に 292 を使ったが 292 は
+  すでに `IDD_ARCHIVE` だったこと。`resource.h` の IDD 一覧は値順に並んでおらず、
+  末尾だけ見て「最大値 291」と判断したのが誤りだった（`IDD_ARCHIVE` 292 は一覧の
+  途中にあった）。ID 293 に変更して修正。以後の教訓：リソース ID の空き確認は
+  一覧の末尾ではなく全 define を値でソートして確認すること（IDD／IDC／コマンド ID
+  のすべて）。IDC 1719〜1726 とコマンド 38931〜38933 は全 define 対象で空きを確認済み。
+- 3 回目の実行 45613020758 は success。成果物 2 件（いずれも 2027-02-23 失効）：
+  `WinMerge-x64.zip`（26,047,171 バイト、ID 15022205819）、
+  `WinMerge-x64-Setup-x64.exe`（39,530,112 バイト、ID 15022012096）。
