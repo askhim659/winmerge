@@ -7288,6 +7288,141 @@ msgstr "配下のチェックをすべて外す"
 msgid "%1 displayed, %2 checked"
 msgstr "表示 %1 件中 %2 件チェック"
 
+#. Merge20 (S4): folder compare column headers (design section 6, spec section 3 (2/4))
+#: Src/DirViewColItems.cpp
+msgid "Action Category"
+msgstr "対応区分"
+
+#. Merge20 (S4): folder compare column headers
+#: Src/DirViewColItems.cpp
+msgid "Risk"
+msgstr "リスク"
+
+#. Merge20 (S4): folder compare column headers
+#: Src/DirViewColItems.cpp
+msgid "Summary"
+msgstr "要約"
+
+#. Merge20 (S4): folder compare column descriptions (column dialog)
+#: Src/DirViewColItems.cpp
+msgid "Action category of the file, derived from the existence category and the diff breakdown (missing / changed / added lines). Shown only after the file has been opened; unopened files show Not calculated."
+msgstr "存在区分と差分内訳（欠落／変更／追加の行数）から導出した対応区分。ファイルを開いた後に表示します。未開封のファイルは「未計算」と表示します。"
+
+#. Merge20 (S4): folder compare column descriptions (column dialog)
+#: Src/DirViewColItems.cpp
+msgid "Risk level of the file: None, Medium, or High. One attention point (missing lines, changed lines, or an important keyword in the diff) means Medium; several overlapping points mean High."
+msgstr "リスク（なし／中／高）。注意点が1つ（欠落行、変更行、または差分内の重要語）なら「中」、複数重なれば「高」。"
+
+#. Merge20 (S4): folder compare column descriptions (column dialog)
+#: Src/DirViewColItems.cpp
+msgid "Rule-based summary of the file: missing / changed / added line counts, detected changes (rounding, SQL, deleted if guard, condition/boundary, constants) and the affected functions. This is a deterministic pattern match, not generated AI: the same input always returns the same summary."
+msgstr "ルールベース要約：欠落／変更／追加の行数、検出した変更（端数処理、SQL、if条件の削除、条件・境界、定数）、影響する関数を表示します。生成AIではなく決定論的なパターンマッチです。同じ入力には常に同じ要約を返します。"
+
+#. Merge20 (S4): action category value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "Merge (missing in new)"
+msgstr "要マージ（旧欠落）"
+
+#. Merge20 (S4): action category value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "Review (missing + changed)"
+msgstr "要判断（欠落＋変更）"
+
+#. Merge20 (S4): action category value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "Review (modified)"
+msgstr "要判断（同一書換）"
+
+#. Merge20 (S4): action category value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "New additions only"
+msgstr "新追加のみ"
+
+#. Merge20 (S4): action category value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "Old-only file"
+msgstr "旧のみファイル"
+
+#. Merge20 (S4): action category value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "New-only file"
+msgstr "新のみファイル"
+
+#. Merge20 (S4): risk level value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "Medium"
+msgstr "中"
+
+#. Merge20 (S4): risk level value (folder compare column)
+#: Src/DirViewColItems.cpp
+msgid "High"
+msgstr "高"
+
+#. Merge20 (S4): unclassified files (folder compare columns)
+#: Src/DirViewColItems.cpp
+msgid "Not calculated"
+msgstr "未計算"
+
+#. Merge20 (S4): summary line counts (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Missing: %1 lines / Changed: %2 lines / Added: %3 lines"
+msgstr "欠落：%1行 / 変更：%2行 / 追加：%3行"
+
+#. Merge20 (S4): summary excluded lines (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Excluded: %1 lines"
+msgstr "除外：%1行"
+
+#. Merge20 (S4): summary insight (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Rounding change"
+msgstr "端数処理の変更"
+
+#. Merge20 (S4): summary insight (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "SQL change"
+msgstr "SQLの変更"
+
+#. Merge20 (S4): summary insight (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Deleted if guard (old-only logic lost)"
+msgstr "if条件の削除（旧独自ロジックの消失）"
+
+#. Merge20 (S4): summary insight (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Condition/boundary change"
+msgstr "条件・境界の変更"
+
+#. Merge20 (S4): summary insight (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Constant change"
+msgstr "定数の変更"
+
+#. Merge20 (S4): summary insight (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Constant change (%1 -> %2)"
+msgstr "定数の変更（%1 → %2）"
+
+#. Merge20 (S4): summary risk keyword note (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Includes important keywords"
+msgstr "重要語を含む"
+
+#. Merge20 (S4): summary affected functions (Merge20ClassifyDoc)
+#: Src/Merge20/Merge20ClassifyDoc.cpp
+msgid "Affected functions: %1"
+msgstr "影響する関数: %1"
+
+#. Merge20 (S4): old-only / new-only summary (DirDoc)
+#: Src/DirDoc.cpp
+msgid "Old-only file (%1 lines)"
+msgstr "旧のみ存在（%1行）"
+
+#. Merge20 (S4): old-only / new-only summary (DirDoc)
+#: Src/DirDoc.cpp
+msgid "New-only file (%1 lines)"
+msgstr "新のみ存在（%1行）"
+
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
 msgid "Image files are identical"
