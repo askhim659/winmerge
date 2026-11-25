@@ -33,6 +33,7 @@
 #include "DirDoc.h"
 #include "OpenDoc.h"
 #include "MergeDoc.h"
+#include "Merge20/Merge20LearnDoc.h"
 #include "MergeEditView.h"
 #include "HexMergeDoc.h"
 #include "HexMergeView.h"
@@ -1513,6 +1514,13 @@ void CMainFrame::OnOptions()
 
 		// make an attempt at rescanning any open diff sessions
 		ApplyDiffOptions();
+
+		// Merge20 (Phase 3 L2, design section 3.5): the learning
+		// ON/OFF toggle lives on the Compare options page, so the
+		// options are already saved here. Recompute the candidates
+		// of all open docs: switching OFF clears every candidate
+		// map, switching ON recomputes them.
+		Merge20LearnRefreshAllOpenDocs();
 
 		// Update all dirdoc settings
 		for (auto pDirDoc : GetAllDirDocs())
