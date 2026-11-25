@@ -40,6 +40,7 @@ public:
 	int     m_nDiffAlgorithm;
 	bool    m_bIndentHeuristic;
 	bool    m_bCompleteBlankOutIgnoredChanges;
+	bool    m_bMerge20Learning;
 	//}}AFX_DATA
 
 
