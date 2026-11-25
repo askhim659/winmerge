@@ -3048,6 +3048,30 @@ BEGIN
 END
 
 IDD_MERGE20_MEMO DIALOGEX 0, 0, 300, 130
+
+IDD_MERGE20_LEARN DIALOGEX 0, 0, 480, 314
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Learning"
+FONT 8, FONTNAME, 0, 0, 0x1
+BEGIN
+    LTEXT           "Your merge judgments (insert old / keep new / replace with old / both old and new) are recorded as patterns. Later comparisons show matching differences as suggestions. Suggestions are never applied automatically: nothing changes until you accept one.",IDC_MERGE20_LEARN_DESC,7,7,466,30
+    LTEXT           "",IDC_MERGE20_LEARN_STATE,7,41,320,10
+    PUSHBUTTON      "Toggle ON/OFF",IDC_MERGE20_LEARN_TOGGLE,380,39,93,14
+    LTEXT           "",IDC_MERGE20_LEARN_STATS,7,55,466,10
+    LTEXT           "",IDC_MERGE20_LEARN_LOAD_ERROR,7,67,466,10
+    GROUPBOX        "Sources (per import)",IDC_STATIC,7,80,466,68
+    LISTBOX         IDC_MERGE20_LEARN_SOURCES,14,92,320,48,WS_VSCROLL | LBS_NOINTEGRALHEIGHT | WS_TABSTOP | LBS_NOTIFY
+    PUSHBUTTON      "Delete selected source",IDC_MERGE20_LEARN_DELETE_SOURCE,340,92,126,14
+    PUSHBUTTON      "Export merged sources",IDC_MERGE20_LEARN_MERGE_SOURCES,340,110,126,14
+    GROUPBOX        "Learned rules (top 50)",IDC_STATIC,7,154,466,104
+    LISTBOX         IDC_MERGE20_LEARN_RULES,14,166,452,84,WS_VSCROLL | LBS_NOINTEGRALHEIGHT | WS_TABSTOP
+    LTEXT           "Learning data contains source code fragments. Share only through approved internal channels. Do not take it outside the company or save it to a personal cloud.",IDC_MERGE20_LEARN_NOTICE,7,264,466,20
+    PUSHBUTTON      "Export learning data (JSON)",IDC_MERGE20_LEARN_EXPORT,7,292,130,14
+    PUSHBUTTON      "Import learning data",IDC_MERGE20_LEARN_IMPORT,142,292,130,14
+    PUSHBUTTON      "Clear learning data",IDC_MERGE20_LEARN_CLEAR,277,292,80,14
+    DEFPUSHBUTTON   "Close",IDOK,362,292,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,417,292,56,14
+END
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Edit Audit Memo"
 FONT 8, FONTNAME, 0, 0, 0x1
@@ -4631,6 +4655,11 @@ BEGIN
 END
 
 IDD_MERGE20_MEMO AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_MERGE20_LEARN AFX_DIALOG_LAYOUT
 BEGIN
     0
 END
