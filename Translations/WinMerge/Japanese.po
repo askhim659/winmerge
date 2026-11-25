@@ -7508,10 +7508,137 @@ msgstr "新追加"
 msgid "Memo"
 msgstr "メモ"
 
-#. Merge20 (S6): folder compare "Memo" column description (DirViewColItems)
+#. Merge20 (S8): folder compare "Memo" column description (DirViewColItems)
 #: Src/DirViewColItems.cpp
-msgid "Audit memo for the file (free text for the reviewer's notes). The memo is included in the diff-list CSV; editing the memo is not implemented yet, so this column is empty for now."
-msgstr "ファイルの監査メモ（確認者の自由記述）。差分一覧 CSV に含めます。メモの編集はまだ実装されていないため、この列は今は空です。"
+msgid "Audit memo for the file (free text for the reviewer's notes). The memo is included in the diff-list CSV and saved in the session file; edit it from the folder list context menu."
+msgstr "ファイルの監査メモ（確認者の自由記述）。差分一覧 CSV に含め、セッションファイルにも保存します。フォルダ一覧の右クリックメニューから編集できます。"
+
+#. Merge20 (S8): folder compare context menu (DirView)
+#: Src/DirView.cpp
+msgid "Save session"
+msgstr "セッションを保存"
+
+#. Merge20 (S8): folder compare context menu (DirView)
+#: Src/DirView.cpp
+msgid "Restore session..."
+msgstr "セッションを復元…"
+
+#. Merge20 (S8): folder compare context menu (DirView)
+#: Src/DirView.cpp
+msgid "Edit audit memo..."
+msgstr "監査メモを編集…"
+
+#. Merge20 (S8): session save result (DirView)
+#: Src/DirView.cpp
+msgid "Session saved to:\n"
+"%1"
+msgstr "セッションを保存しました：\n"
+"%1"
+
+#. Merge20 (S8): session restore report (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Session restored: %1 files restored, %2 files changed since the save and reset to unreviewed."
+msgstr "セッションを復元しました：%1件を復元、%2件は保存後に変更されていたため未確認に戻しました。"
+
+#. Merge20 (S8): session restore report, unreadable entries (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "%1 saved entries could not be read and will be ignored."
+msgstr "%1件の保存エントリを読み取れなかったため無視します。"
+
+#. Merge20 (S8): session restore report, missing files (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "%1 saved files no longer exist in this comparison."
+msgstr "%1件の保存ファイルはこの比較に存在しません。"
+
+#. Merge20 (S8): session restore report, differing compare options (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Note: the saved compare options differ from the current ones and were not applied: %1."
+msgstr "注意：保存された比較オプションは現在のものと異なるため適用していません：%1。"
+
+#. Merge20 (S8): nothing to save (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "There is no folder comparison to save yet."
+msgstr "保存するフォルダ比較がまだありません。"
+
+#. Merge20 (S8): session folder creation failed (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Cannot create the session folder:\n"
+"%1"
+msgstr "セッションフォルダを作成できません：\n"
+"%1"
+
+#. Merge20 (S8): session save failed (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Cannot save the session:\n"
+"%1"
+msgstr "セッションを保存できません：\n"
+"%1"
+
+#. Merge20 (S8): session load failed (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Cannot load the session file:\n"
+"%1"
+msgstr "セッションファイルを読み込めません：\n"
+"%1"
+
+#. Merge20 (S8): nothing to restore into (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "There is no folder comparison to restore into yet."
+msgstr "復元先のフォルダ比較がまだありません。"
+
+#. Merge20 (S8): session file for another folder pair (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "This session file is for a different folder pair."
+msgstr "このセッションファイルは別のフォルダ組のものです。"
+
+#. Merge20 (S8): restore offer (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "A session saved on %1 was found for these folders (%2 files recorded).\n"
+"\n"
+"Restore the review states, output checks, memos and merge judgments?"
+msgstr "%1に保存されたセッションがこのフォルダ組に見つかりました（%2件を記録）。\n"
+"\n"
+"確認内容・出力チェック・メモ・差分判定を復元しますか？"
+
+#. Merge20 (S8): compare option name, recursive (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Recursive"
+msgstr "再帰"
+
+#. Merge20 (S8): compare option name, file filter (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "File filter"
+msgstr "ファイルフィルタ"
+
+#. Merge20 (S8): compare option name, compare method (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Compare method"
+msgstr "比較方法"
+
+#. Merge20 (S8): compare option name, ignore whitespace (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Ignore whitespace"
+msgstr "空白を無視"
+
+#. Merge20 (S8): compare option name, ignore case (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Ignore case"
+msgstr "大文字と小文字を区別しない"
+
+#. Merge20 (S8): compare option name, ignore blank lines (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Ignore blank lines"
+msgstr "空行を無視"
+
+#. Merge20 (S8): compare option name, ignore EOL differences (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Ignore EOL differences"
+msgstr "行末の違いを無視"
+
+#. Merge20 (S8): memo dialog caption (Merge.rc)
+#: Src/Merge.rc
+msgid "Edit Audit Memo"
+msgstr "監査メモの編集"
 
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
