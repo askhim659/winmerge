@@ -17,9 +17,16 @@
 #include "UnicodeString.h"
 #include "MergeApp.h"
 #include "I18n.h"
+#include "MergeDoc.h"
+#include "MergeResultView.h"
+#include "DirDoc.h"
+#include "DiffContext.h"
+#include "MainFrm.h"
+#include "IMergeDoc.h"
 #include <combaseapi.h>
 #include <filesystem>
 #include <fstream>
+#include <algorithm>
 
 namespace
 {
@@ -143,6 +150,115 @@ namespace
 		return true;
 	}
 
+	// Merge20 (Phase 3 L2): helpers for the record / candidate
+	// adapter below. They mirror Merge20ClassifyDoc.cpp (same
+	// ghost-safe line reading, same per-range pairing).
+
+	// Read one real line of a text buffer (empty when unreadable).
+	bool GetBufferLine(const CDiffTextBuffer& buf, int realLine, String& text)
+	{
+		if (realLine < 0)
+			return false;
+		return buf.GetLine(buf.ComputeApparentLine(realLine), text);
+	}
+
+	int RangeLineCount(const DIFFRANGE& range, int pane)
+	{
+		const int count = range.end[pane] - range.begin[pane] + 1;
+		return count > 0 ? count : 0;
+	}
+
+	// Design section 2.2: a strategy maps to source panes. INSERT_OLD
+	// and REPLACE_WITH_OLD both resolve to the old pane only ({0});
+	// they stay distinct in the learning counts (HTML JSON
+	// compatibility) even though the drawn result is the same.
+	// KEEP_NEW is the new pane only ({1}): on a deleted-only diff
+	// the new side has no lines, so {1} becomes the display-only
+	// "<No Lines>" row that is left out when the result is saved
+	// (i.e. "not adopted"); the same holds for {0} on an added-only
+	// diff. BOTH_OLD_NEW takes both panes ({0, 1}).
+	std::vector<int> SrcPanesFromStrategy(Merge20LearnStrategy strategy)
+	{
+		switch (strategy)
+		{
+		case Merge20LearnStrategy::InsertOld:
+		case Merge20LearnStrategy::ReplaceWithOld:
+			return { 0 };
+		case Merge20LearnStrategy::KeepNew:
+			return { 1 };
+		case Merge20LearnStrategy::BothOldNew:
+			return { 0, 1 };
+		}
+		return { 1 };
+	}
+
+	// Reverse of SrcPanesFromStrategy (for recording): the chosen
+	// source panes plus the diff op give back the strategy. {0} on
+	// a deleted-only diff is INSERT_OLD (the HTML tool's default for
+	// deletions); {0} on a changed or added-only diff is
+	// REPLACE_WITH_OLD. {1} is KEEP_NEW for every op, {0, 1} is
+	// BOTH_OLD_NEW. An empty selection is not a judgment (false).
+	bool StrategyFromSrcPanes(OP_TYPE op, const std::vector<int>& srcPanes,
+		Merge20LearnStrategy& strategyOut)
+	{
+		const bool hasOld = std::find(srcPanes.begin(), srcPanes.end(), 0) != srcPanes.end();
+		const bool hasNew = std::find(srcPanes.begin(), srcPanes.end(), 1) != srcPanes.end();
+		if (hasOld && hasNew)
+		{
+			strategyOut = Merge20LearnStrategy::BothOldNew;
+			return true;
+		}
+		if (hasOld)
+		{
+			strategyOut = (op == OP_1STONLY) ?
+				Merge20LearnStrategy::InsertOld : Merge20LearnStrategy::ReplaceWithOld;
+			return true;
+		}
+		if (hasNew)
+		{
+			strategyOut = Merge20LearnStrategy::KeepNew;
+			return true;
+		}
+		return false;
+	}
+
+	// Identity of a diff for the dismissed set (design section 2.3):
+	// op and the real line ranges, so a rescan that moves the diff
+	// shows the candidate again, while the same diff stays dismissed.
+	String DismissedKey(const DIFFRANGE& range)
+	{
+		return strutils::format(_T("%d:%d-%d:%d-%d"),
+			static_cast<int>(range.op),
+			range.begin[0], range.end[0], range.begin[1], range.end[1]);
+	}
+
+	// Example file path stored with a recorded judgment (HTML `ex`):
+	// the folder-relative path when the file came from a folder
+	// compare (the same relative path the session file uses),
+	// otherwise the file name. Display-only metadata.
+	String ExamplePath(const CMergeDoc& doc)
+	{
+		const String filePath = doc.GetPath(1);
+		if (const CDirDoc* pDirDoc = dynamic_cast<const CDirDoc*>(doc.GetDirDoc()))
+		{
+			const CDiffContext& ctxt = pDirDoc->GetDiffContext();
+			if (ctxt.GetCompareDirs() > 1)
+			{
+				const String root = ctxt.GetNormalizedPath(1);
+				if (!root.empty())
+				{
+					const String lowerPath = strutils::makelower(filePath);
+					String lowerRoot = strutils::makelower(root);
+					if (!lowerRoot.empty() && lowerRoot.back() != _T('\\') && lowerRoot.back() != _T('/'))
+						lowerRoot += _T('\\');
+					if (lowerPath.rfind(lowerRoot, 0) == 0)
+						return filePath.substr(lowerRoot.length());
+				}
+			}
+		}
+		return paths::FindFileName(filePath);
+	}
+
 } // namespace
 
 String Merge20LearnGetDirectory()
@@ -242,4 +358,204 @@ bool Merge20LearnSaveStore(String& errStr)
 		return false;
 	}
 	return true;
+}
+
+std::vector<Merge20DiffLine> Merge20LearnLinesForDiff(const CMergeDoc& doc, int nDiff)
+{
+	std::vector<Merge20DiffLine> lines;
+	if (doc.m_nBuffers != 2 || nDiff < 0 || nDiff >= doc.m_diffList.GetSize())
+		return lines;
+	const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff);
+	// Context (OP_NONE) and ignored (OP_TRIVIAL) ranges carry no
+	// judgment text: trivial diffs have no line texts at all (see
+	// Merge20ClassifyDoc), and the record hook only runs for
+	// significant diffs, so they never reach the learning keys.
+	if (pRange == nullptr || pRange->op == OP_NONE || pRange->op == OP_TRIVIAL)
+		return lines;
+	const DIFFRANGE& range = *pRange;
+	const CDiffTextBuffer& oldBuf = *doc.m_ptBuf[0];
+	const CDiffTextBuffer& newBuf = *doc.m_ptBuf[1];
+	const int oldLines = RangeLineCount(range, 0);
+	const int newLines = RangeLineCount(range, 1);
+	switch (range.op)
+	{
+	case OP_1STONLY:
+		for (int r = range.begin[0]; r <= range.end[0]; ++r)
+		{
+			Merge20DiffLine line;
+			line.op = OP_1STONLY;
+			GetBufferLine(oldBuf, r, line.oldText);
+			lines.push_back(line);
+		}
+		break;
+	case OP_2NDONLY:
+		for (int r = range.begin[1]; r <= range.end[1]; ++r)
+		{
+			Merge20DiffLine line;
+			line.op = OP_2NDONLY;
+			GetBufferLine(newBuf, r, line.newText);
+			lines.push_back(line);
+		}
+		break;
+	case OP_DIFF:
+		{
+			// Pair the lines in order, like Merge20ClassifyDoc:
+			// the leftover lines of the longer side stay OP_DIFF
+			// rows with one empty side.
+			const int paired = (std::min)(oldLines, newLines);
+			for (int k = 0; k < paired; ++k)
+			{
+				Merge20DiffLine line;
+				line.op = OP_DIFF;
+				GetBufferLine(oldBuf, range.begin[0] + k, line.oldText);
+				GetBufferLine(newBuf, range.begin[1] + k, line.newText);
+				lines.push_back(line);
+			}
+			for (int k = paired; k < oldLines; ++k)
+			{
+				Merge20DiffLine line;
+				line.op = OP_DIFF;
+				GetBufferLine(oldBuf, range.begin[0] + k, line.oldText);
+				lines.push_back(line);
+			}
+			for (int k = paired; k < newLines; ++k)
+			{
+				Merge20DiffLine line;
+				line.op = OP_DIFF;
+				GetBufferLine(newBuf, range.begin[1] + k, line.newText);
+				lines.push_back(line);
+			}
+		}
+		break;
+	default:
+		break;
+	}
+	return lines;
+}
+
+bool Merge20LearnRecordDiffJudgment(CMergeDoc& doc, int nDiff)
+{
+	// OFF, 3-way, and not-yet-built result panes record nothing.
+	// 3-way has no strategy mapping (design section 2.2 is 2-way
+	// only), and an unbuilt pane has no segment to judge.
+	if (!Merge20LearnIsEnabled() || doc.m_nBuffers != 2 || !doc.GetMergeResultBuildState())
+		return false;
+	if (nDiff < 0 || nDiff >= doc.m_diffList.GetSize() ||
+		!doc.m_diffList.IsDiffSignificant(nDiff))
+		return false;
+	const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff);
+	if (pRange == nullptr)
+		return false;
+	const MergeResultSegment* pSegment = doc.GetResultSegmentByDiff(nDiff);
+	// Only a Chosen segment is an explicit judgment (design section
+	// 2.2): an empty selection goes back to Unresolved/Conflict and
+	// must not be recorded as "not adopted", and an Auto segment was
+	// resolved by the machine, not by the person.
+	if (pSegment == nullptr || pSegment->state != ResultSegmentState::Chosen)
+		return false;
+	Merge20LearnStrategy strategy;
+	if (!StrategyFromSrcPanes(pRange->op, pSegment->srcPanes, strategy))
+		return false;
+	std::vector<Merge20DiffLine> lines = Merge20LearnLinesForDiff(doc, nDiff);
+	if (lines.empty())
+		return false;
+	// The candidate shown for this diff (if any) is the previous
+	// learned judgment: choosing a different strategy corrects it.
+	const auto& candidates = doc.GetMerge20LearnCandidates();
+	const auto it = candidates.find(nDiff);
+	const Merge20LearnStrategy* prevLearned = nullptr;
+	Merge20LearnStrategy prevStrategy;
+	if (it != candidates.end())
+	{
+		prevStrategy = it->second.strategy;
+		prevLearned = &prevStrategy;
+	}
+	Merge20LearnStore& store = Merge20LearnGetStore();
+	const String today = String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d")).GetString());
+	Merge20LearnRecordJudgment(store, lines, strategy, prevLearned,
+		Merge20LearnGetOwnerId(), Merge20LearnGetOwnerDisplayName(),
+		ExamplePath(doc), today);
+	return true;
+}
+
+void Merge20LearnRefreshCandidates(CMergeDoc& doc)
+{
+	std::map<int, Merge20LearnCandidate>& candidates = doc.GetMerge20LearnCandidates();
+	const bool hadCandidates = !candidates.empty();
+	// OFF clears the map (design section 3.5); 3-way docs and docs
+	// without a built result pane never get candidates. The result
+	// view is invalidated below when the map changed, so the cleared
+	// state is visible at once.
+	if (!Merge20LearnIsEnabled() || doc.m_nBuffers != 2 || !doc.GetMergeResultBuildState())
+	{
+		candidates.clear();
+		if (hadCandidates && doc.GetMergeResultView() != nullptr &&
+			doc.GetMergeResultView()->GetSafeHwnd() != nullptr)
+			doc.GetMergeResultView()->Invalidate();
+		return;
+	}
+	const Merge20LearnStore& store = Merge20LearnGetStore();
+	const std::set<String>& dismissed = doc.GetMerge20LearnDismissed();
+	std::map<int, Merge20LearnCandidate> fresh;
+	for (int nDiff = 0; nDiff < doc.m_diffList.GetSize(); ++nDiff)
+	{
+		const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff);
+		if (pRange == nullptr || pRange->op == OP_NONE || pRange->op == OP_TRIVIAL)
+			continue;
+		// Only diffs still waiting for a decision get a candidate:
+		// resolved (Chosen/Auto) and common segments are skipped,
+		// so a candidate can never change the result (spec 4(c)).
+		const MergeResultSegment* pSegment = doc.GetResultSegmentByDiff(nDiff);
+		if (pSegment == nullptr ||
+			(pSegment->state != ResultSegmentState::Unresolved &&
+			 pSegment->state != ResultSegmentState::Conflict))
+			continue;
+		// A dismissed diff stays dismissed across rescans.
+		if (dismissed.find(DismissedKey(*pRange)) != dismissed.end())
+			continue;
+		std::vector<Merge20DiffLine> lines = Merge20LearnLinesForDiff(doc, nDiff);
+		if (lines.empty())
+			continue;
+		Merge20LearnCandidate candidate;
+		if (!store.Match(lines, candidate))
+			continue;
+		candidate.diffIdx = nDiff;
+		candidate.srcPanes = SrcPanesFromStrategy(candidate.strategy);
+		fresh.emplace(nDiff, std::move(candidate));
+	}
+	// Merge20LearnCandidate has no operator==, so compare the map
+	// entry by entry (diffIdx always equals the key).
+	bool changed = (fresh.size() != candidates.size());
+	if (!changed)
+	{
+		for (const auto& kv : fresh)
+		{
+			const auto it = candidates.find(kv.first);
+			if (it == candidates.end() ||
+				it->second.strategy != kv.second.strategy ||
+				it->second.via != kv.second.via ||
+				it->second.n != kv.second.n ||
+				it->second.srcPanes != kv.second.srcPanes)
+			{
+				changed = true;
+				break;
+			}
+		}
+	}
+	candidates = std::move(fresh);
+	if (changed && doc.GetMergeResultView() != nullptr &&
+		doc.GetMergeResultView()->GetSafeHwnd() != nullptr)
+		doc.GetMergeResultView()->Invalidate();
+}
+
+void Merge20LearnRefreshAllOpenDocs()
+{
+	CMainFrame* pMainFrame = dynamic_cast<CMainFrame*>(AfxGetMainWnd());
+	if (pMainFrame == nullptr)
+		return;
+	for (IMergeDoc* pDoc : pMainFrame->GetAllMergeDocuments())
+	{
+		if (CMergeDoc* pMergeDoc = dynamic_cast<CMergeDoc*>(pDoc))
+			Merge20LearnRefreshCandidates(*pMergeDoc);
+	}
 }
