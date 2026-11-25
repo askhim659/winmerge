@@ -17,7 +17,7 @@
  * from the diff range -> apparent line number in the buffer, ghost
  * lines included), so ghost padding never leaks into the texts.
  */
-#include "pch.h"
+#include "StdAfx.h"
 #include "Merge20/Merge20ClassifyDoc.h"
 #include "Merge20/Merge20Classify.h"
 #include "MergeDoc.h"
