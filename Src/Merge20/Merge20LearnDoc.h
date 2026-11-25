@@ -32,8 +32,11 @@
  */
 #pragma once
 
+#include <vector>
 #include "UnicodeString.h"
 #include "Merge20/Merge20Learn.h"
+
+class CMergeDoc;
 
 /** @brief Directory holding the learning file. Created on demand by the save path; empty when it cannot be determined. */
 String Merge20LearnGetDirectory();
@@ -84,3 +87,57 @@ bool Merge20LearnGetLoadError(String& errStr);
  * @return False when the write failed.
  */
 bool Merge20LearnSaveStore(String& errStr);
+
+/**
+ * @brief Merge20 (Phase 3 L2, design section 3.2): diff lines of one
+ * diff (one DIFFRANGE), built like Merge20ClassifyDoc but for a
+ * single diff only and without OP_NONE context lines (the HTML tool's
+ * hunkKeyExact / hunkFeatKey are built from diff rows only).
+ * Line texts are read through ComputeApparentLine, so ghost padding
+ * never leaks into the texts. Only 2-way docs have lines; other docs
+ * return an empty vector.
+ */
+std::vector<Merge20DiffLine> Merge20LearnLinesForDiff(const CMergeDoc& doc, int nDiff);
+
+/**
+ * @brief Merge20 (Phase 3 L2, design section 3.1): record the current
+ * judgment of one diff (HTML `learnFromHunk`).
+ *
+ * The only record entry point: called from CMergeDoc::OnMergeChooseSource
+ * (the explicit source-choice command) and nowhere else, so batch
+ * approval (S5), auto-merge and session restore (S8) can never mix
+ * into the learning data. Only a `Chosen` segment of a 2-way doc is
+ * recorded, and only while learning is enabled. The candidate shown
+ * for this diff (if any) is passed as `prevLearned`, so choosing a
+ * different strategy corrects the old one (-1) before the new one
+ * gains (+1), like the HTML tool. The store is changed in memory
+ * only; the caller saves it (Merge20LearnSaveStore) once per command.
+ * @return True when a judgment was recorded.
+ */
+bool Merge20LearnRecordDiffJudgment(CMergeDoc& doc, int nDiff);
+
+/**
+ * @brief Merge20 (Phase 3 L2, design section 3.2): recompute the
+ * learning candidates of one doc into its candidate map
+ * (CMergeDoc::GetMerge20LearnCandidates()).
+ *
+ * Only 2-way docs with a built result pane get candidates, and only
+ * for diffs whose segment is still Unresolved/Conflict: a candidate
+ * never touches `m_resultSegments` and never resolves anything
+ * (spec section 4(c)). Dismissed diffs (by identity) get no
+ * candidate. When learning is OFF, the map is cleared instead and
+ * nothing is computed. The result view is invalidated when the map
+ * changed, so a cleared map is visible at once (design section 3.5).
+ * Runs on the UI thread only (called from Rescan / StartMergeSession
+ * tails, like the S4 classification hook).
+ */
+void Merge20LearnRefreshCandidates(CMergeDoc& doc);
+
+/**
+ * @brief Merge20 (Phase 3 L2, design section 3.2 (c)): recompute the
+ * learning candidates of every open text merge doc (used after the
+ * learning data changed: recording, and the ON/OFF toggle in the
+ * options dialog). Binary / image / web page docs are skipped
+ * (they are not CMergeDoc).
+ */
+void Merge20LearnRefreshAllOpenDocs();
