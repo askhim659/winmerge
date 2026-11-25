@@ -64,6 +64,9 @@
     <Filter Include="Common">
       <UniqueIdentifier>{9545a3ff-6867-464f-a244-755ed58529e0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Merge20">
+      <UniqueIdentifier>{e64abd62-5001-47ba-85ea-991e40a48e36}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Common\Header Files">
       <UniqueIdentifier>{cef4b0e0-5b0d-4f4f-8522-fe6eb66f3fa5}</UniqueIdentifier>
     </Filter>
@@ -617,6 +620,9 @@
     </ClCompile>
     <ClCompile Include="LocationBar.cpp">
       <Filter>MFCGui\MDIChild\TextTableCompare\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FileStates.cpp">
+      <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="MergeDoc.cpp">
       <Filter>MFCGui\MDIChild\TextTableCompare\Source Files</Filter>
@@ -1399,6 +1405,12 @@
     </ClInclude>
     <ClInclude Include="MergeEditView.h">
       <Filter>MFCGui\MDIChild\TextTableCompare\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20FileStates.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20Types.h">
+      <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="MergeDoc.h">
       <Filter>MFCGui\MDIChild\TextTableCompare\Header Files</Filter>
