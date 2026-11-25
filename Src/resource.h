@@ -1726,6 +1726,8 @@
 #define ID_MERGE20_SESSION_SAVE         38935
 #define ID_MERGE20_SESSION_RESTORE      38936
 #define ID_MERGE20_MEMO_EDIT            38937
+#define ID_MERGE20_LEARN_APPLY        38939
+#define ID_MERGE20_LEARN_DISMISS      38940
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2466,7 +2468,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        296
-#define _APS_NEXT_COMMAND_VALUE         38938
+#define _APS_NEXT_COMMAND_VALUE         38941
 #define _APS_NEXT_CONTROL_VALUE         1732
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
