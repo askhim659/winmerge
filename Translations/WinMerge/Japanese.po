@@ -10917,3 +10917,113 @@ msgstr "完全一致"
 #: Src/Merge20/Merge20LearnDoc.cpp
 msgid "Feature match"
 msgstr "特徴一致"
+
+#. Merge20 (L4): learning dialog title (Merge.rc)
+#: Src/Merge.rc
+msgid "Learning (merge judgment history and sharing)"
+msgstr "🎓 学習機能（マージ判定の蓄積と共有）"
+
+#. Merge20 (L4): learning dialog description (Merge.rc)
+#: Src/Merge.rc
+msgid "Your merge judgments (insert old / keep new / replace with old / both old and new) are recorded as patterns. Later comparisons show matching differences as suggestions. Suggestions are never applied automatically: nothing changes until you accept one."
+msgstr "あなたのマージ判定（旧挿入／新維持／旧置換／両方）をパターンとして記録し、次回以降の比較で同じパターンの差分に候補を提示します。候補は自動で適用されません。人が確認して受け入れるまで、結果は変わりません。"
+
+#. Merge20 (L4): learning dialog ON/OFF toggle button (Merge.rc)
+#: Src/Merge.rc
+msgid "Toggle ON/OFF"
+msgstr "ON/OFF切替"
+
+#. Merge20 (L4): learning dialog sources group (Merge.rc)
+#: Src/Merge.rc
+msgid "Sources (per import)"
+msgstr "出典（取込単位）"
+
+#. Merge20 (L4): learning dialog delete-source button (Merge.rc)
+#: Src/Merge.rc
+msgid "Delete selected source"
+msgstr "選択したソースを削除"
+
+#. Merge20 (L4): learning dialog merged-export button, disabled until L5 (Merge.rc)
+#: Src/Merge.rc
+msgid "Export merged sources"
+msgstr "🔗 選択したソースを統合して出力"
+
+#. Merge20 (L4): learning dialog rules group (Merge.rc)
+#: Src/Merge.rc
+msgid "Learned rules (top 50)"
+msgstr "学習したルール（上位50件）"
+
+#. Merge20 (L4): learning dialog sharing notice (Merge.rc)
+#: Src/Merge.rc
+msgid "Learning data contains source code fragments. Share only through approved internal channels. Do not take it outside the company or save it to a personal cloud."
+msgstr "学習データにはソースコードの断片が含まれます。共有はチーム内の承認された経路で行ってください。社外への持ち出し、個人クラウドへの保存は禁止です。"
+
+#. Merge20 (L4): learning dialog export button, disabled until L5 (Merge.rc)
+#: Src/Merge.rc
+msgid "Export learning data (JSON)"
+msgstr "📤 学習データを出力（JSON）"
+
+#. Merge20 (L4): learning dialog import button, disabled until L5 (Merge.rc)
+#: Src/Merge.rc
+msgid "Import learning data"
+msgstr "📥 学習データを取込（蓄積型）"
+
+#. Merge20 (L4): learning dialog clear button, disabled until L5 (Merge.rc)
+#: Src/Merge.rc
+msgid "Clear learning data"
+msgstr "🗑️ 学習データをクリア"
+
+#. Merge20 (L4): learning dialog menu item, folder compare context menu
+#: Src/DirView.cpp
+msgid "Learning..."
+msgstr "学習…"
+
+#. Merge20 (L4): learning dialog ON state (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Current state: ON (suggestions and recording active)"
+msgstr "現在の状態：ON（候補提示・記録あり）"
+
+#. Merge20 (L4): learning dialog OFF state (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Current state: OFF (no suggestions, no recording)"
+msgstr "現在の状態：OFF（候補提示・記録なし）"
+
+#. Merge20 (L4): learning dialog statistics (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Patterns: %1 / Judgments: %2 / Sources: %3 / Suggestions shown: %4"
+msgstr "パターン %1件 ／ 判定記録 %2件 ／ 出典 %3件 ／ 候補提示中 %4件"
+
+#. Merge20 (L4): learning dialog load failure (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Could not load the learning file: %1"
+msgstr "学習ファイルを読み込めませんでした：%1"
+
+#. Merge20 (L4): learning dialog source row (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "%1 (rules: %2, judgments: %3)"
+msgstr "%1（ルール %2件・判定 %3件）"
+
+#. Merge20 (L4): learning dialog empty state (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "No learning data yet."
+msgstr "まだ学習データがありません。"
+
+#. Merge20 (L4): learning dialog empty rule list (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "No learning data yet. Judge a diff in the result pane to record it."
+msgstr "まだ学習データがありません。結果ペインで差分の判定を選ぶと記録されます。"
+
+#. Merge20 (L4): learning dialog rule share (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "%1 times / %2%"
+msgstr "%1回／%2%"
+
+#. Merge20 (L4): learning dialog rule row (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "[%1] %2 - %3 (%4)"
+msgstr "[%1] %2 - %3（%4）"
+
+#. Merge20 (L4): learning dialog delete-source confirmation (Merge20LearnDlg)
+#: Src/Merge20/Merge20LearnDlg.cpp
+msgid "Delete the learning data of \"%1\"? (Only this source's contribution is deleted.)"
+msgstr "「%1」の学習データを削除しますか？（この出典の分だけ削除されます）"
