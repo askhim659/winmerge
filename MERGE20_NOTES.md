@@ -2354,7 +2354,16 @@ CI 成果物で一括して確認する。
 
 ### 21.9 CI 結果（PR #18）
 
-（CI 確認後に追記する。PR 作成直後の実行 ID・結論・成果物はここに記録する。）
+- PR: https://github.com/askhim659/winmerge/pull/18（`merge20/phase3-l6` → `master`、3 コミット、未マージ）
+- 実行 45702991568（2026-11-25 21:17Z）：**success**。ジョブ build 139517640964。
+  - 成果物：`WinMerge-x64.zip` 26,194,774 バイト（ID 15064214343）、
+    `WinMerge-x64-Setup-x64.exe` 39,687,933 バイト（ID 15065235829）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：**600 テスト全パス**（`[  PASSED  ] 600 tests.`。L5 までの
+    597＋新規 3）。Merge20Learn は 19 件すべて OK（既存 16 件＋新規
+    `ExactZeroRecords`／`Feature79PercentBoundary`／
+    `ChangedContentReimport`）。`[  FAILED  ]` は 0 件。
+  - CI 失敗 0 回（初回実行で success）。
 
 ### 21.10 ローカル同期（L6）
 
