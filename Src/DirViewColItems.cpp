@@ -68,6 +68,7 @@ const char *COLHDR_LENCODING    = N_("Left Encoding");
 const char *COLHDR_RENCODING    = N_("Right Encoding");
 const char *COLHDR_MENCODING    = N_("Middle Encoding");
 const char *COLHDR_NIDIFFS      = N_("Ignored Diff");
+const char *COLHDR_EXCLUDED     = N_("Ignored diffs");
 const char *COLHDR_NSDIFFS      = N_("Differences");
 const char *COLHDR_BINARY       = NC_("DirView|ColumnHeader", "Binary");
 const char *COLHDR_UNPACKER     = N_("Unpacker");
@@ -122,6 +123,7 @@ const char *COLDESC_LENCODING   = N_("Left side encoding.");
 const char *COLDESC_RENCODING   = N_("Right side encoding.");
 const char *COLDESC_MENCODING   = N_("Middle side encoding.");
 const char *COLDESC_NIDIFFS     = N_("Number of ignored differences in file. Ignored and cannot be merged.");
+const char *COLDESC_EXCLUDED    = N_("Number of ignored differences in file (prediffer exclusions). Interim display for the excluded-line count; this is a diff count, not a line count.");
 const char *COLDESC_NSDIFFS     = N_("Number of differences in file (excluding ignored).");
 const char *COLDESC_BINARY      = N_("Shows an asterisk (*) if the file is binary.");
 const char *COLDESC_UNPACKER    = N_("Unpacker plugin name or pipeline.");
@@ -570,6 +572,40 @@ static String ColDiffsGet(const CDiffContext *, const void *p, int)
 	else
 	{
 		s = locality::NumToLocaleStr(r);
+	}
+	return s;
+}
+
+/**
+ * @brief Format Excluded-lines column data.
+ * @param [in] p Pointer to integer having count of ignored differences.
+ * @return String to show in the column: U+2205 (N-ARY COPRODUCT) followed
+ * by the count, e.g. the excluded-lines mark with N.
+ *
+ * Merge20 (S0, design section 4.2 plan 2): the prediffer API only reports
+ * whether the buffer changed (Plugins.h: InvokePrediffBuffer), so the true
+ * excluded-line count is not available yet. Until plan 1 (count the lines
+ * blanked by the prediffer in PrediffingInfo::Prediffing) lands, this
+ * column shows DIFFITEM::nidiffs, i.e. a diff count, not a line count;
+ * the column description says so. This file stays ASCII, so the U+2205
+ * character is written as an escape.
+ */
+static String ColExcludedGet(const CDiffContext *, const void *p, int)
+{
+	const int &r = *static_cast<const int*>(p);
+	String s;
+	if (r == CDiffContext::DIFFS_UNKNOWN_QUICKCOMPARE)
+	{ // QuickCompare, unknown
+		s = _T("*");
+	}
+	else if (r == CDiffContext::DIFFS_UNKNOWN)
+	{ // Unique item
+		s.clear();
+	}
+	else if (r > 0)
+	{
+		s = _T("\x2205");
+		s += locality::NumToLocaleStr(r);
 	}
 	return s;
 }
@@ -1545,6 +1581,7 @@ static DirColInfo f_cols[] =
 	{ _T("Rencoding"), nullptr, COLHDR_RENCODING, COLDESC_RENCODING, &ColEncodingGet, &ColEncodingSort, FIELD_OFFSET(DIFFITEM, diffFileInfo[1]), -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Snsdiffs"), nullptr, COLHDR_NSDIFFS, COLDESC_NSDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nsdiffs), -1, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Snidiffs"), nullptr, COLHDR_NIDIFFS, COLDESC_NIDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
+	{ _T("Sexcluded"), nullptr, COLHDR_EXCLUDED, COLDESC_EXCLUDED, ColExcludedGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Leoltype"), nullptr, COLHDR_LEOL_TYPE, COLDESC_LEOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Reoltype"), nullptr, COLHDR_REOL_TYPE, COLDESC_REOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Unpacker"), nullptr, COLHDR_UNPACKER, COLDESC_UNPACKER, &ColPluginPipelineGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
@@ -1597,6 +1634,7 @@ static DirColInfo f_cols3[] =
 	{ _T("Rencoding"), nullptr, COLHDR_RENCODING, COLDESC_RENCODING, &ColEncodingGet, &ColEncodingSort, FIELD_OFFSET(DIFFITEM, diffFileInfo[2]), -1, true, DirColInfo::ALIGN_LEFT, 2 },
 	{ _T("Snsdiffs"), nullptr, COLHDR_NSDIFFS, COLDESC_NSDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nsdiffs), -1, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Snidiffs"), nullptr, COLHDR_NIDIFFS, COLDESC_NIDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
+	{ _T("Sexcluded"), nullptr, COLHDR_EXCLUDED, COLDESC_EXCLUDED, ColExcludedGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Leoltype"), nullptr, COLHDR_LEOL_TYPE, COLDESC_LEOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Meoltype"), nullptr, COLHDR_MEOL_TYPE, COLDESC_MEOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Reoltype"), nullptr, COLHDR_REOL_TYPE, COLDESC_REOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },

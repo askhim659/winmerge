@@ -6883,6 +6883,11 @@ msgstr "中文字コード"
 msgid "Ignored Diff"
 msgstr "無視した差異数"
 
+#. Merge20 (S0): interim column for the excluded-line count (plan 2)
+#: Src/DirViewColItems.cpp
+msgid "Ignored diffs"
+msgstr "無視差分"
+
 #. IDS_COLHDR_BINARY
 #: Merge.rc:5137
 msgctxt "DirView|ColumnHeader"
@@ -7480,6 +7485,11 @@ msgstr "中央の文字コードです。"
 #: Merge.rc:5297
 msgid "Number of ignored differences in file. Ignored and cannot be merged."
 msgstr "ファイル内で無視した差異の数です。この差異は WinMerge によって無視され、マージされません。"
+
+#. Merge20 (S0)
+#: Src/DirViewColItems.cpp
+msgid "Number of ignored differences in file (prediffer exclusions). Interim display for the excluded-line count; this is a diff count, not a line count."
+msgstr "ファイル内で無視した差異の数です（prediffer による除外）。除外行数（⊘N）の暫定表示であり、行数ではなく差分の件数です。"
 
 #. IDS_COLDESC_NSDIFFS
 #: Merge.rc:5298
