@@ -189,3 +189,99 @@ push していない（gh 未ログイン、アカウント作成もしていな
   listens to, so CI is triggered with pull requests.
 - Phase 1 was pushed through the Git Database API (the stored token
   cannot be used for git-over-HTTPS password auth from this Linux VM).
+
+
+## 8. Phase 2 S0（Phase 1 の残り）— ブランチ `merge20/phase2-s0`
+
+設計書 `merge20-phase2-design.md` §4（§7 の S0）に従う。C++ の変更は
+この Linux VM ではコンパイルできないため、CI でのビルド＋成果物確認が
+検証になる（各コミットは小さく分けている）。
+
+### 8.1 存在区分の表示名対応（設計 §4.1）
+
+- `Src/DirViewColItems.cpp` の `ColStatusGet`／`ColStatusAbbrGet` を変更。
+  2-way 比較では「比較結果」列と「Short Result」列が HTML の 4 区分名で
+  表示される：`変更`／`旧のみ`／`新のみ`／`同一`（英語は `Changed`／
+  `Old only`／`New only`／`Identical`）。3-way 比較は従来の表示
+  （`Left only: <パス>` 等）のまま。
+- フィルタ（`OPT_SHOW_*`）とソートは `DIFFCODE` を見ており、表示文字列
+  には依存しないため、フィルタ動作は変わらない。
+- `Old only`／`New only` は設計書の英語仮文言 `Left only`／`Right only`
+  ではなく `Old`／`New` にした。理由：(1) 日本語表示が HTML と同じ
+  `旧のみ`／`新のみ` になる、(2) 既存の msgid `Left Only`（訳：左側のみ）
+  との混同を避ける、(3) フォークの利用者は OLD／NEW フォルダで考えている。
+- 日本語訳は `Translations/WinMerge/Japanese.po` に追加。実行時の翻訳
+  参照は msgid による `.po` 参照のため、`Merge.rc`／`resource.h` への
+  IDS 追加はしていない（`.po` を `Merge.rc` から再生成する場合は、
+  対応する IDS の追加が必要になる点に注意）。
+
+### 8.2 ⊘N（除外行数）表示（設計 §4.2）— 第 2 案（暫定）を採用
+
+- 実コードで確認したこと：prediffer API
+  `InvokePrediffBuffer(BSTR &bstrBuf, int &nChanged, ...)`
+  （`Src/Plugins.h:213`、`Src/Plugins.cpp:1345`）が返すのは変更フラグ
+  だけで、除外した行数は返さない。第 3 案（`.sct` 側で数えて返す）は
+  インターフェースにないため不可。
+- 第 1 案（`PrediffingInfo::Prediffing`、`Src/FileTransform.cpp:1293` で
+  prediffer 適用前後の BSTR バッファを比較し、空行化された行を数えて
+  `DIFFITEM` へ運ぶ）は実現可能と判断したが、触る層が多い
+  （`FileTransform` → `DiffFileData::Filepath_Transform` →
+  `FullQuickCompare::CompareFiles` → `DIFFITEM` 新フィールド →
+  列追加）ため、S0 の PR には詰め込まず別 PR とする。
+  受け皿は用意済み：新列の regName `Sexcluded` は第 1 案でも流用する。
+- S0 では第 2 案として、新列「無視差分」（英語 `Ignored diffs`、既定で
+  非表示、2-way 用 `f_cols` と 3-way 用 `f_cols3` の両方に追加）を
+  追加した。値は `DIFFITEM::nidiffs`（無視差分数）で、0 より大きい場合
+  に `⊘N` 形式（例：`⊘3`）で表示する。**行数ではなく差分の件数**で
+  あることは列の説明文に明記してある。QuickCompare の不明値は従来の
+  `*`、片側のみのファイルは空欄（`ColDiffsGet` と同じ扱い）。
+
+### 8.3 文字コード往復テスト（設計 §4.3）
+
+- 単体テスト：`Testing/GoogleTest/Encoding/Merge20EncodingRoundtrip_test.cpp`
+  を新規追加し、`UnitTests.vcxproj`（＋`.filters`）に登録した。
+  CI は `BuildAll.cmd` で `UnitTests.exe` を実行するため、このテストも
+  CI で実行される（T-2-3 は解消：CI 実行対象である）。
+- テスト内容：(a) `codepage_detect::Guess` のバッファ版で UTF-8（BOM
+  あり／なし）・ASCII・UTF-16LE BOM を判別すること、(b) 付属の
+  `Testing/Data/Codepages/CP932`／`CP51932`（各 6 KB の日本語テキスト）
+  を日本語自動判別（`(50932<<16)|3`、アプリ既定と同じ）で 932／51932
+  と判別すること（MLang 依存。判別精度は T-2-6 として残る）、
+  (c) `UniStdioFile` で 932／51932／65001（BOM なし／あり）に書き出し、
+  バイト列が期待値と一致し、`UniMemFile` で読み戻したテキストが一致
+  すること（EUC-JP が UTF-8 に化ける回帰を防ぐ）。
+  `CDiffTextBuffer` は UnitTests にリンクされていないため、テストは
+  `UniFile` レベルで行っている。テストファイルは ASCII のみ（日本語
+  テキストは `\u` エスケープ、期待バイト列は明示の配列）。
+
+### 8.4 Windows 実機での往復テスト手順（手動テスト・設計 §4.3-2）
+
+CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDiffTextBuffer::SaveToFile`
+経由、`PickResultEncoding` によるマージ結果の文字コード決定を含む）は
+検証できない。次の手順で CI 成果物 ZIP の WinMergeU.exe を使って確認する。
+
+1. テストファイルを用意する（各コードページ × CRLF／LF）：
+   - Shift_JIS（932）、EUC-JP（51932）、UTF-8（BOM なし）、UTF-8（BOM あり）。
+     付属の `Testing/Data/Codepages/CP932/DiffItem.h`（Shift_JIS）、
+     `Testing/Data/Codepages/CP51932/DiffItem.h`（EUC-JP）がそのまま使える。
+     UTF-8 のサンプルはメモ帳などで作る（BOM あり／なしの両方）。
+2. WinMergeU.exe で各ファイルを開き、**無変更のまま保存**する
+   （ファイル比較画面で何も変更せずに保存、またはフォルダ比較から開いて保存）。
+3. 保存前後でバイト比較する（`fc /b 変更前ファイル 変更後ファイル`、
+   または PowerShell の `Compare-Object (Get-Content -AsByteStream ...)`）。
+   期待結果：**バイト一致**。特に EUC-JP（51932）が UTF-8 になっていないこと。
+4. マージ結果の文字コードも確認する：OLD＝EUC-JP、NEW＝Shift_JIS の
+   2 ファイル比較でマージ結果を保存し、結果の文字コードを確認する。
+   注意：2-way のマージ結果は `PickResultEncoding`
+   （`Src/MergeDocResultPane.cpp:847`）により **NEW 側の文字コード**に
+   なる（OLD が EUC-JP で NEW が Shift_JIS の場合、結果は Shift_JIS）。
+   これは仕様書 §4(e)「読み込んだときの文字コードで書き戻す」との関係で
+   整理が必要な点であり、仕様書の改訂候補として記録する（単体ファイル
+   保存では元コード、2-way マージ結果では NEW 側のコード）。
+
+### 8.5 S0 で未実施のこと（残課題）
+
+- ⊘N 第 1 案（真の除外行数の計数）：別 PR とする（§8.2 参照）。
+- 表示名・⊘N 列・往復テストの Windows 実機での目視確認：CI 成果物での
+  確認待ち（§8.4 の手順を含む）。
+- U-0-2（2-way 自動マージの挙動確認）：S5 着手前に Windows 実機で確認すること。
