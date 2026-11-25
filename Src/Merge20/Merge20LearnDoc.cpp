@@ -88,18 +88,39 @@ namespace
 		return Merge20LearnFromJson(utf8, kLearnFileName, out, header, errDetail, skippedRules);
 	}
 
-	// Write the store as learning JSON v2 (temporary file plus
-	// rename, the same way as Merge20SessionSaveToFile in S8).
-	bool SaveStoreToFile(const Merge20LearnStore& store, const String& filePath, std::string& errDetail)
+	// Current local time as ISO 8601 without a zone designator
+	// (the format the internal save uses for `exportedAt`).
+	String ExportedAtNow()
+	{
+		return String(CTime::GetCurrentTime().Format(_T("%Y-%m-%dT%H:%M:%S")).GetString());
+	}
+
+	// Read a whole file as UTF-8 text (import path; the lazy-load
+	// reader LoadStoreFromFile does the same for Merge20Learn.json).
+	bool ReadFileToUtf8(const String& filePath, std::string& utf8, std::string& errDetail)
 	{
 		errDetail.clear();
-		const String exportedAt = String(CTime::GetCurrentTime().Format(_T("%Y-%m-%dT%H:%M:%S")).GetString());
-		std::string utf8;
-		if (!Merge20LearnToJson(store, store.GetOwnerId(), kLearnFileName, exportedAt, utf8))
+		std::ifstream in(std::filesystem::path(filePath), std::ios::binary);
+		if (!in)
 		{
-			errDetail = "failed to serialize learning data";
+			errDetail = "cannot open file";
 			return false;
 		}
+		utf8.assign(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+		if (in.bad())
+		{
+			errDetail = "failed to read file";
+			return false;
+		}
+		return true;
+	}
+
+	// Write UTF-8 text to a file with a temporary file plus rename
+	// (the S8 session-save way); falls back to a direct write when
+	// the rename fails (e.g. a locked target).
+	bool WriteTextFileAtomic(const String& filePath, const std::string& utf8, std::string& errDetail)
+	{
+		errDetail.clear();
 		std::filesystem::path target(filePath);
 		// The ".tmp" suffix is ASCII, so building the temp path from
 		// the String name is safe on both Windows (native wide path)
@@ -118,7 +139,7 @@ namespace
 			out.flush();
 			if (!out)
 			{
-				errDetail = "failed to write learning file";
+				errDetail = "failed to write file";
 				std::error_code ec;
 				std::filesystem::remove(tmp, ec);
 				return false;
@@ -129,11 +150,11 @@ namespace
 		if (ec)
 		{
 			// Rename failed (e.g. a locked target): fall back to a
-			// direct write so the save still has a chance to succeed.
+			// direct write so the write still has a chance to succeed.
 			std::ofstream out(target, std::ios::binary | std::ios::trunc);
 			if (!out)
 			{
-				errDetail = "cannot create learning file";
+				errDetail = "cannot create file";
 				std::filesystem::remove(tmp, ec);
 				return false;
 			}
@@ -141,13 +162,27 @@ namespace
 			out.flush();
 			if (!out)
 			{
-				errDetail = "failed to write learning file";
+				errDetail = "failed to write file";
 				std::filesystem::remove(tmp, ec);
 				return false;
 			}
 			std::filesystem::remove(tmp, ec);
 		}
 		return true;
+	}
+
+	// Write the store as learning JSON v2 (temporary file plus
+	// rename, the same way as Merge20SessionSaveToFile in S8).
+	bool SaveStoreToFile(const Merge20LearnStore& store, const String& filePath, std::string& errDetail)
+	{
+		errDetail.clear();
+		std::string utf8;
+		if (!Merge20LearnToJson(store, store.GetOwnerId(), kLearnFileName, ExportedAtNow(), utf8))
+		{
+			errDetail = "failed to serialize learning data";
+			return false;
+		}
+		return WriteTextFileAtomic(filePath, utf8, errDetail);
 	}
 
 	// Merge20 (Phase 3 L2): helpers for the record / candidate
@@ -358,6 +393,74 @@ bool Merge20LearnSaveStore(String& errStr)
 		return false;
 	}
 	return true;
+}
+
+String Merge20LearnDefaultExportFileName(bool merged)
+{
+	const String today = String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d")).GetString());
+	// HTML exportLearn / exportUnifiedLearn file names, written with
+	// \u escapes so the source stays ASCII (see the .h comment).
+	if (merged)
+		return String(L"\u30DE\u30FC\u30B8\u652F\u63F420\u53F7_\u5B66\u7FD2_\u7D71\u5408_") + today + _T(".json");
+	return String(L"\u30DE\u30FC\u30B8\u652F\u63F420\u53F7_\u5B66\u7FD2_") + today + _T(".json");
+}
+
+bool Merge20LearnExportToFile(const String& filePath, std::string& errDetail)
+{
+	errDetail.clear();
+	Merge20LearnStore& store = Merge20LearnGetStore();
+	std::string utf8;
+	if (!Merge20LearnToJson(store, Merge20LearnGetOwnerId(),
+			paths::FindFileName(filePath), ExportedAtNow(), utf8))
+	{
+		errDetail = "failed to serialize learning data";
+		return false;
+	}
+	return WriteTextFileAtomic(filePath, utf8, errDetail);
+}
+
+bool Merge20LearnExportMergedToFile(const std::vector<String>& srcIds,
+	const String& filePath, std::string& errDetail, int& ruleCount)
+{
+	errDetail.clear();
+	ruleCount = 0;
+	Merge20LearnStore& store = Merge20LearnGetStore();
+	const std::vector<Merge20LearnRule> rules = store.MergeSources(srcIds);
+	// Display names of the merged sources, in the store's source order
+	// (GetSources() order, most judgments first).
+	std::vector<String> sourceNames;
+	for (const Merge20LearnSourceSummary& summary : store.GetSources())
+	{
+		if (std::find(srcIds.begin(), srcIds.end(), summary.id) != srcIds.end())
+			sourceNames.push_back(summary.name);
+	}
+	std::string utf8;
+	if (!Merge20LearnMergedToJson(rules, Merge20LearnGetOwnerId(),
+			paths::FindFileName(filePath), ExportedAtNow(), sourceNames, utf8))
+	{
+		errDetail = "failed to serialize learning data";
+		return false;
+	}
+	ruleCount = static_cast<int>(rules.size());
+	return WriteTextFileAtomic(filePath, utf8, errDetail);
+}
+
+bool Merge20LearnImportFromFile(const String& filePath,
+	Merge20LearnFileHeader& header, int& skippedRules, int& addedRules,
+	int& mergedRules, std::string& errDetail)
+{
+	errDetail.clear();
+	skippedRules = 0;
+	addedRules = 0;
+	mergedRules = 0;
+	std::string utf8;
+	if (!ReadFileToUtf8(filePath, utf8, errDetail))
+		return false;
+	Merge20LearnStore& store = Merge20LearnGetStore();
+	// The v1 source-id fallback hashes the file *name* (the HTML tool's
+	// importLearn uses f.name), not the full path.
+	return Merge20LearnImportJson(utf8, paths::FindFileName(filePath), store,
+		header, errDetail, skippedRules, addedRules, mergedRules);
 }
 
 std::vector<Merge20DiffLine> Merge20LearnLinesForDiff(const CMergeDoc& doc, int nDiff)

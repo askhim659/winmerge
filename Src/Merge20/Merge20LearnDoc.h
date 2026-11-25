@@ -89,6 +89,51 @@ bool Merge20LearnGetLoadError(String& errStr);
 bool Merge20LearnSaveStore(String& errStr);
 
 /**
+ * @brief Merge20 (Phase 3 L5, design section 4.2): default file name
+ * for a learning JSON export (HTML `exportLearn` / `exportUnifiedLearn`).
+ * The HTML tool's file name (Japanese "Merge20 learning YYYY-MM-DD.json",
+ * with a "merged" marker inserted for a merged export; see the .cpp
+ * for the exact form, written with \u escapes so the source stays ASCII).
+ * The save dialog decides the folder (the desktop equivalent of the
+ * HTML tool's browser download folder); only the file name is fixed.
+ */
+String Merge20LearnDefaultExportFileName(bool merged);
+
+/**
+ * @brief Merge20 (Phase 3 L5): write the whole store as learning
+ * JSON v2 to an explicit file (HTML `exportLearn` shape).
+ * `sourceName` is the file's base name, `sourceId` this PC's owner
+ * id. The store itself is not changed (Merge20Learn.json is not
+ * touched). @param [out] errDetail ASCII reason on failure.
+ */
+bool Merge20LearnExportToFile(const String& filePath, std::string& errDetail);
+
+/**
+ * @brief Merge20 (Phase 3 L5): write the selected sources merged
+ * into one learning JSON v2 (HTML `exportUnifiedLearn` shape).
+ * Counts are summed and per-rule `sources` are dropped (L0
+ * Merge20LearnMergedToJson); the root `sources` lists the merged
+ * sources' display names. `ruleCount` is the number of rules written.
+ */
+bool Merge20LearnExportMergedToFile(const std::vector<String>& srcIds,
+	const String& filePath, std::string& errDetail, int& ruleCount);
+
+/**
+ * @brief Merge20 (Phase 3 L5): import a learning JSON file,
+ * accumulating (HTML `importLearn`).
+ * Reads the file and calls L0 Merge20LearnImportJson: the file's
+ * source replaces its previous contribution (no double count), and
+ * per-rule `sources` in the file are flattened under that one source.
+ * The store is changed in memory only; the caller saves it
+ * (Merge20LearnSaveStore), like the L4 delete handler.
+ * @param [out] errDetail ASCII reason on failure (see
+ * Merge20LearnFromJson: a wrong `app` / `version` rejects the file).
+ */
+bool Merge20LearnImportFromFile(const String& filePath,
+	Merge20LearnFileHeader& header, int& skippedRules, int& addedRules,
+	int& mergedRules, std::string& errDetail);
+
+/**
  * @brief Merge20 (Phase 3 L2, design section 3.2): diff lines of one
  * diff (one DIFFRANGE), built like Merge20ClassifyDoc but for a
  * single diff only and without OP_NONE context lines (the HTML tool's
