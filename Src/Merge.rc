@@ -2721,6 +2721,8 @@ BEGIN
     CONTROL         "Enable indent &heuristic",IDC_INDENT_HEURISTIC,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,210,309,10
     CONTROL         "Completely unhighlight the ignored differences",IDC_COMPLETELY_BLANK_OUT_IGNORED_DIFFERENCES,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,222,309,10
+    CONTROL         "Enable learning",IDC_MERGE20_LEARN_CHECK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,234,309,10
+    LTEXT           "When off, learning suggestions and recording stop.",IDC_STATIC,7,246,309,10
     PUSHBUTTON      "Defaults",IDC_COMPARE_DEFAULTS,230,280,88,14
 END
 
