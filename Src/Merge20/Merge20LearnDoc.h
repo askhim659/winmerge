@@ -159,6 +159,18 @@ bool Merge20LearnDismissCandidate(CMergeDoc& doc, int nDiff);
 void Merge20LearnRefreshCandidates(CMergeDoc& doc);
 
 /**
+ * @brief Merge20 (Phase 3 L4, design section 3.3): number of learning
+ * candidates currently shown in all open text merge docs (the
+ * "Suggestions shown: K" figure of the learning dialog). The HTML
+ * tool's "auto-judged in this analysis: N" statistic is dropped
+ * (there is no automatic application in the fork, spec section 4(c));
+ * the live candidate count takes its place. Counts the candidate map
+ * of each open CMergeDoc (binary / image / web page docs are not
+ * CMergeDoc and have no candidates).
+ */
+int Merge20LearnCountOpenCandidates();
+
+/**
  * @brief Merge20 (Phase 3 L2, design section 3.2 (c)): recompute the
  * learning candidates of every open text merge doc (used after the
  * learning data changed: recording, and the ON/OFF toggle in the
