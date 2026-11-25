@@ -34,8 +34,8 @@ BOOL Merge20MemoDlg::OnInitDialog()
 
 void Merge20MemoDlg::OnOK()
 {
-	CString text;
+	String text;
 	GetDlgItemText(IDC_MERGE20_MEMO_TEXT, text);
-	m_memo = String(text.GetString());
+	m_memo = text;
 	__super::OnOK();
 }
