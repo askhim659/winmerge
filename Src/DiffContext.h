@@ -200,6 +200,26 @@ public:
 	 * when a merge doc reports a freshly computed classification.
 	 */
 	void SetMerge20Classification(const String& relPath, const Merge20FileState& state);
+	/** @brief Audit memo of one file (S8). */
+	String GetMerge20Memo(const String& relPath) const;
+	/** @brief Set the audit memo of one file (S8). */
+	void SetMerge20Memo(const String& relPath, const String& memo);
+	/** @brief Store the per-diff judgments of one file (S8). */
+	void SetMerge20DiffJudgments(const String& relPath, const std::vector<Merge20DiffJudgment>& judgments);
+	/**
+	 * @brief Restore a whole saved per-file state (S8): review state,
+	 * output flag, classification, memo and diff judgments. Used by
+	 * the session restore; unlike SetMerge20Classification it does not
+	 * keep the current review state, output flag or memo.
+	 */
+	void SetMerge20SessionState(const String& relPath, const Merge20FileState& state);
+	/**
+	 * @brief Reset a file whose contents changed since the session was
+	 * saved (S8, spec section 6.1): review back to TODO, output flag
+	 * back to its initial value, classification and diff judgments
+	 * cleared. The audit memo is kept.
+	 */
+	void ResetMerge20ChangedFile(const DIFFITEM& di);
 	/** @brief Direct access to the sidecar map (for S2 and later slices). */
 	Merge20FileStates& GetMerge20FileStates() { return m_merge20FileStates; }
 	/** @brief Direct access to the sidecar map (const version). */
