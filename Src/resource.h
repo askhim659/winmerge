@@ -2477,6 +2477,20 @@
 #define IDS_LOG_COPY_INLINE_DIFFS        44766
 #define IDS_LOG_COPY_CHARS               44767
 
+// Merge20 (Phase 4 D0, design section 5.2/D0): resource IDs reserved
+// for the Phase 4 dialogs and commands. No IDs are consumed yet (D0
+// only reserves and verifies); D1-D9 allocate from these ranges.
+// Verified by sorting all numeric defines in resource.h:
+// - dialogs (IDD_*): from 297 (_APS_NEXT_RESOURCE_VALUE). The numeric
+//   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
+//   (IDR_LOGO), 310 (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already
+//   taken; dialog IDs must skip those values.
+// - controls (IDC_*): from 1745 (_APS_NEXT_CONTROL_VALUE), free
+//   contiguously up to 8602 (the next IDC_* is 8603).
+// - commands (ID_*): from 38941 (_APS_NEXT_COMMAND_VALUE), free up
+//   to 38976 (38977 is IDS_SPLASH_GPLTEXT).
+// Never trust _APS_NEXT_* alone: sort all defines by value before
+// allocating (S3 lesson: CVT1100 duplicate resource).
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
