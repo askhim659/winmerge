@@ -2097,6 +2097,17 @@ DirViewColItems::IsColStatusAbbr(int col) const
 	return IsColById(col, COLHDR_RESULT_ABBR);
 }
 /**
+ * @brief Is specified physical column the Merge20 output checkbox column?
+ *
+ * Merge20 (S2): used by CDirView::OnClick to find out whether the user
+ * clicked the output checkbox cell.
+ */
+bool
+DirViewColItems::IsColOutputCheck(int col) const
+{
+	return IsColById(col, COLHDR_OUTPUT);
+}
+/**
  * @brief Return whether the column can be sorted while comparison results are being updated.
  * Such columns must not depend on values that are updated asynchronously.
  */
