@@ -2376,3 +2376,165 @@ MERGE20_NOTES.md` を GitHub 上の master 版（§21・§10・§11 を含む
 `~/workspace/winmerge-fork/MERGE20_NOTES.local-backup.md` に保存してから
 上書きした。ローカルリポジトリはブランチ `merge20/phase1` のままであり、
 ブランチの切り替えや `git push` はしていない。
+
+## 22. Phase 4 D0（基盤：オプションキー・リソースID・計測フック）— ブランチ `merge20/phase4-d0`
+
+設計書 `merge20-phase4-design.md` §5.2 の D0 どおり。基盤（キー・ID・
+計測フック）までとし、UI の表示・動作は作らない（D1 以降）。C++ の変更は
+この Linux VM ではコンパイルできないため、CI でのビルド＋成果物確認が
+検証になる。
+
+### 22.1 変更一覧
+
+- `Src/OptionsDef.h`／`Src/OptionsInit.cpp` — 新規キー 11 件
+  （設計書 §4.1(a) どおり。既存 WinMerge の設定キーの改名なし）。
+  既定値は HTML（`17_v17.15.html`）のものに合わせた：
+
+  | キー | 既定値 | 備考 |
+  |---|---|---|
+  | `OPT_MERGE20_DED_MODE`（`Merge20/DedMode`） | false | 専用モードの有無（HTML `dedMode`） |
+  | `OPT_MERGE20_DED_PINNED`（`Merge20/DedPinned`） | false | 専用バーのピン固定（HTML `dedPinned`） |
+  | `OPT_MERGE20_DED_ZOOM`（`Merge20/DedZoom`） | 750 | 専用モード時の倍率（HTML `DEF_SCALE=0.75`）。範囲 350–2200（HTML の camS 0.35–2.2）。`OPT_VIEW_ZOOM`（既定 1000）とは別キー |
+  | `OPT_MERGE20_TODO_ONLY`（`Merge20/TodoOnly`） | false | 未確認のみ巡回（HTML `todoOnly`） |
+  | `OPT_MERGE20_SNIPER_ON`（`Merge20/SniperOn`） | false | オートスナイパーの ON／OFF（HTML `sniperOn`） |
+  | `OPT_MERGE20_SNIPER_FONT`（`Merge20/SniperFont`） | 20 | スナイパーの文字サイズ（HTML `snFont`）。範囲 14–28（HTML のクランプ） |
+  | `OPT_MERGE20_SNIPER_LAYOUT`（`Merge20/SniperLayout`） | 0 | スナイパーのレイアウト（0＝3 列 `cols`、1＝3 段 `rows`）。範囲 0–1 |
+  | `OPT_MERGE20_SLIM`（`Merge20/Slim`） | false | スリムリスト（HTML `slim`） |
+  | `OPT_MERGE20_DOCK_HIDDEN`（`Merge20/DockHidden`） | false | ドックの隠し状態（HTML `dockHid`） |
+  | `OPT_MERGE20_FOCUS_DOCK_HEIGHT`（`Merge20/FocusDockHeight`） | 0 | フォーカスドックの高さ（HTML `fDockH`）。0＝既定高さ（範囲なし） |
+  | `OPT_MERGE20_GREP_HISTORY`（`Merge20/GrepHistory`） | （空） | Grep の検索文字列の履歴（`;` 区切り、最新 10 件まで。上限の強制は D7） |
+
+  キーの読み手はまだない（D1〜D9 で追加する）。セッションへの保存は
+  D11（設計書 §4.1(b) の `Merge20SessionDisplay` への追加）。
+- 新規 `Src/Merge20/Merge20Measure.h/.cpp`（純粋モジュール、MFC・`_()`
+  なし・ASCII のみ。pch.h グループ。`Merge20Classify.cpp` と同じ作法）：
+  フォルダ比較の計測フック。3 つの接続点（下記）の時刻を
+  `steady_clock` で記録し、最後の計測結果をメモリに保持する。
+  `Merge20MeasureComputeResult()` は 3 時点からの純粋計算
+  （単体テストで固定時刻により検証）。計測結果の書式は ASCII の 1 行
+  （例：`Merge20 measure: folder compare 1234 ms (scan 1200 ms, list 34 ms), 100 items`）。
+  時刻は atomic に保持する（Begin は UI スレッド、スキャン完了は比較
+  スレッド、一覧確定は UI スレッド。順序はメッセージフローで保証される）。
+- `Src/DirDoc.cpp` — 計測フック 2 件の接続。`Rescan()` の
+  `m_compareStart = clock();` の直後に `Merge20MeasureBeginCompare()`、
+  `DiffThreadCallback()` の `EVENT_COMPARE_COMPLETED` 分岐（`m_elapsed`
+  の計算の直後）に `Merge20MeasureCompareCompleted()`。
+  いずれも既存の呼び出しの末尾への追加で、既存動作に影響しない。
+- `Src/DirView.cpp` — 計測フック 1 件の接続と出力。`OnUpdateUIMessage()`
+  の `EVENT_COMPARE_COMPLETED` 分岐で、`Redisplay()` の直後に
+  `Merge20MeasureListFinalized(ctxt.m_pCompareStats->GetTotalItems())`
+  を呼び、結果があれば `RootLogger::Info` で WinMerge のログへ 1 行
+  出力する（表示＞ログで確認できる）。`RootLogger::Info` は同関数内の
+  `MergeLogger::LogComparisonCompleted` と同じ出力経路で、DirView.cpp
+  内にも前例がある（ファイル操作のログ）。新たな出力チャネルや
+  ファイル書き込みは作っていない。
+- `Src/resource.h` — フェーズ 4 用リソース ID の予約範囲をコメントで
+  記録（`_APS_NEXT_*` の直前）。**ID は消費していない**（D0 は予約と
+  空きの確認まで）。D1〜D9 はここから割り当てる。
+- `Testing/GoogleTest/Merge20/Merge20Measure_test.cpp`（新規、8 テスト）：
+  純粋計算（スキャン点あり／なし／0ms）、Begin→一覧確定のフロー、
+  Begin なしの無視、Begin による再開、スキャン点なしの書式、キー名
+  11 件（`OptionsDef.h` のレジストリ／INI 名）。
+- `Src/Merge.vcxproj`／`.filters`、
+  `Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` —
+  新規ファイルを登録。`Merge20Measure.cpp` は pch.h グループ
+  （`Merge20Classify.cpp` と同じ）。`Merge20Measure_test.cpp` は
+  PCH Use＋pch.h のテスト用エントリ。
+- 変更していないもの：`Translations/WinMerge/Japanese.po`（D0 では
+  UI 文字列を新設しないため。計測のログ行は開発者向け診断で ASCII
+  のまま、翻訳しない）、`.github/workflows/*`、仕様書 PDF、
+  `17_v17.15.html`、S5（一括承認。U-0-2 待ちのため着手しない）。
+
+### 22.2 設計・仕様との食い違いと判断理由
+
+1. **T-4-5 の解消：計測の接続点**。実コードで確認した結果、次の 3 点に
+   決めた。開始＝`CDirDoc::Rescan()`（`m_compareStart = clock();` の
+   位置。既に比較開始時刻を取っている箇所）。スキャン完了＝
+   `CDirDoc::DiffThreadCallback()` の `EVENT_COMPARE_COMPLETED` 分岐
+   （`m_elapsed = clock() - m_compareStart;` の位置。比較スレッドの
+   終了）。一覧確定＝`CDirView::OnUpdateUIMessage()` の同イベント分岐
+   で `Redisplay()` の直後（一覧の再構築とフォーカス・スクロール復元
+   の後。S8 の復旧提案も同じ位置の後で呼ばれる）。既存の `m_elapsed`
+   はスキャン時間しか覆わないため、一覧確定の点が D0 で新たに必要
+   だった。
+2. **計測は 3 点にした（設計書は 2 点）**。開始と一覧確定の 2 点だけでは
+   スキャン時間と一覧再描画時間を切り分けられないため、スキャン完了
+   の中間点を追加した。D10 で「どこが遅いか」を切り分けるための土台。
+   スキャン完了点が記録されなかった場合（将来の経路追加時など）は
+   全体をスキャンに帰属させ `listMs=0` とし、`hasScanPoint` で区別
+   する。
+3. **計測結果の出力方法は WinMerge のログ（`RootLogger::Info`）**。
+   新たなファイル・CSV・モーダルは作らない。理由：(1) 既存の出力経路
+   で、比較完了のログ（`MergeLogger::LogComparisonCompleted`）と同じ
+   関数から出るため、比較完了時のログ行の直後に並ぶ、(2) 毎比較の
+   ファイル書き込みや UI 表示は D0 の範囲外の副作用になる、
+   (3) D10 で UI 表示を追加する際はメモリ内の最終結果
+   （`Merge20MeasureGetLast()`）を使う。
+4. **リソース ID の予約範囲の注意点（ソート検証で判明）**：
+   ダイアログ ID は 297 からだが、数値空間はアイコン／ビットマップと
+   共用で、302（`IDI_ROTATE2`）、307（`IDR_LOGO`）、310
+   （`IDR_MARGIN_ICONS_PNG`）、312、316 以降が既に使われているため、
+   ダイアログ ID はこれらを飛ばして割り当てること。コントロール ID は
+   1745 から 8602 まで連続で空き（次の `IDC_*` は 8603）。コマンド ID
+   は 38941 から 38976 まで空き（36 件。38977 は
+   `IDS_SPLASH_GPLTEXT`）。ソートで見つかった重複はすべて既存の意図
+   的な範囲エイリアス（`ID_COLORSCHEME_FIRST`／`IDS_COLORSCHEME_PLAIN`
+   等）で、Merge20 の範囲にはない。
+5. **オプションキー既定値の GoogleTest について（設計書 §5.2 D0 との
+   食い違い）**：設計書は「新規キーの既定値テストを追加する」とするが、
+   既定値は `OptionsInit.cpp`（`Options::Init`）にあり、同ファイルは
+   UnitTests にリンクされていない（オプション初期化全体の include
+   依存を引き込むため、D0 での追加は見送った）。代わりに (a) gtest で
+   11 キーのレジストリ／INI 名を検証し、(b) `InitOption` の呼び出しは
+   CI ビルドで型チェックされ、(c) 既定値は実機で INI／レジストリから
+   読み戻して確認する（§22.4 手順 3）。テストファイルのコメントにも
+   この理由を明記した。
+6. **範囲の決定根拠**：`DED_ZOOM` 350–2200 は HTML の camS クランプ
+   0.35–2.2、`SNIPER_FONT` 14–28 は HTML の `snFont` クランプ、
+   `SNIPER_LAYOUT` 0–1 は HTML の `cols`／`rows` の 2 値、
+   `FOCUS_DOCK_HEIGHT` は 0＝既定高さのため範囲なし（2 引数版の
+   `InitOption`）、`GREP_HISTORY` は S4 のリスク重要語と同じ `;`
+   区切り文字列とし、上限 10 件の強制は D7 に委ねた。
+
+### 22.3 検証結果（ローカル g++ ハーネス）
+
+純粋モジュール `Merge20Measure` を g++（C++17、`-Wall -Wextra`、
+`pch.h` は空スタブ）でビルドし、ハーネスで 14 アサーション全て合格：
+純粋計算（スキャン点あり：合計 1234／スキャン 1200／一覧 34ms、
+スキャン点なし：合計 1234 をスキャンに帰属・一覧 0ms、0ms）、
+Begin→一覧確定のフロー（42 件、書式に `scan` と `42 items` を含む）、
+Begin なしの無視、Begin による再開、スキャン点なしの書式
+（`scan` を含まず `3 items` を含む）。CI での gtest
+（`Merge20Measure_test.cpp`、同内容＋キー名 11 件）は §22.5 参照。
+vcxproj 4 ファイルの XML 整形式をパーサで確認済み。リソース ID の
+ソート検証は §22.2-4 のとおり。
+
+### 22.4 Windows 実機での確認手順（D0 受け入れテスト）
+
+D0 は基盤のため、実機で確認できる動作は計測ログとオプション既定値の
+2 点に限られる。UI の変化はないこと。
+
+1. CI 成果物 ZIP の `WinMergeU.exe` をポータブル版（`winmerge.ini`
+   あり）で起動し、2 フォルダ比較を開く。
+2. 比較完了後、表示＞ログ（View＞Log）を開き、`Merge20 measure: folder compare N ms (scan S ms, list L ms), M items`
+   という行があること。N は比較開始から一覧確定までの時間、M は比較
+   対象の項目数。行がない場合は D0 のフックが接続されていないため
+   不具合として報告すること。
+3. WinMerge を終了し、`winmerge.ini` の `[Merge20]` セクションに
+   11 項目が既定値で書き出されていること（`DedMode=false`、
+   `DedPinned=false`、`DedZoom=750`、`TodoOnly=false`、
+   `SniperOn=false`、`SniperFont=20`、`SniperLayout=0`、`Slim=false`、
+   `DockHidden=false`、`FocusDockHeight=0`、`GrepHistory=`（空））。
+   インストール版ではレジストリの WinMerge 設定下に同じ項目がある
+   こと。配置が想定と異なる場合はそのまま報告すること（キー名は
+   `Merge20/...` で固定だが、INI のセクション分割は想定）。
+4. 100 ファイル規模のフォルダペアで比較し、ログ行の N ms が体感と
+   大きく矛盾しないこと（目安：数秒以内の一覧確定）。500／1000
+   ファイル規模での計測と記録は D10 の受け入れ条件のため、D0 では
+   100 ファイル規模の記録までとする。
+5. 既存のフォルダ比較・ファイル比較が従来どおり動くこと（回帰確認）。
+
+### 22.5 CI 結果（PR #19）
+
+- PR: https://github.com/askhim659/winmerge/pull/19（`merge20/phase4-d0` → `master`、13 コミット、未マージ）
+- 実行待ち（PR 作成後に追記する）。
