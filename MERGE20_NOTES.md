@@ -887,3 +887,16 @@ CI での gtest（`Merge20Session_test.cpp`、同内容）は 14.5 参照。
    再度開くと復旧提案が出ること。
 9. 既存のフォルダ比較・ファイル比較・CSV 出力・一括チェックが
    従来どおり動くこと（回帰確認）。
+
+### 14.5 CI 結果（PR #11）
+
+- PR: https://github.com/askhim659/winmerge/pull/11（`merge20/phase2-s8` → `master`、29 コミット + 修正 4 コミット、未マージ）
+- 実行 45646476887（2026-11-25 15:33Z）：failure。Merge.vcxproj のコンパイルエラー 16 件。
+  - `Merge20MemoDlg.cpp(38)` C2664：`DlgUtils<CTrDialog>::GetDlgItemText` は `String&` を取るのに `CString` を渡していた。`String` に変更して修正（コミット 77609f14）。
+  - `Merge20SessionDoc.cpp` C3861/C2593：`makelower` 未定義。`UnicodeString.h` の include 漏れに加え、`makelower` は `strutils` 名前空間内だった。include 追加（d58974d2）＋ `strutils::makelower` に修飾（1cfa38f6）。
+  - `DirView.h(491-494)` C2248：S8 の表示設定メソッド 4 件を誤って `private:` 節に宣言していた。`public:` 節へ移動（01137b9a）。
+- 実行 45648809914（修正 3 件込み、15:47Z）：failure。`makelower` の C3861 が残存（名前空間の見落とし）。上記 1cfa38f6 で修正。
+- 実行 45650082458（2026-11-25 15:58Z）：**success**。ジョブ build 139331890185。
+  - 成果物：`WinMerge-x64.zip` 26,133,366 バイト（ID 15040695967）、`WinMerge-x64-Setup-x64.exe` 39,622,714 バイト（ID 15040845810）。いずれも失効日 2027-02-23。
+  - GoogleTest：581 テスト全パス。S8 新規 6 件（`Merge20Session.Utf8RoundTrip` / `JsonRoundTrip` / `JsonErrors` / `SessionRoundTrip` / `SessionFormatErrors` / `FileChanged`）すべて OK。
+- 注意：修正コミットごとに push したため、途中の実行 45648764458 / 45648785154 も走ったが、最終実行のみが全修正込み。実機確認は §14.4 の手順で行うこと。
