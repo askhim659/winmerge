@@ -169,6 +169,30 @@ public:
 	ReviewState GetMerge20ReviewState(const String& relPath) const;
 	/** @brief Set the review state of one file. */
 	void SetMerge20ReviewState(const String& relPath, ReviewState state);
+	/**
+	 * @brief Set the review state of one item.
+	 * Unlike the path-based overload above, this one also records the
+	 * initial output flag (see GetMerge20IncludeInOutput) when the file
+	 * gets its first entry, so the stored flag never falls back to the
+	 * struct default (true) for a NEW_ONLY or identical file.
+	 */
+	void SetMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	/**
+	 * @brief Output checkbox flag of one file: the stored flag when the
+	 * file has an entry, otherwise the initial value from its existence
+	 * category (design section 3.2: MODIFIED / OLD_ONLY start ON,
+	 * NEW_ONLY / IDENTICAL start OFF).
+	 */
+	bool GetMerge20IncludeInOutput(const DIFFITEM& di) const;
+	/** @brief Set the output checkbox flag of one file. */
+	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include);
+	/**
+	 * @brief Set the review state of one file and apply the output-flag
+	 * linkage (spec section 4(b), HTML setRev/cycRev): DONE turns the
+	 * output flag back ON except for NEW_ONLY files (2-way right-only),
+	 * HOLD and KEEP turn it OFF, TODO and SPECIAL leave it unchanged.
+	 */
+	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
 	/** @brief Direct access to the sidecar map (for S2 and later slices). */
 	Merge20FileStates& GetMerge20FileStates() { return m_merge20FileStates; }
 	/** @brief Direct access to the sidecar map (const version). */
