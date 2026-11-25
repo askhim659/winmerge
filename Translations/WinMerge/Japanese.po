@@ -11083,3 +11083,8 @@ msgstr "学習データをすべてクリアしますか？（他の作業者と
 #: Src/Merge20/Merge20LearnDlg.cpp
 msgid "Cleared the learning data."
 msgstr "学習データをクリアしました"
+
+#. Merge20 (D1): dedicated compare mode menu item (Merge.rc) and dedicated bar caption
+#: Src/Merge.rc
+msgid "Dedicated Compare Mode"
+msgstr "比較専用モード"
