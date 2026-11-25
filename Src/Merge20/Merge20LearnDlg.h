@@ -59,9 +59,11 @@ private:
 	/** @brief Re-read the store and rebuild every control. */
 	void RefreshAll();
 	/** @brief Source ids of the checked rows of m_sourcesList. */
-	std::vector<String> GetCheckedSourceIds() const;
+	std::vector<String> GetCheckedSourceIds();
 	/** @brief Enable the delete / merged-export buttons when a source is checked. */
 	void UpdateSourceButtons();
+	/** @brief Sharing-notice confirmation before writing an export file. */
+	bool AskExportConfirm(const String& filePath);
 
 	CCheckListBox m_sourcesList;
 	CListBox m_rulesList;
