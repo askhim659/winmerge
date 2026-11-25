@@ -377,3 +377,18 @@ CI の単体テストだけでは、実際の WinMergeU.exe での保存（`CDif
    ダイアログが出た場合、日付・サイズの表示がずれていないこと
    （§9.3 のハードコード列番号の回帰確認）。
 7. 再スキャン（F5）後も列と表示が変わらないこと。
+
+### 9.6 CI 結果と修正（PR #6）
+
+- PR #6（`merge20/phase2-s1`、14 コミット）。CI 実行 45592525097 は
+  failure：`UnitTests.vcxproj` のリンクで LNK2019（`Merge20FileStates::
+  GetReviewState`／`SetReviewState` の unresolved external）。原因は
+  UnitTests プロジェクトが `DiffContext.cpp` を直接コンパイルするのに
+  `Merge20FileStates.cpp` を含んでいなかったこと。本体（WinMergeU）の
+  ビルド自体は通っていた。`UnitTests.vcxproj`／`.filters` に
+  `Src\Merge20\Merge20FileStates.cpp`（＋2 ヘッダ）を追加して修正。
+  以後の教訓：`Src/` の新規 `.cpp` は `Merge.vcxproj` だけでなく
+  `UnitTests.vcxproj`（`DiffContext.cpp` 等を直接使う側）への登録も必要。
+- 再実行 45594649835 は success。成果物 2 件（いずれも 2027-02-23 失効）：
+  `WinMerge-x64.zip`（26,037,934 バイト、ID 15013980458）、
+  `WinMerge-x64-Setup-x64.exe`（39,509,228 バイト、ID 15011999981）。
