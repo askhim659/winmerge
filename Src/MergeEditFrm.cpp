@@ -51,6 +51,8 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	ON_COMMAND_EX(ID_VIEW_LOCATION_BAR, OnBarCheck)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE_RESULT_BAR, OnUpdateViewMergeResultBar)
 	ON_COMMAND_EX(ID_VIEW_MERGE_RESULT_BAR, OnBarCheck)
+	ON_COMMAND(ID_VIEW_MERGE20_DEDICATED_MODE, OnViewMerge20DedicatedMode)
+	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_DEDICATED_MODE, OnUpdateViewMerge20DedicatedMode)
 	ON_COMMAND(ID_VIEW_SPLITVERTICALLY, OnViewSplitVertically)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_SPLITVERTICALLY, OnUpdateViewSplitVertically)
 	// Display filter bar
@@ -78,6 +80,13 @@ CMergeEditFrame::CMergeEditFrame()
 , m_pwndDetailMergeEditSplitterView(nullptr)
 , m_pMergeResultView(nullptr)
 , m_bResultBarVisible(false)
+, m_bDedicatedMode(false)
+, m_bDedWasMaximized(false)
+, m_bDedFilePathBarVisible(false)
+, m_bDedLocationBarVisible(false)
+, m_bDedDetailBarVisible(false)
+, m_bDedResultBarVisible(false)
+, m_bDedStatusBarVisible(false)
 {
 	m_pMergeDoc = 0;
 }
@@ -124,6 +133,16 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 	if (!m_pwndDetailMergeEditSplitterView->Create(nullptr, nullptr, dwStyle, CRect(0,0,1,1), &m_wndDetailBar, ID_VIEW_DETAIL_BAR+1, pContext))
 	{
 		TRACE0("Failed to create CMergeEditSplitterView\n");
+		return FALSE;
+	}
+
+	// Merge20 (Phase 4 D1): dedicated-mode bar (skeleton, caption only).
+	// D2 adds the Prev/Next, review-state and exit buttons; D1 only
+	// wires its show/hide to the dedicated mode.
+	sCaption = _("Dedicated Compare Mode");
+	if (!m_wndDedBar.Create(this, sCaption.c_str(), WS_CHILD | WS_VISIBLE, ID_VIEW_MERGE20_DEDICATED_MODE))
+	{
+		TRACE0("Failed to create Merge20DedBar\n");
 		return FALSE;
 	}
 
@@ -180,6 +199,7 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 	pLocationView->SetFrameHwnd(GetSafeHwnd());
 	m_wndLocationBar.SetFrameHwnd(GetSafeHwnd());
 	m_wndDetailBar.SetFrameHwnd(GetSafeHwnd());
+	m_wndDedBar.SetFrameHwnd(GetSafeHwnd());
 
 	// Load splitter positions
 	LoadOptions();
@@ -251,6 +271,13 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_wndDetailBar.EnableDocking(CBRS_ALIGN_TOP | CBRS_ALIGN_BOTTOM);
 	DockControlBar(&m_wndDetailBar, AFX_IDW_DOCKBAR_BOTTOM, &rc);
 
+	// Merge20 (Phase 4 D1): dedicated-mode bar, docked at the top.
+	// It starts hidden; entering dedicated mode shows it.
+	m_wndDedBar.SetBarStyle(m_wndDedBar.GetBarStyle() |
+		CBRS_SIZE_DYNAMIC | CBRS_ALIGN_TOP);
+	m_wndDedBar.EnableDocking(CBRS_ALIGN_TOP | CBRS_ALIGN_BOTTOM);
+	DockControlBar(&m_wndDedBar, AFX_IDW_DOCKBAR_TOP, &rc);
+
 	// Merge result pane bar, docked at the bottom
 	if (m_wndResultBar.m_hWnd != nullptr)
 	{
@@ -276,6 +303,7 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// for the dimensions of the diff and location pane, use the CSizingControlBar loader
 	m_wndLocationBar.LoadState(_T("Settings"));
 	m_wndDetailBar.LoadState(_T("Settings"));
+	m_wndDedBar.LoadState(_T("Settings"));
 	if (m_wndResultBar.m_hWnd != nullptr)
 	{
 		m_wndResultBar.LoadState(_T("Settings"));
@@ -285,6 +313,16 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		// sessions otherwise start without it, regardless of saved state.
 		ShowControlBar(&m_wndResultBar, FALSE, FALSE);
 	}
+
+	// Merge20 (Phase 4 D1): the dedicated-mode bar is shown only while
+	// dedicated mode is active.
+	ShowControlBar(&m_wndDedBar, FALSE, FALSE);
+
+	// Merge20 (Phase 4 D1): if the previous session left dedicated mode
+	// on (OPT_MERGE20_DED_MODE), enter it again for this frame. Posted
+	// (not called directly) so the frame finishes creation first.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_DED_MODE))
+		PostMessage(WM_COMMAND, ID_VIEW_MERGE20_DEDICATED_MODE);
 
 	return 0;
 }
@@ -304,6 +342,98 @@ BOOL CMergeEditFrame::OnBarCheck(UINT nID)
 	if (nID == ID_VIEW_MERGE_RESULT_BAR)
 		GetMainFrame()->UpdateToolbar();
 	return result;
+}
+
+/**
+ * @brief Toggle dedicated compare mode (Merge20 Phase 4 D1).
+ *
+ * The mode is kept in OPT_MERGE20_DED_MODE (D0 key) so the next file
+ * compare opens in dedicated mode again (design section 4.1(a)).
+ * The flag is set before entering/exiting so the pane-size save
+ * triggered by hiding the bars (MSG_STORE_PANESIZES) is suppressed
+ * while the mode is active (see OnStorePaneSizes).
+ */
+void CMergeEditFrame::SetDedicatedMode(bool bEnable)
+{
+	if (bEnable == m_bDedicatedMode)
+		return;
+	m_bDedicatedMode = bEnable;
+	if (bEnable)
+		EnterDedicatedMode();
+	else
+		ExitDedicatedMode();
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_MODE, bEnable);
+}
+
+/**
+ * @brief Enter dedicated compare mode: maximize the MDI child window,
+ * hide this frame's bars, and show the dedicated-mode bar.
+ *
+ * WinMerge has no fullscreen mode, so the mode is the maximized child
+ * window plus hidden bars (design section 2.2(2)). Only this frame's
+ * own bars are hidden (T-4-1 fallback): the main frame's menu bar /
+ * toolbar / tab bar / status bar have no public hide API callable from
+ * the child, and hiding the menu would remove the View-menu exit path
+ * while the dedicated bar is still a skeleton without its own exit
+ * button (D2 adds it).
+ */
+void CMergeEditFrame::EnterDedicatedMode()
+{
+	// Remember the current layout so exiting restores it exactly.
+	m_bDedFilePathBarVisible = !!m_wndFilePathBar.IsWindowVisible();
+	m_bDedLocationBarVisible = !!m_wndLocationBar.IsWindowVisible();
+	m_bDedDetailBarVisible = !!m_wndDetailBar.IsWindowVisible();
+	m_bDedResultBarVisible = m_wndResultBar.m_hWnd != nullptr && !!m_wndResultBar.IsWindowVisible();
+	m_bDedStatusBarVisible = !!m_wndStatusBar.IsWindowVisible();
+	m_bDedWasMaximized = !!IsZoomed();
+
+	ShowControlBar(&m_wndFilePathBar, FALSE, FALSE);
+	ShowControlBar(&m_wndLocationBar, FALSE, FALSE);
+	ShowControlBar(&m_wndDetailBar, FALSE, FALSE);
+	if (m_wndResultBar.m_hWnd != nullptr)
+		ShowControlBar(&m_wndResultBar, FALSE, FALSE);
+	ShowControlBar(&m_wndStatusBar, FALSE, FALSE);
+	ShowControlBar(&m_wndDedBar, TRUE, FALSE);
+
+	if (GetMDIFrame() != nullptr)
+		GetMDIFrame()->MDIMaximize(this);
+	GetMainFrame()->UpdateToolbar();
+}
+
+/**
+ * @brief Exit dedicated compare mode: hide the dedicated-mode bar and
+ * restore the bars and the maximized state saved on entry.
+ */
+void CMergeEditFrame::ExitDedicatedMode()
+{
+	ShowControlBar(&m_wndDedBar, FALSE, FALSE);
+	ShowControlBar(&m_wndFilePathBar, m_bDedFilePathBarVisible, FALSE);
+	ShowControlBar(&m_wndLocationBar, m_bDedLocationBarVisible, FALSE);
+	ShowControlBar(&m_wndDetailBar, m_bDedDetailBarVisible, FALSE);
+	if (m_wndResultBar.m_hWnd != nullptr)
+		ShowControlBar(&m_wndResultBar, m_bDedResultBarVisible, FALSE);
+	ShowControlBar(&m_wndStatusBar, m_bDedStatusBarVisible, FALSE);
+
+	if (!m_bDedWasMaximized && GetMDIFrame() != nullptr)
+		GetMDIFrame()->MDIRestore(this);
+	GetMainFrame()->UpdateToolbar();
+}
+
+/**
+ * @brief View-menu handler: toggle dedicated compare mode.
+ */
+void CMergeEditFrame::OnViewMerge20DedicatedMode()
+{
+	SetDedicatedMode(!m_bDedicatedMode);
+}
+
+/**
+ * @brief View-menu update handler: check the item while in dedicated mode.
+ */
+void CMergeEditFrame::OnUpdateViewMerge20DedicatedMode(CCmdUI* pCmdUI)
+{
+	pCmdUI->Enable(TRUE);
+	pCmdUI->SetCheck(m_bDedicatedMode);
 }
 
 /**
@@ -342,6 +472,12 @@ void CMergeEditFrame::ActivateFrame(int nCmdShow)
 
 BOOL CMergeEditFrame::DestroyWindow() 
 {
+	// Merge20 (Phase 4 D1): restore the normal-mode layout first, so the
+	// dock state saved below is the normal one. ExitDedicatedMode (not
+	// SetDedicatedMode) is used so OPT_MERGE20_DED_MODE keeps the
+	// dedicated-mode preference for the next frame.
+	if (m_bDedicatedMode)
+		ExitDedicatedMode();
 	SavePosition();
 	SaveActivePane();
 	SaveWindowState();
@@ -368,6 +504,7 @@ void CMergeEditFrame::SavePosition()
 	// for the dimensions of the diff pane, use the CSizingControlBar save
 	m_wndLocationBar.SaveState(_T("Settings"));
 	m_wndDetailBar.SaveState(_T("Settings"));
+	m_wndDedBar.SaveState(_T("Settings"));
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.SaveState(_T("Settings"));
 
@@ -549,8 +686,12 @@ void CMergeEditFrame::OnTimer(UINT_PTR nIDEvent)
 {
 	if (nIDEvent == IDT_SAVEPOSITION)
 	{
-		SavePosition();
 		KillTimer(IDT_SAVEPOSITION);
+		// Merge20 (Phase 4 D1): while dedicated mode hides the bars, do
+		// not let the delayed pane-size save persist the hidden layout.
+		// The normal layout is saved again when the frame is destroyed.
+		if (!m_bDedicatedMode)
+			SavePosition();
 	}
 	else if (nIDEvent == IDT_PREVIEWMODE)
 	{
@@ -615,6 +756,7 @@ void CMergeEditFrame::UpdateResources()
 	m_wndStatusBar.UpdateResources();
 	m_wndLocationBar.UpdateResources();
 	m_wndDetailBar.UpdateResources();
+	m_wndDedBar.UpdateResources();
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.UpdateResources();
 }
@@ -624,6 +766,12 @@ void CMergeEditFrame::UpdateResources()
  */
 LRESULT CMergeEditFrame::OnStorePaneSizes(WPARAM wParam, LPARAM lParam)
 {
+	// Merge20 (Phase 4 D1): while dedicated mode hides the bars, ignore
+	// the pane-size save request (hiding a bar posts this message). The
+	// saved dock state must stay the normal-mode layout, so a frame
+	// opened later does not start with its bars hidden.
+	if (m_bDedicatedMode)
+		return 0;
 	KillTimer(IDT_SAVEPOSITION);
 	SetTimer(IDT_SAVEPOSITION, 300, nullptr);
 	return 0;
