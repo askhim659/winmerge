@@ -1298,3 +1298,185 @@ L3 の候補提示 UI がまだ無いため、候補の存在は `Merge20Learn.j
   - CI 失敗 0 回（初回実行で success）。
   - `Merge20LearnDoc.cpp` が WinMergeU のビルド対象に含まれ、コンパイル
     されていることをログで確認（`Merge20LearnDoc.obj` を生成）。
+
+## 18. Phase 3 L3（学習の候補提示 UI）— ブランチ `merge20/phase3-l3`
+
+設計書 `merge20-phase3-design.md` §5 L3 どおり。候補提示 UI（結果ペイン）と
+コンテキストメニュー（受け入れ／却下）。学習モーダル（L4）・JSON 入出力 UI（L5）は
+含まない。自動適用の経路は作らない（仕様書 §4(c)）。
+
+### 18.1 変更一覧
+
+- `Src/resource.h` — 学習候補コマンド ID を追加：`ID_MERGE20_LEARN_APPLY`＝38939、
+  `ID_MERGE20_LEARN_DISMISS`＝38940。全 define を値でソートして空きを確認
+  （S3 の教訓）。38938 は L4 の `ID_MERGE20_LEARN`（設計書 §3.3）用に予約の
+  まま空けてあり、`_APS_NEXT_COMMAND_VALUE` は 38938→38941 に更新。
+  `IDD_MERGE20_LEARN`＝296 も L4 用に予約のまま（L3 では使わない）。
+- `Src/Merge.rc` — `IDR_POPUP_MERGERESULTVIEW_2WAY` に 2 項目を追加
+  （「Choose Right for All Unresolved Conflicts」の直後）：
+  `MENUITEM "Apply Learning Suggestion", ID_MERGE20_LEARN_APPLY`、
+  `MENUITEM "Dismiss Learning Suggestion", ID_MERGE20_LEARN_DISMISS`。
+  3-way メニューには追加しない（候補は L2 の 2-way のみ）。
+  `.rc` のラベルは ASCII のため英語のままにし、`.po` 経由で日本語化する
+  （L1 の教訓）。
+- `Src/MergeDoc.h` — ハンドラ宣言 4 件（`OnMerge20LearnApply`／
+  `OnUpdateMerge20LearnApply`／`OnMerge20LearnDismiss`／
+  `OnUpdateMerge20LearnDismiss`）、却下集合の書き込み用アクセサ
+  `GetMerge20LearnDismissed()`（非 const。const 版は L2 のまま）、
+  `GetMerge20LearnTargetDiffs(int& firstDiff, int& lastDiff)`
+  （対象範囲の決定。`OnMergeChooseSource` と同じ規則：選択がなければ現在の
+  差分、選択があれば選択範囲の差分）。
+- `Src/MergeDoc.cpp` — メッセージマップに 2 コマンドを登録
+  （`ON_COMMAND`／`ON_UPDATE_COMMAND_UI`）。
+- `Src/Merge20/Merge20LearnDoc.h/.cpp` — L3 ヘルパー 3 件（新規ファイルなし。
+  StdAfx.h グループの既定エントリのまま）。
+  - `Merge20LearnDismissCandidate(doc, nDiff)` — 却下の本体。差分の同一性
+    （`DismissedKey` と同じ `op:begin0-end0:begin1-end1`）を却下集合に追加し、
+    候補マップから候補を消す。学習データには何も記録しない（却下は「判定」
+    ではないため）。ビューへの `Invalidate` は呼び出し元が行う。
+  - `Merge20LearnStrategyDisplayName(strategy)` — 方針値の表示語彙
+    （HTML 語彙：旧挿入／新維持／旧置換／両方。`_()` 経由）。
+  - `Merge20LearnViaDisplayName(via)` — 一致種別の表示語彙
+    （`via` は `"exact"`／`"feat"`。完全一致／特徴一致。`_()` 経由）。
+- `Src/MergeDocResultPane.cpp` — 候補提示の本体。
+  - `GetResultLineMarker`：`Unresolved`／`Conflict` のセグメントで、その差分に
+    候補がある場合は `'?'` の代わりに `'L'` を返す。`L` は既存マーカー
+    （`1`／`2`／`3`、`?`、`m`）と重ならない未使用文字。描画色は既存の
+    `DrawMargin` の灰色のまま（候補専用の色分けは後回し。設計書 §2.3 どおり）。
+  - `OnMerge20LearnApply`：対象範囲のうち候補がある差分だけ、その候補の
+    `srcPanes` を `ResultChooseSources` で適用する（`ResultChooseSources`
+    の L2 フックが候補を消し、セグメントを `Chosen` にする）。
+    適用した差分だけを `Merge20LearnRecordDiffJudgment` で記録し、1 件でも
+    記録されたら `Merge20LearnSaveStore` で保存（保存失敗時は
+    メッセージボックスで明示）し、`Merge20LearnRefreshAllOpenDocs()` で
+    全文書の候補を再計算する。確認内容（レビュー状態）は変えない。
+  - `OnMerge20LearnDismiss`：対象範囲のうち候補がある差分だけ
+    `Merge20LearnDismissCandidate` で却下し、変わった場合に結果ビューを
+    `Invalidate` する。差分は `Unresolved` のまま残り、確認内容も変わらない。
+  - 両コマンドの `OnUpdate*` は共通ヘルパー `UpdateMerge20LearnCommandUI`
+    を使う：対象範囲に候補が 1 件でもある場合のみ有効。チェック表示なし。
+- `Src/MergeResultView.cpp` — 表示の本体。
+  - `GetLineColors`：候補がある差分の行の背景を紫色 `RGB(232, 213, 249)`
+    にする（設計書 §2.3 の第一候補の色）。現在の差分（選択中）は選択色を
+    優先する（既存の `bCurrent` 分岐と同じ扱い）。文字色は変えない。
+    色は固定色でテーマ対応は後回し（S2 の行色と同じ判断）。
+  - `OnContextMenu`：対象範囲に候補がちょうど 1 件だけある場合、
+    適用メニュー項目の文言を `ModifyMenu` で書き換える
+    （例：「🎓 学習候補を適用（旧・完全一致・2件）」）。
+    候補が複数件・0 件の場合は `.po` 経由の汎用文言
+    （「🎓 学習候補を適用」）のまま。却下項目の文言は書き換えない。
+    `Merge20/Merge20LearnDoc.h` を include 追加。
+- `Translations/WinMerge/Japanese.po` — 9 件追加（msgid 重複なしを確認。
+  既存の重複 msgid（`''`／`Binary`／`Diff`／`Disabled`／`Folder`／`None`）
+  は L3 以前からあるもので、L3 では増えていない）。
+
+### 18.2 設計書・仕様書との食い違い（判断理由つき）
+
+1. **T-3-1 は解消（静的表示へのフォールバックを採用）**。点滅表示の実現方法を
+   実読で確認した結果、`CMergeResultView` にはタイマの前例がない
+   （`MergeResultView.cpp`／`.h`、`GhostTextView.h` に `ON_WM_TIMER`／
+   `SetTimer` はなく、コードベースで確認できたタイマ前例は
+   `CDirView::TIMER_ID_STATUSBAR_UPDATE` のみ）。さらにビュー階層には
+   行単位の `Invalidate` の仕組みがなく、再描画の経路はビュー全体の
+   `Invalidate()` だけである。900ms タイマを入れると、編集中の結果ペイン
+   全体（構文ハイライトを含む）を 900ms ごとに再描画することになり、
+   キャレットのちらつきと描画コストの懸念がある。設計書 §2.3 は
+   「点滅が難しい場合は静的な紫色＋`L`マーカーに落とす。点滅の有無は
+   受け入れ条件 A-3-4 の判定には影響しない（必須なのは『候補が出ている
+   ことが一目で分かる』こと）」と明記しているため、L3 は静的表示
+   （紫色＋`L`マーカー＋メニューの候補文言）とした。点滅は実装していない。
+2. **仕様書 §4(d) の「点滅させ」との齟齬（仕様書改訂候補 M-3-1 の拡張）**。
+   仕様書 §4(d) は「学習によって候補提示された行には『学習機能マージ』の
+   ポップ表示を点滅させ、自動で決まったことが一目で分かるようにする」と
+   書く。フォーク版は (a) 点滅しない（上記 1）、(b) 「学習機能マージ」という
+   文言を使わない（設計書 §2.3／M-3-1：「自動判定」を「候補提示」と読み替え、
+   自動で決まったようには見せないため。文言は「🎓 学習候補（完全一致・N件）」
+   ／「🎓 学習候補（特徴一致・N件）」）。仕様書の改訂候補 M-3-1 に追加する：
+   点滅の要求を「候補が出ていることが一目で分かる表示（紫色＋`L`マーカー。
+   点滅は任意）」に改めること。
+3. **受け入れの呼び出し経路と記録の関係**（設計書 §2.3 の第 2 の選択肢を
+   採用）。受け入れハンドラは `OnMergeChooseSource` を経由しない。
+   あのハンドラは送信元をトグルするもので、現在の差分／選択範囲に対して
+   しか働かず、「この差分の候補の方針値をそのまま適用する」
+   （例：`{0,1}` の両方）を表現できないためである。代わりに設計書 §2.3 の
+   指示どおり、受け入れハンドラから `ResultChooseSources` を直接呼び、
+   その後に `OnMergeChooseSource` と同じ記録関数
+   `Merge20LearnRecordDiffJudgment` を呼ぶ。記録は `ResultChooseSources`
+   には置いていないため、一括承認（S5）・自動マージ・セッション復元（S8）
+   が学習に混ざることは構造的にない（L2 の保証は維持される）。
+   `ResultChooseSources` が候補を先に消す（L2 フック）ため、記録時の
+   `prevLearned` はなく、受け入れは +1 だけが記録される。後で違う方針を
+   選ぶと、同じ記録関数が旧方針 -1・新方針 +1 の訂正を行う。
+4. **二重計上の防止（受け入れ時の記録対象の限定）**。受け入れの記録ループは
+   対象範囲全体ではなく、このコマンドで実際に適用した差分だけを記録する。
+   選択範囲内に、以前の操作で既に `Chosen` になっている差分（候補なし）
+   が含まれていた場合、その差分を再記録すると件数が二重に増えるためである。
+   `OnMergeChooseSource` の記録ループ（範囲全体）は、トグルですべての差分に
+   新しい判定が付くため正しいが、受け入れでは適用した差分だけが新しい判定
+   である。この違いをコードのコメントにも明記した。
+5. **却下集合への追加経路（L2 で未実装だった部分）**。L2 で作られた
+   `m_merge20LearnDismissed` には書き込み口がなかったが、L3 で
+   `Merge20LearnDismissCandidate` が初めての追加経路になった。同一性の
+   形式（`op:begin0-end0:begin1-end1`）は `DismissedKey` のある
+   `Merge20LearnDoc.cpp` 内に留め、`CMergeDoc` 側には重複して持たせていない。
+   却下はメモリ内のみ（セッションにも学習ファイルにも保存しない）。
+   却下は学習に記録しない（設計書 §2.3 どおり。将来の「却下を負の
+   フィードバックとして記録する」は Phase 4 以降の検討）。
+6. **候補の件数表示場所（T-3-5）**。結果ペイン内に件数を常時表示する場所は
+   作らなかった（設計書 §1.5 T-3-5 どおり）。件数（`n`）と一致種別は、
+   候補が 1 件のときの適用メニュー項目の文言
+   （「🎓 学習候補を適用（旧・完全一致・2件）」）でのみ示す。
+   ステータスバーへの件数表示は見送り。
+7. **コマンド ID の予約**。38938 は L4 の `ID_MERGE20_LEARN` 用に空けたまま
+   にしたため、L3 は 38939／38940 を使った。L4 着手時は 38938 を
+   `ID_MERGE20_LEARN` に割り当てること（`_APS_NEXT_COMMAND_VALUE` は
+   38941 になっている）。
+8. **新規ファイル・新規単体テストなし**。L3 はビュー／文書の UI であり、
+   候補計算・記録の中核は L0 の 16 テストで検証済みのため、`.vcxproj`／
+   `.filters` の変更もない。`Merge20LearnDoc.cpp` が WinMergeU のビルド対象
+   としてコンパイルされていることは CI ログで確認する。
+
+### 18.3 Windows 実機での確認手順（L3 受け入れテスト）
+
+CI 成果物の ZIP（`WinMerge-x64.zip`）を展開し、ポータブル版として使う。
+
+1. 2-way のファイル対を開き、L2 で学習したパターンと同じ差分を含むファイル
+   を開いてマージセッションを開始する。候補がある差分の行が結果ペインで
+   紫色になり、マージンに `?` ではなく `L` が出ること。**行は点滅しない**
+   （静的表示が L3 の仕様。§18.2-1）。
+2. その差分で結果ペインを右クリックする。「🎓 学習候補を適用
+   （旧・完全一致・2件）」（方針値／一致種別／件数は実際の候補に従う）と
+   「候補を却下」が有効であること。候補がない差分では両項目とも無効
+   （グレー）であること。
+3. 「学習候補を適用」を押す：その差分だけが解決し、紫色と `L` が消えること。
+   ファイルの確認内容が TODO のままであること。`Merge20Learn.json` で
+   適用した方針値の件数が +1 されていること。
+4. 「候補を却下」を押す：紫色と `L` が消え、差分は未解決のまま残り、確認内容
+   も変わらないこと。再スキャン後も候補が再表示されないこと。
+   `Merge20Learn.json` の件数が変わらないこと。
+5. 候補が出ている状態で結果を保存する：その差分は未解決のコンフリクト
+   セクションとして書き出されること（候補提示だけでは出力が変わらないこと）。
+6. **T-3-8（「不採用」の表現）**：旧欠落のみの差分で `KEEP_NEW` の候補を
+   受け入れると、結果ペインに `<No Lines>` 行が 1 行表示され、保存時に
+   その行が除外される（旧行が結果に含まれない）こと。新追加のみの差分で
+   `REPLACE_WITH_OLD` の候補を受け入れた場合も同じこと。発火しない場合は
+   「不採用」の表現方法を設計し直す（設計書 §2.2 の注記）。
+7. 複数の候補がある差分を選択した状態で右クリックする：適用項目は汎用文言
+   「🎓 学習候補を適用」になること。各差分にはそれぞれ自分の候補の方針値が
+   適用されること。
+8. 3-way のファイル対では、結果ペインのコンテキストメニューに学習候補の
+   項目が出ないこと。
+
+### 18.4 CI 結果（PR #15）
+- PR: https://github.com/askhim659/winmerge/pull/15（`merge20/phase3-l3` → `master`、9 コミット、未マージ）
+- 実行 45680942184（2026-11-25 19:00Z）：**success**。ジョブ build 139440983781。
+  - 成果物：`WinMerge-x64.zip` 26,160,731 バイト（ID 15054033790）、
+    `WinMerge-x64-Setup-x64.exe` 39,658,844 バイト（ID 15054288536）。
+    いずれも失効日 2027-02-23。
+  - GoogleTest：597 テスト全パス。Merge20Learn 16 件すべて OK。
+    ログ中の `[  FAILED  ]` はなし。`echo ERROR: Failed to download ...`
+    の行は DownloadDeps.cmd 内のエラーメッセージの echo 文そのもので、
+    実際のダウンロード失敗ではない（ビルドは完了し成果物もある）。
+  - CI 失敗 0 回（初回実行で success）。
+  - `MergeDocResultPane.obj`／`MergeResultView.obj`／`Merge20LearnDoc.obj`
+    の生成をログで確認（L3 の変更ファイルがコンパイルされていること）。
