@@ -630,6 +630,15 @@
     <ClCompile Include="Merge20\Merge20ClassifyDoc.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Csv.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20CsvExport.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20CsvExportDlg.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20FileStates.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1422,6 +1431,15 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20ClassifyDoc.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20Csv.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20CsvExport.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20CsvExportDlg.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FileStates.h">
