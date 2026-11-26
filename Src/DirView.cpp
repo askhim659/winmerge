@@ -166,6 +166,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_BULK_CLASSIFY, OnMerge20BulkClassify)
 	ON_COMMAND(ID_MERGE20_MASTER, OnMerge20Master)
 	ON_COMMAND(ID_MERGE20_SLIM, OnMerge20Slim)
+	ON_COMMAND_RANGE(ID_MERGE20_SHOW_REVIEW_TODO, ID_MERGE20_SHOW_REVIEW_KEEP, OnMerge20ShowReview)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
@@ -832,6 +833,37 @@ static void NTAPI CheckContextMenu(BCMenu *pPopup, UINT uIDItem, BOOL bCheck)
 	pPopup->CheckMenuItem(uIDItem, bCheck ? MF_CHECKED : MF_UNCHECKED);
 }
 
+// Merge20 (Phase 4 D11): option key of a review-state filter toggle,
+// by ReviewState index (0 TODO, 1 DONE, 2 HOLD, 3 SPECIAL, 4 KEEP).
+static const String& Merge20ShowReviewKey(int index)
+{
+	switch (index)
+	{
+	case 1: return OPT_MERGE20_SHOW_REVIEW_DONE;
+	case 2: return OPT_MERGE20_SHOW_REVIEW_HOLD;
+	case 3: return OPT_MERGE20_SHOW_REVIEW_SPECIAL;
+	case 4: return OPT_MERGE20_SHOW_REVIEW_KEEP;
+	case 0:
+	default: return OPT_MERGE20_SHOW_REVIEW_TODO;
+	}
+}
+
+// Merge20 (Phase 4 D11): menu name of a review state, by ReviewState
+// index. These are the existing S2 column display names, reused so
+// the filter submenu needs no new strings of its own.
+static String Merge20ReviewStateMenuName(int index)
+{
+	switch (index)
+	{
+	case 1: return _("Done");
+	case 2: return _("On hold");
+	case 3: return _("Needs manual work");
+	case 4: return _("Keep as is");
+	case 0:
+	default: return _("Not reviewed");
+	}
+}
+
 /**
  * @brief User right-clicked in listview rows
 ?* @param [in] point Point where the mouse was right-clicked.
@@ -953,6 +985,22 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	String sMerge20Slim = _("Slim List");
 	pPopup->AppendMenu(MF_STRING | (GetOptionsMgr()->GetBool(OPT_MERGE20_SLIM) ? MF_CHECKED : 0),
 		ID_MERGE20_SLIM, sMerge20Slim.c_str());
+	// Merge20 (Phase 4 D11, design section 5.2/D11): review-state
+	// filter submenu. The check marks show the current filter (the
+	// menu is rebuilt on every popup, as for the other Merge20
+	// items, so no update handler is needed). menuReview lives on
+	// the stack until TrackPopupMenu returns (as for the plugin
+	// submenu above); it is not detached, because BCMenu's
+	// owner-draw item data belongs to the submenu.
+	BCMenu menuReview;
+	VERIFY(menuReview.CreatePopupMenu());
+	for (int i = 0; i < 5; ++i)
+	{
+		menuReview.AppendMenu(MF_STRING | (GetOptionsMgr()->GetBool(Merge20ShowReviewKey(i)) ? MF_CHECKED : 0),
+			ID_MERGE20_SHOW_REVIEW_TODO + i, Merge20ReviewStateMenuName(i).c_str());
+	}
+	String sMerge20ShowReview = _("Show review states");
+	pPopup->AppendMenu(MF_POPUP, static_cast<int>(reinterpret_cast<uintptr_t>(menuReview.m_hMenu)), sMerge20ShowReview.c_str());
 	// Merge20 (S8, design section 3.6, spec section 6.1): session
 	// save/restore, next to the batch check and CSV export. Always offered.
 	String sMerge20SessionSave = _("Save session");
@@ -3293,6 +3341,26 @@ LRESULT CDirView::OnUpdateUIMessage(WPARAM wParam, LPARAM lParam)
 			m_pSavedUIState.reset();
 		}
 
+		// Merge20 (Phase 4 D11): apply a session stashed while its
+		// saved compare options were applied and the folders were
+		// compared again (Merge20SessionApplyToDoc). Runs before the
+		// restore offer, so a deferred restore and a new offer never
+		// compete for the same compare completion.
+		if (pDoc->Merge20HasPendingSession())
+		{
+			Merge20SessionRestoreResult pendingResult;
+			int pendingSkipped = 0;
+			if (Merge20SessionApplyPending(*pDoc, pendingResult, pendingSkipped))
+			{
+				AfxMessageBox(Merge20SessionFormatRestoreReport(pendingResult, pendingSkipped).c_str(), MB_ICONINFORMATION);
+				UpdateMerge20StatusCount();
+			}
+			else
+			{
+				AfxMessageBox(_("The saved session no longer matches these folders, so it was not applied.").c_str(), MB_ICONINFORMATION);
+			}
+		}
+
 		// Merge20 (S8): offer to restore a saved session for this folder
 		// pair, once per document. Runs after the list was rebuilt and
 		// the focus/scroll position restored, so the session's display
@@ -3785,6 +3853,25 @@ void CDirView::OnMerge20Slim()
 }
 
 /**
+ * @brief Merge20 (Phase 4 D11): review-state filter toggle
+ * (folder-list context menu, "Show review states" submenu). One of
+ * the five states is toggled per command (ID_MERGE20_SHOW_REVIEW_*);
+ * the toggle is written back to the global options and into the
+ * view's filter settings, and the list is rebuilt (same pattern as
+ * the show_* filters in Merge20SetDisplayFilter).
+ */
+void CDirView::OnMerge20ShowReview(UINT nID)
+{
+	const int index = static_cast<int>(nID - ID_MERGE20_SHOW_REVIEW_TODO);
+	if (index < 0 || index >= 5)
+		return;
+	const bool bShow = !GetOptionsMgr()->GetBool(Merge20ShowReviewKey(index));
+	GetOptionsMgr()->SaveOption(Merge20ShowReviewKey(index), bShow);
+	m_dirfilter.show_review[index] = bShow;
+	Redisplay();
+}
+
+/**
  * @brief Merge20 (Phase 4 D9, design sections 3.10 and 5.2/D9, spec
  * sections 3 (4/4) and 5.1): apply or leave the slim list.
  *
@@ -4159,7 +4246,15 @@ void CDirView::OnMerge20SessionRestore()
 		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
 		return;
 	}
-	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(*pDoc, session);
+	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(*pDoc, session, skippedFiles);
+	if (result.deferred)
+	{
+		// Merge20 (Phase 4 D11): the saved compare options were
+		// applied and a rescan started; the final report comes after
+		// the pending apply (OnUpdateUIMessage).
+		AfxMessageBox(Merge20SessionFormatDeferredMessage(result).c_str(), MB_ICONINFORMATION);
+		return;
+	}
 	AfxMessageBox(Merge20SessionFormatRestoreReport(result, skippedFiles).c_str(), MB_ICONINFORMATION);
 	UpdateMerge20StatusCount();
 }
@@ -4222,6 +4317,10 @@ void CDirView::Merge20GetDisplaySettings(Merge20SessionDisplay& display)
 	display.reviewFilter[2] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_HOLD);
 	display.reviewFilter[3] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_SPECIAL);
 	display.reviewFilter[4] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_KEEP);
+	// Merge20 (Phase 4 D11, design section 4.1(b)): the slim flag
+	// itself is saved, so a restore brings back the slim list (the
+	// remembered full layout travels in columnOrders/columnWidths).
+	display.slim = m_bMerge20Slim;
 	// Merge20 (Phase 4 D9): while slim is on, the session stores
 	// the remembered full layout, not the slim preset (D11 saves the
 	// slim flag itself; the preset is rebuilt from it on restore).
@@ -4240,11 +4339,13 @@ void CDirView::Merge20GetDisplaySettings(Merge20SessionDisplay& display)
 }
 
 /**
- * @brief Merge20 (S8): apply the saved show_* filters and tree mode
- * (same effect as toggling the filter bar by hand: the values are
- * written back to the global options), then rebuild the list. The
- * review filter has no UI yet (no filter UI exists); its saved values
- * are recorded only.
+ * @brief Merge20 (S8, D11): apply the saved show_* filters, the
+ * review-state filter and tree mode (same effect as toggling the
+ * filter bar by hand: the values are written back to the global
+ * options), then rebuild the list. The slim flag is restored before
+ * the rebuild, so the slim preset applies to this list; the saved
+ * column layout (the remembered full layout) is applied afterwards
+ * by Merge20ApplyColumnSettings.
  */
 void CDirView::Merge20SetDisplayFilter(const Merge20SessionDisplay& display)
 {
@@ -4279,7 +4380,40 @@ void CDirView::Merge20SetDisplayFilter(const Merge20SessionDisplay& display)
 	m_bTreeMode = display.treeMode;
 	m_dirfilter.tree_mode = display.treeMode;
 	GetOptionsMgr()->SaveOption(OPT_TREE_MODE, display.treeMode);
-	Redisplay();
+	// Merge20 (Phase 4 D11): apply the saved review-state filter
+	// (D9 saved only the keys). Same pattern as the show_* filters:
+	// written back to the global options and into the view's filter
+	// settings, so IsShowable (DirActions.cpp) picks it up.
+	m_dirfilter.show_review[0] = display.reviewFilter[0];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_TODO, display.reviewFilter[0]);
+	m_dirfilter.show_review[1] = display.reviewFilter[1];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_DONE, display.reviewFilter[1]);
+	m_dirfilter.show_review[2] = display.reviewFilter[2];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_HOLD, display.reviewFilter[2]);
+	m_dirfilter.show_review[3] = display.reviewFilter[3];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_SPECIAL, display.reviewFilter[3]);
+	m_dirfilter.show_review[4] = display.reviewFilter[4];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_KEEP, display.reviewFilter[4]);
+	// Merge20 (Phase 4 D11): the slim flag is restored before the
+	// list is rebuilt. SetMerge20Slim rebuilds the list itself
+	// (except when leaving slim off while already off); Redisplay is
+	// only needed in that case, so the list is built exactly once.
+	if (display.slim || m_bMerge20Slim)
+		SetMerge20Slim(display.slim);
+	else
+		Redisplay();
+}
+
+/**
+ * @brief Merge20 (Phase 4 D11, design section 4.1(b)): put the saved
+ * Grep search string back at the head of the search history (and
+ * into the open Grep dialog, if any). An empty string is a no-op.
+ */
+void CDirView::Merge20RestoreGrepText(const String& text)
+{
+	if (text.empty())
+		return;
+	m_wndGrep.RestoreSearchText(text);
 }
 
 /**
