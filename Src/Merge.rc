@@ -82,6 +82,8 @@ BEGIN
         MENUITEM "Choose Right for All Unresolved Conflicts",  ID_MERGE_RESULT_CHOOSE_ALL_2ND
         MENUITEM "Apply Learning Suggestion", ID_MERGE20_LEARN_APPLY
         MENUITEM "Dismiss Learning Suggestion", ID_MERGE20_LEARN_DISMISS
+        MENUITEM "Split", ID_MERGE20_SPLIT_DIFF
+        MENUITEM "Regroup", ID_MERGE20_REGROUP_DIFF
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
@@ -106,6 +108,8 @@ BEGIN
         MENUITEM "Choose Left for All Unresolved Conflicts",   ID_MERGE_RESULT_CHOOSE_ALL_1ST
         MENUITEM "Choose Middle for All Unresolved Conflicts", ID_MERGE_RESULT_CHOOSE_ALL_2ND
         MENUITEM "Choose Right for All Unresolved Conflicts",  ID_MERGE_RESULT_CHOOSE_ALL_3RD
+        MENUITEM "Split", ID_MERGE20_SPLIT_DIFF
+        MENUITEM "Regroup", ID_MERGE20_REGROUP_DIFF
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
@@ -128,6 +132,8 @@ BEGIN
         MENUITEM "Choose Right\tCtrl+Shift+&2", ID_MERGE_RESULT_CHOOSE_2ND
         MENUITEM "Choose Left for All Unresolved Conflicts",  ID_MERGE_RESULT_CHOOSE_ALL_1ST
         MENUITEM "Choose Right for All Unresolved Conflicts", ID_MERGE_RESULT_CHOOSE_ALL_2ND
+        MENUITEM "Split", ID_MERGE20_SPLIT_DIFF
+        MENUITEM "Regroup", ID_MERGE20_REGROUP_DIFF
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&End Merge Session",          ID_MERGE_END_SESSION
@@ -144,6 +150,8 @@ BEGIN
         MENUITEM "Choose Left for All Unresolved Conflicts",   ID_MERGE_RESULT_CHOOSE_ALL_1ST
         MENUITEM "Choose Middle for All Unresolved Conflicts", ID_MERGE_RESULT_CHOOSE_ALL_2ND
         MENUITEM "Choose Right for All Unresolved Conflicts",  ID_MERGE_RESULT_CHOOSE_ALL_3RD
+        MENUITEM "Split", ID_MERGE20_SPLIT_DIFF
+        MENUITEM "Regroup", ID_MERGE20_REGROUP_DIFF
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&End Merge Session",          ID_MERGE_END_SESSION

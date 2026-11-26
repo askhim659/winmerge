@@ -101,7 +101,9 @@ String Merge20SessionFormatRestoreReport(const Merge20SessionRestoreResult& resu
 /**
  * @brief Restore the saved diff judgments into a merge doc whose
  * merge session just started (called from CMergeDoc::StartMergeSession
- * after BuildMergeResult and the auto-merge). Judgments whose diff
- * no longer matches are skipped. No-op without a saved judgment.
+ * after BuildMergeResult and the auto-merge). Saved split groups are
+ * re-applied first, so per-row judgments match the split ranges they
+ * were saved against. Judgments whose diff no longer matches are
+ * skipped. No-op without a saved judgment or split group.
  */
 void Merge20SessionRestoreMergeDoc(CMergeDoc& doc);

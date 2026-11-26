@@ -3938,3 +3938,73 @@ PrediffLineFilter、AI、ApplyPatch、Merge20Exclude）のタイトルが日本�
 - `WinMerge\Filters` 等のユーザーデータフォルダ名そのものを "WizMerge" に変えるかどうかは
 未決定（変えると既存の設定・フィルタ・学習データの移行が必要になるため、別途検討）。
 - ラベルを「Wiz」から「WizMerge」にするかはユーザーに未確認（W1 §26.3 参照）。注：本節では全角括弧の記法がツール経由で欠落する問題があったため「Wiz」と表記した。意味は W1 の「Wiz」ラベルと同じ。
+
+## 30. Phase 4 D5（分割・再結合）— ブランチ `merge20/phase4-d5`
+
+PR #27。2026-11-26。master 3adc2cfa（W2-followup＝PR #25 マージ済み）から分岐（リベース。元は 56136579＝D4＝PR #26 から分岐）。24ファイル、24コミット＋記録。設計書 §5.2 D5・§4.2・§3.8・T-4-10、仕様書 §5.2・§4(g)。D4＝§28、W2-followup＝§29。
+
+> リベースについて：D5 作業中に W2-followup（PR #25）が master 3adc2cfa としてマージされた。ブランチは `commit_on_parent.py` で 3adc2cfa へ載せ直し、24コミットを同順で再演した。重なったのは `Src/MergeDoc.cpp`（W2 の DoSave 文言 `WinMerge`→`WizMerge` の 1行）と `Translations/WinMerge/Japanese.po`（プラグイン題名の改名 1件＋ApplyPatch 題名の新規 1件）のみで、両方とも D5 の変更と行が重ならず、手でマージした。PR #27 は開いたまま（載せ直し直後に state=open・mergeable を確認）。
+
+### 30.1 変更一覧
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| 8dedf5a3 | Src/Merge20/Merge20Split.h | 純粋モジュール（新規）。行ペアリング・分割可否・分割範囲・グループ往復・先頭行一致 |
+| dc732eea | Src/Merge20/Merge20Split.cpp | 同上の実装。MFC 不使用 |
+| 25ce9ff1 | Testing/GoogleTest/Merge20/Merge20Split_test.cpp | 単体テスト（新規、8テスト）。2-way／旧のみ／新のみ／3-way、分割可否ガード、グループ往復 |
+| d1c79052 | Src/Merge.vcxproj | Merge20Split を登録（pch.h グループ） |
+| 91fd78f8 | Src/Merge.vcxproj.filters | 同上 |
+| 2c92d5bc | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Merge20Split とテストを登録 |
+| c6fb83f6 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上 |
+| bb26da3e | Src/DiffList.h | `InsertDiff`／`EraseDiffs` 宣言 |
+| 133813ff | Src/DiffList.cpp | 同上の実装（範囲チェック付き。呼出元が `ConstructSignificantChain()` を呼ぶ） |
+| 2275b47e | Src/Merge20/Merge20Types.h | `Merge20SplitGroup`（op／begin[3]／end[3]／dbegin／dend／blank[3]／rows）と `Merge20FileState::splitGroups` |
+| 39b21ac5 | Src/MergeDoc.h | 分割／再結合 API（`Merge20CanSplitDiff`／`Merge20CanRegroupDiff`／`Merge20SplitDiff`／`Merge20RegroupDiff`／`Merge20ReapplySplitGroups`、コマンドハンドラ）とサイドカー `m_merge20SplitGroups` |
+| e765cee3 | Src/MergeDocResultPane.cpp | 分割／再結合の本体。判定引き継ぎ、学習候補の再計算、結果ペイン右クリックメニューのハンドラ、手編集ガード |
+| a19be3c4 | Src/MergeDoc.cpp | コマンドの配線、Rescan でのサイドカークリア。W2-followup の DoSave 文言改名をマージ済み |
+| 676b8b45 | Src/Merge20/Merge20FocusDock.cpp | フォーカスドックの分割／戻すボタンを有効化（D4 は表示のみ・無効化） |
+| d68dbc8c | Src/resource.h | `ID_MERGE20_SPLIT_DIFF` 38954、`ID_MERGE20_REGROUP_DIFF` 38955、`_APS_NEXT_COMMAND_VALUE`→38956 |
+| 2671eb48 | Src/Merge.rc | 4つの結果メニュー（2-way／3-way、ポップアップ／メイン）に Split／Regroup を追加 |
+| 3e40d86e | Translations/WinMerge/Japanese.po | 手編集ガード警告の日本語訳 1件。W2-followup のプラグイン題名改名をマージ済み |
+| 9355aa89 | Src/Merge20/Merge20Session.h | `Merge20SessionFile::splits` |
+| 97c136bd | Src/Merge20/Merge20Session.cpp | セッション JSON の任意 `splits` 配列。範囲チェック付きパース（不正な項目は捨てる） |
+| 1339bfed | Testing/GoogleTest/Merge20/Merge20Session_test.cpp | `SplitsRoundTrip` テスト（往復／v1 互換／不正項目の破棄） |
+| b7fd19cb | Src/DiffContext.h | `SetMerge20SplitGroups` 宣言 |
+| 9ea46b10 | Src/DiffContext.cpp | 同上の実装 |
+| 41714767 | Src/Merge20/Merge20SessionDoc.h | `Merge20SessionRestoreMergeDoc` の注記（分割の再適用） |
+| b262f3c9 | Src/Merge20/Merge20SessionDoc.cpp | 分割グループの退避／適用。復元時は判定復元の前に分割を再適用 |
+
+### 30.2 設計判断（T-4-10 ほか）
+
+- T-4-10 の結論は完全分割（Option A）。理由：(1) マージセッション中は `Rescan()` が `RESCAN_SUPPRESSED` を返すため、差分リストがセッション中に再構築されることはない。(2) 行ごとの部分範囲は親のゴースト配置から算術で導ける（各ペインの実線は見かけ範囲の先頭に詰まっており、残りがゴースト）。バッファの再プライミングは不要。(3) DIFFRANGE を分割すれば `BuildMergeResult`・`ResultChooseSources`・セッション・学習候補・移動・位置ビューなど既存の仕組みがそのまま使える。結果ペイン表示だけに落とす代替案は、行単位の判定を保持する影の仕組みが別途必要になるため却下した。
+- 判定の引き継ぎ（設計書 §4.2 の既定）：親が Chosen／Auto なら `srcPanes` を全行へ引き継ぐ（Auto は `Merge20SetResultSegmentState` で復元）。Unresolved／Conflict の親は行ごとに未解決のまま。再結合は先頭行の判定を引き継ぐ（HTML の regroupHunk と同じ）。
+- 行ごとの op 規則：全ペインに行がある→親の op。1ペインだけ→そのペインの `OP_*ONLY`。3-way で 2ペイン→`OP_DIFF`（2ペイン用の op はないため、競合の意味を保つ）。`OP_TRIVIAL`／`OP_NONE` と 1行の範囲は分割不可。さらに `dend-dbegin+1 == rowCount` を要求し、未プライミングのバッファを弾く。
+- 学習：分割そのものは記録しない（人の明示的な差分判定ではないため）。分割後に行を判定したときだけ、既存の記録口で記録される。分割・再結合の直後に `Merge20LearnRefreshCandidates` を呼んで候補を再計算する。却下集合のキーは分割前の差分に対するものなので、却下した親の行に候補が再表示されることがある（設計書 §4.2 の扱いで許容）。
+- 同一性（設計書 §4.2 の 3層目）：`CMergeDoc` のサイドカー `std::vector<Merge20SplitGroup>`。インデックスは保持せず、先頭行の同一性（`begin[]`＋`dbegin`）で見つけ直す。再結合時はグループ記録を先に落とす（親自身が先頭行に一致するため）。
+- セッション：`splits` は任意項目（v1 ファイルは `splits` なしで読める）。復元は判定ループの前に `Merge20ReapplySplitGroups` を呼び、親を範囲の同一性で探して格納順に再適用する。親が合わなくなったグループは黙って飛ばし、その行の判定も従来どおり飛ばす。
+- 手編集ガード：結果セグメントに Edited が 1件でもあれば分割・再結合を拒否し、警告メッセージボックスを出す（`BuildMergeResult()` が結果バッファ全体を作り直すため、手編集が失われる）。再構築で undo 履歴が消えるのは既知の副作用。
+- UI は 3箇所のうち 2箇所：フォーカスドックのボタン（D4 で表示済み・無効化済みを有効化）と、メイン画面＝結果ペインの右クリックメニュー＋メインメニュー（4メニューすべて）。スナイパー側のボタンは D6 と調整（`Merge20SplitDiff`／`Merge20RegroupDiff`／`Merge20Can*` は public）。
+
+### 30.3 CI 結果（最終 head b262f3c9）
+
+- 実行 ID：45758285091、結論：success。ジョブ 139701990552（build）success。
+- GoogleTest：636件全パス（627＋新規 9件）。全文ログ `[==========] 636 tests from 51 test suites ran. (1510 ms total)`／`[  PASSED  ] 636 tests.`。`[  FAILED  ]` は 0件（「FAILED」を含む 4行は .po チェック出力中の `IDS_FILESAVE_FAILED`／`IDS_MERGE_RESULT_SAVE_FAILED` 文字列）。Merge20Split の 8テストと `Merge20Session.SplitsRoundTrip` も全パス。CI の .po チェックも通過（"Merge20 strings present in the bundled Japanese.po."）。
+- 成果物：WinMerge-x64.zip（ID 15089706058、26,327,263 バイト）、WinMerge-x64-Setup-x64.exe（ID 15090135355、39,767,979 バイト）。両方とも失効日 2027-02-24T04:55:51Z、未失効。
+- エラー 0件（全文ログに `error C*`／`error LNK*`／`error MSB*` なし）。
+- 注：リベース前の head（46960242）の実行 45756835370 も success。リベース後の head b262f3c9 に対する実行が本節の対象。記録コミット自体は MERGE20_NOTES.md のみでコードはこの head と同一のため、記録コミット後の最終 head に対する実行は別途確認する（親への報告に記載）。
+
+### 30.4 検証ゲート
+
+- (a) 仕様・設計：仕様書 §5.2 の分割・再結合（行単位で判定、再結合は先頭行の判定）は実装。設計書 §5.2 D5・§4.2・§3.8・T-4-10 は §30.2 のとおり。スナイパーのボタンは D6 へ（設計書どおり調整事項）。
+- (b) 利用可否：分割→行単位判定→再結合→保存・復元の流れはコード上の通知点（`BuildMergeResult`／`ResultChooseSources`／`Merge20LearnRefreshCandidates`／`UpdateAllViews`／セッションの退避・再適用）で網羅。実機での操作確認は未検証（チェックリストは §30.5）。
+- (c) 表示：新規 `_()` 文字列は警告文 1件のみで日本語訳あり。Split／Regroup は既存の msgid（「分割」／「戻す」）を再利用。新規レイアウトなし。実機での表示確認は未検証。
+- (d) 回帰：フォルダ比較・ファイル比較の経路は変更していない（`InsertDiff`／`EraseDiffs` は分割・再結合からのみ呼ぶ。メニュー追加のみ）。実機での回帰確認は未検証。
+- 副産物：master の Japanese.po に二重エンコード等の破損がないか全走査した。重複 msgid（''・'None'・'Disabled'・'Binary'・'Folder'・'Diff'）は master にもともとあるもので、D5 の追加によるものではない。English.pot は master で 25件の .po msgid を欠いている（W2-followup 自身の新規項目を含む）ため、D5 では .pot を変更していない（過去スライスと同じ扱い）。
+
+### 30.5 D6 への引き継ぎと残課題
+
+- スナイパーの分割／戻すボタン（D6）。API は public（`Merge20SplitDiff`／`Merge20RegroupDiff`／`Merge20CanSplitDiff`／`Merge20CanRegroupDiff`）。
+- 分割・再結合は結果に手編集があると拒否される。手編集してから分割したい場合は、先に結果を保存するか手編集をやめること。再構築で undo 履歴が消える。
+- 分割はセッション内のみ有効。再スキャン・セッション終了で分割は消える。セッション保存・再開では `splits` で復元されるが、親の差分が変わっていたグループは黙って飛ばされる（その行の判定も復元されない）。
+- D4 からの残課題は変わらず：ワードラップ ON 時のスクロールずれ、結果ペインでの手編集のドック反映遅れ、3-way 片側差分の判定ボタンなし、フォーカス結果ビューの構文ハイライト未実装。
+- 実機チェックリスト：(1) 3行以上の変更差分でフォーカスドックの分割ボタンを押すと、行ごとの差分になること。(2) 分割した各行を個別に判定できること（旧／新／両方／不採用）。(3) 戻すボタンで元の差分に戻り、先頭行の判定が引き継がれること。(4) 結果ペインの右クリックメニューからも分割・戻すができること。(5) 分割した状態でセッション保存→再開すると分割が復元され、行ごとの判定も復元されること。(6) 分割した親を学習で却下していた場合、行に候補が再表示されることがあること。(7) 結果を手編集した状態で分割しようとすると警告が出て拒否されること。(8) 日本語が文字化けせず表示されること（警告文・メニュー）。(9) 既存のフォルダ比較・ファイル比較が従来どおり動くこと。

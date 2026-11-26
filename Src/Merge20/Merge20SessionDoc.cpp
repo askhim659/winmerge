@@ -155,6 +155,9 @@ namespace
 		if (pItem == nullptr)
 			return;
 		doc.GetDiffContext().SetMerge20DiffJudgments(pItem->getItemRelativePath(), ExtractJudgments(mergeDoc));
+		// Merge20 (Phase 4 D5): stash the split groups too, so a
+		// save covers the splits of open file compares as well.
+		doc.GetDiffContext().SetMerge20SplitGroups(pItem->getItemRelativePath(), mergeDoc.Merge20GetSplitGroups());
 	}
 
 	String Utf8ToString(const std::string& utf8)
@@ -247,6 +250,7 @@ bool Merge20SessionBuildFromDoc(CDirDoc& doc, Merge20Session& session)
 		file.nsdiffs = di.nsdiffs;
 		file.nidiffs = di.nidiffs;
 		file.diffs = st.diffJudgments;
+		file.splits = st.splitGroups;
 		fresh.files.push_back(std::move(file));
 	}
 	session = std::move(fresh);
@@ -416,6 +420,7 @@ Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20
 		st.summary = file.summary;
 		st.memo = file.memo;
 		st.diffJudgments = file.diffs;
+		st.splitGroups = file.splits;
 		ctxt.SetMerge20SessionState(di.getItemRelativePath(), st);
 		++result.restored;
 		result.diffsRestored += static_cast<int>(file.diffs.size());
@@ -489,6 +494,12 @@ void Merge20SessionRestoreMergeDoc(CMergeDoc& doc)
 	if (pItem == nullptr)
 		return;
 	const Merge20FileState& st = pFolderDoc->GetDiffContext().GetMerge20FileStates().GetState(pItem->getItemRelativePath());
+	// Merge20 (Phase 4 D5): re-apply the saved split groups first, so
+	// the saved per-row judgments below match the split ranges they
+	// were saved against. A group whose parent diff no longer matches
+	// is skipped; its per-row judgments are then skipped the same way
+	// any changed diff is (never forced).
+	doc.Merge20ReapplySplitGroups(st.splitGroups);
 	if (st.diffJudgments.empty())
 		return;
 	for (const Merge20DiffJudgment& judgment : st.diffJudgments)

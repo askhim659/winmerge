@@ -226,6 +226,72 @@ TEST(Merge20Session, SessionRoundTrip)
 	EXPECT_EQ(back.files[1].rightMtime, -1);
 }
 
+TEST(Merge20Session, SplitsRoundTrip)
+{
+	// Merge20 (Phase 4 D5): split groups survive a save/load cycle,
+	// so a restore can re-apply the splits before restoring the
+	// per-row judgments.
+	Merge20Session session = MakeSession();
+	Merge20SplitGroup group;
+	group.op = 4;
+	group.begin[0] = 10;
+	group.begin[1] = 20;
+	group.begin[2] = -1;
+	group.end[0] = 12;
+	group.end[1] = 24;
+	group.end[2] = -1;
+	group.dbegin = 30;
+	group.dend = 34;
+	group.blank[0] = -1;
+	group.blank[1] = -1;
+	group.blank[2] = -1;
+	group.rows = 5;
+	session.files[0].splits.push_back(group);
+	std::string json;
+	ASSERT_TRUE(Merge20SessionToJson(session, json));
+	EXPECT_NE(json.find("\"splits\""), std::string::npos);
+	Merge20Session back;
+	std::string err;
+	int skipped = -1;
+	ASSERT_TRUE(Merge20SessionFromJson(json, back, err, skipped));
+	EXPECT_TRUE(err.empty());
+	EXPECT_EQ(skipped, 0);
+	ASSERT_EQ(back.files.size(), 2u);
+	ASSERT_EQ(back.files[0].splits.size(), 1u);
+	const Merge20SplitGroup& g = back.files[0].splits[0];
+	EXPECT_EQ(g.op, 4);
+	EXPECT_EQ(g.begin[0], 10);
+	EXPECT_EQ(g.begin[1], 20);
+	EXPECT_EQ(g.begin[2], -1);
+	EXPECT_EQ(g.end[0], 12);
+	EXPECT_EQ(g.end[1], 24);
+	EXPECT_EQ(g.end[2], -1);
+	EXPECT_EQ(g.dbegin, 30);
+	EXPECT_EQ(g.dend, 34);
+	EXPECT_EQ(g.blank[0], -1);
+	EXPECT_EQ(g.blank[1], -1);
+	EXPECT_EQ(g.blank[2], -1);
+	EXPECT_EQ(g.rows, 5);
+	EXPECT_TRUE(back.files[1].splits.empty());
+	// A file saved before D5 has no "splits" member and still loads.
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,\"files\":["
+		"{\"path\":\"f.txt\",\"diffs\":[]}]}",
+		back, err, skipped));
+	ASSERT_EQ(back.files.size(), 1u);
+	EXPECT_TRUE(back.files[0].splits.empty());
+	// A bad split group inside a good file is dropped, the file survives.
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,\"files\":["
+		"{\"path\":\"f.txt\",\"diffs\":[],\"splits\":["
+		"{\"op\":4,\"begin\":[10,20,-1],\"end\":[12,24,-1],\"dbegin\":30,\"dend\":34,\"blank\":[-1,-1,-1],\"rows\":5},"
+		"{\"op\":4,\"begin\":[10,20,-1],\"end\":[12,24,-1],\"dbegin\":30,\"dend\":34,\"blank\":[-1,-1,-1],\"rows\":1}]}]}",
+		back, err, skipped));
+	ASSERT_EQ(back.files.size(), 1u);
+	ASSERT_EQ(back.files[0].splits.size(), 1u);
+	EXPECT_EQ(back.files[0].splits[0].rows, 5);
+}
+
 TEST(Merge20Session, SessionFormatErrors)
 {
 	Merge20Session back;

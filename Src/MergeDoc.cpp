@@ -158,6 +158,11 @@ BEGIN_MESSAGE_MAP(CMergeDoc, CDocument)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_LEARN_APPLY, OnUpdateMerge20LearnApply)
 	ON_COMMAND(ID_MERGE20_LEARN_DISMISS, OnMerge20LearnDismiss)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_LEARN_DISMISS, OnUpdateMerge20LearnDismiss)
+	// Merge20 (Phase 4 D5): split / regroup commands (result pane context menu)
+	ON_COMMAND(ID_MERGE20_SPLIT_DIFF, OnMerge20SplitDiff)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_SPLIT_DIFF, OnUpdateMerge20SplitDiff)
+	ON_COMMAND(ID_MERGE20_REGROUP_DIFF, OnMerge20RegroupDiff)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_REGROUP_DIFF, OnUpdateMerge20RegroupDiff)
 	ON_COMMAND(ID_MERGE_START_SESSION, OnMergeStartSession)
 	ON_UPDATE_COMMAND_UI(ID_MERGE_START_SESSION, OnUpdateMergeStartSession)
 	ON_COMMAND(ID_MERGE_END_SESSION, OnMergeEndSession)
@@ -553,6 +558,11 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 	// Clear diff list
 	m_diffList.Clear();
 	m_nCurDiff = -1;
+	// Merge20 (Phase 4 D5): the rebuilt list has no split groups; the
+	// sidecar entries (which identify groups by their ranges) would
+	// otherwise point at ranges that no longer exist. Rescan never
+	// runs while a merge session is active, so no live split is lost.
+	m_merge20SplitGroups.clear();
 	m_CurWordDiff = { -1, static_cast<size_t>(-1), -1 };
 	// Clear moved lines lists
 	if (m_diffWrapper.GetDetectMovedBlocks())

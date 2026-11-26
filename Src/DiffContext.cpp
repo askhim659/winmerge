@@ -229,6 +229,16 @@ void CDiffContext::SetMerge20DiffJudgments(const String& relPath, const std::vec
 }
 
 /**
+ * @brief Merge20 (D5): store the split diff groups of one file.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] groups Split groups of the file's merge doc.
+ */
+void CDiffContext::SetMerge20SplitGroups(const String& relPath, const std::vector<Merge20SplitGroup>& groups)
+{
+	m_merge20FileStates.GetOrCreateState(relPath).splitGroups = groups;
+}
+
+/**
  * @brief Merge20 (S8): restore a whole saved per-file state.
  * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
  * @param [in] state Saved state from the session file. Every field is

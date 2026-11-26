@@ -144,6 +144,39 @@ void DiffList::AddDiff(const DIFFRANGE & di)
 }
 
 /**
+ * @brief Insert a diff before the given index (Merge20 Phase 4 D5:
+ * splitting a DIFFRANGE into per-row ranges).
+ * @param [in] nDiff Index to insert before (GetSize() appends).
+ * @param [in] di Difference to insert.
+ * @return true if the index was valid and the diff was inserted.
+ * @note The caller must call ConstructSignificantChain() afterwards:
+ * the inserted range's chain links are only rebuilt there.
+ */
+bool DiffList::InsertDiff(int nDiff, const DIFFRANGE & di)
+{
+	if (nDiff < 0 || nDiff > (int) m_diffs.size())
+		return false;
+	m_diffs.insert(m_diffs.begin() + nDiff, DiffRangeInfo(di));
+	return true;
+}
+
+/**
+ * @brief Erase diffs starting at the given index (Merge20 Phase 4 D5:
+ * replacing a split group with its original range, and vice versa).
+ * @param [in] nFirst First index to erase.
+ * @param [in] nCount Number of diffs to erase.
+ * @return true if the range was in bounds and erased.
+ * @note The caller must call ConstructSignificantChain() afterwards.
+ */
+bool DiffList::EraseDiffs(int nFirst, int nCount)
+{
+	if (nFirst < 0 || nCount < 0 || nFirst + nCount > (int) m_diffs.size())
+		return false;
+	m_diffs.erase(m_diffs.begin() + nFirst, m_diffs.begin() + nFirst + nCount);
+	return true;
+}
+
+/**
  * @brief Checks if diff in given list index is significant or not.
  * @param [in] nDiff Index of DIFFRANGE to check.
  * @return true if diff is significant, false if not.

@@ -11224,6 +11224,12 @@ msgstr "【Wiz】✂ 分割"
 msgid "Regroup"
 msgstr "【Wiz】↩ 戻す"
 
+#. Merge20 (D5): split/regroup refused when the result has hand edits
+#. (CMergeDoc::Merge20SplitDiff / Merge20RegroupDiff)
+#: Src/MergeDocResultPane.cpp
+msgid "The merge result contains hand-edited lines. Splitting or regrouping would discard those edits, so the operation was cancelled."
+msgstr "マージ結果に手編集された行があります。分割または再結合を行うとその編集が失われるため、操作を中止しました。"
+
 #. Merge20 (D4): focus dock header, diff position and state (CMerge20FocusDock)
 #: Src/Merge20/Merge20FocusDock.cpp
 msgid "Diff %1 of %2 (%3)"
