@@ -219,7 +219,7 @@ bool CMerge20SniperDlg::HandleSniperKey(UINT nChar)
 			int nLineHeight = SniperFallbackLineHeight;
 			if (m_pView[0] != nullptr && m_pView[0]->GetSafeHwnd() != nullptr)
 			{
-				const int nHeight = m_pView[0]->GetLineHeight();
+				const int nHeight = m_pView[0]->GetSniperLineHeight();
 				if (nHeight > 0)
 					nLineHeight = nHeight;
 			}
