@@ -497,14 +497,14 @@ BEGIN
     END
     POPUP "&Help"
     BEGIN
-        MENUITEM "&WinMerge Help\tF1",          ID_HELP_CONTENTS
+        MENUITEM "&WizMerge Help\tF1",          ID_HELP_CONTENTS
         MENUITEM SEPARATOR
         MENUITEM "R&elease Notes",              ID_HELP_RELEASENOTES
         MENUITEM "&Translations",               ID_HELP_TRANSLATIONS
         MENUITEM "C&onfiguration",              ID_HELP_GETCONFIG
         MENUITEM SEPARATOR
         MENUITEM "&GNU General Public License", ID_HELP_GNULICENSE
-        MENUITEM "&About WinMerge...",          ID_APP_ABOUT
+        MENUITEM "&About WizMerge...",          ID_APP_ABOUT
     END
 END
 
@@ -674,14 +674,14 @@ BEGIN
     END
     POPUP "&Help"
     BEGIN
-        MENUITEM "&WinMerge Help\tF1",          ID_HELP_CONTENTS
+        MENUITEM "&WizMerge Help\tF1",          ID_HELP_CONTENTS
         MENUITEM SEPARATOR
         MENUITEM "R&elease Notes",              ID_HELP_RELEASENOTES
         MENUITEM "&Translations",               ID_HELP_TRANSLATIONS
         MENUITEM "C&onfiguration",              ID_HELP_GETCONFIG
         MENUITEM SEPARATOR
         MENUITEM "&GNU General Public License", ID_HELP_GNULICENSE
-        MENUITEM "&About WinMerge...",          ID_APP_ABOUT
+        MENUITEM "&About WizMerge...",          ID_APP_ABOUT
     END
 END
 
@@ -1020,14 +1020,14 @@ BEGIN
     END
     POPUP "&Help"
     BEGIN
-        MENUITEM "&WinMerge Help\tF1",          ID_HELP_CONTENTS
+        MENUITEM "&WizMerge Help\tF1",          ID_HELP_CONTENTS
         MENUITEM SEPARATOR
         MENUITEM "R&elease Notes",              ID_HELP_RELEASENOTES
         MENUITEM "&Translations",               ID_HELP_TRANSLATIONS
         MENUITEM "C&onfiguration",              ID_HELP_GETCONFIG
         MENUITEM SEPARATOR
         MENUITEM "&GNU General Public License", ID_HELP_GNULICENSE
-        MENUITEM "&About WinMerge...",          ID_APP_ABOUT
+        MENUITEM "&About WizMerge...",          ID_APP_ABOUT
     END
 END
 
@@ -2291,11 +2291,11 @@ END
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 366, 237
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "About WinMerge"
+CAPTION "About WizMerge"
 FONT 8, FONTNAME, 0, 0, 0x1
 BEGIN
     LTEXT           "",IDC_GNU_ASCII,7,50,200,120
-    CONTROL         "Visit the WinMerge Homepage!",IDC_WWW,"SysLink",LWS_IGNORERETURN | 0x1,120,222,167,10
+    CONTROL         "Visit the WizMerge Homepage!",IDC_WWW,"SysLink",LWS_IGNORERETURN | 0x1,120,222,167,10
     LTEXT           "[VERSION COPYRIGHT GOES HERE]",IDC_COMPANY,7,174,350,42
     DEFPUSHBUTTON   "OK",IDOK,295,220,65,14
     PUSHBUTTON      "Contributors",IDC_OPEN_CONTRIBUTORS,7,220,65,14
@@ -3091,7 +3091,7 @@ BEGIN
     GROUPBOX        "Default Codepage",IDC_STATIC,7,7,311,93
     LTEXT           "Select the default codepage for non-Unicode files:",IDC_STATIC,14,18,298,20
     CONTROL         "System codepage",IDC_CP_SYSTEM,"Button",BS_AUTORADIOBUTTON | WS_GROUP,13,42,300,10
-    CONTROL         "According to WinMerge User Interface",IDC_CP_UI,"Button",BS_AUTORADIOBUTTON,13,55,300,10
+    CONTROL         "According to WizMerge User Interface",IDC_CP_UI,"Button",BS_AUTORADIOBUTTON,13,55,300,10
     CONTROL         "Custom codepage:",IDC_CP_CUSTOM,"Button",BS_AUTORADIOBUTTON,13,68,300,10
     COMBOBOX        IDC_CUSTOM_CP_NUMBER,12,80,299,130,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_GROUP | WS_TABSTOP
     CONTROL         "Detect codepage for: .html, .rc, .xml\nRestart required.",IDC_DETECT_CODEPAGE,
@@ -4689,7 +4689,7 @@ END
 
 STRINGTABLE
 BEGIN
-    AFX_IDS_APP_TITLE       "WinMerge"
+    AFX_IDS_APP_TITLE       "WizMerge"
 END
 
 // Generic status bar strings
@@ -4735,7 +4735,7 @@ END
 // WINMERGE INFORMATION
 STRINGTABLE
 BEGIN
-    IDR_MAINFRAME           "WinMerge"
+    IDR_MAINFRAME           "WizMerge"
     IDR_MERGEDOCTYPE        "\nFileCompare\n\n\n\nWinMerge.FileCompare\nWinMerge File Compare"
     IDR_DIRDOCTYPE          "\nFolderCompare\n\n\n\nWinMerge.FolderCompare\nWinMerge Folder Compare"
 END
@@ -4743,7 +4743,7 @@ END
 // SPLASH SCREEN TEXTS
 STRINGTABLE
 BEGIN
-    IDS_SPLASH_GPLTEXT      "WinMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
+    IDS_SPLASH_GPLTEXT      "WizMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
 END
 
 // "DO NOT SHOW AGAIN" MESSAGEBOXES
@@ -4843,7 +4843,7 @@ BEGIN
     IDS_OPEN_TITLE          "Open"
     IDS_PROGRAMFILES        "Programs|*.exe;*.bat;*.cmd|All Files (*.*)|*.*||"
     IDS_ALLFILES            "All Files (*.*)|*.*||"
-    IDS_PROJECTFILES        "WinMerge Project Files (*.WinMerge)|*.WinMerge||"
+    IDS_PROJECTFILES        "WizMerge Project Files (*.WinMerge)|*.WinMerge||"
     IDS_PROJECTFILES_EXT    "WinMerge"
     IDS_INIFILES            "Options files (*.ini)|*.ini|All Files (*.*)|*.*||"
     IDS_REPLACELIST_FILES   "Tab-Separated Values (*.tsv;*.txt)|*.tsv;*.txt|All Files (*.*)|*.*||"
@@ -5049,7 +5049,7 @@ BEGIN
                             "Plugin '%2' cannot pack changes to middle file into '%1'.\n\nOriginal unchanged. Save unpacked version?"
     IDS_FILEPACK_FAILED_RIGHT 
                             "Plugin '%2' cannot pack changes to right file into '%1'.\n\nOriginal unchanged. Save unpacked version?"
-    IDS_FILECHANGED_ONDISK  "Another application updated\n%1\nsince WinMerge loaded it.\n\nOverwrite?"
+    IDS_FILECHANGED_ONDISK  "Another application updated\n%1\nsince WizMerge loaded it.\n\nOverwrite?"
     IDS_SAVEREADONLY_MULTI  "%1\nis read-only. Override?"
     IDS_FILECHANGED_RESCAN  "Another application updated\n%1\nsince last scan.\n\nReload?"
     IDS_SAVE_LEFT_AS        "Save Left File As"
@@ -5962,7 +5962,7 @@ BEGIN
     IDS_CLIPBOARDHISTORY_NOT_SUPPORTED1 
                             "This system does not support clipboard history."
     IDS_CLIPBOARDHISTORY_NOT_SUPPORTED2 
-                            "32-bit WinMerge does not support Clipboard Compare"
+                            "32-bit WizMerge does not support Clipboard Compare"
 END
 
 STRINGTABLE
@@ -6093,7 +6093,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_DETECTED_PREVIOUS_CRASH      "WinMerge detected a previous crash. Please report this if possible."
+    IDS_DETECTED_PREVIOUS_CRASH      "WizMerge detected a previous crash. Please report this if possible."
 END
 
 STRINGTABLE

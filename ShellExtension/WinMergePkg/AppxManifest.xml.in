@@ -14,7 +14,7 @@
   IgnorableNamespaces="uap uap2 uap3 rescap desktop desktop4 desktop5 desktop6 uap10 com">
   <Identity Name="WinMerge" ProcessorArchitecture="neutral" Publisher="${Publisher}" Version="1.0.8.0" />
   <Properties>
-    <DisplayName>WinMerge</DisplayName>
+    <DisplayName>WizMerge</DisplayName>
     <PublisherDisplayName>winmerge.org</PublisherDisplayName>
     <Logo>Assets\storelogo.png</Logo>
     <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
@@ -33,7 +33,7 @@
   </Capabilities>
   <Applications>
     <Application Id="WinMerge" Executable="WinMergeU.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
-      <uap:VisualElements AppListEntry="none" DisplayName="WinMerge" Description="WinMerge" BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
+      <uap:VisualElements AppListEntry="none" DisplayName="WizMerge" Description="WizMerge" BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\LargeTile.png" Square71x71Logo="Assets\SmallTile.png"></uap:DefaultTile>
       </uap:VisualElements>
       <Extensions>
@@ -52,7 +52,7 @@
         </desktop4:Extension>
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:SurrogateServer  DisplayName="WinMerge context menu verb handler">
+            <com:SurrogateServer  DisplayName="WizMerge context menu verb handler">
               <com:Class Id="90340779-F37E-468E-9728-A2593498ED32" Path="WinMergeContextMenu.dll" ThreadingModel="STA"/>
             </com:SurrogateServer>
           </com:ComServer>

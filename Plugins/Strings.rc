@@ -209,7 +209,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_PLUGIN_COMPAREMSEXCELFILES_STR1 
-                            "CompareMSExcelFiles.sct WinMerge Plugin Options"
+                            "CompareMSExcelFiles.sct WizMerge Plugin Options"
     IDS_PLUGIN_COMPAREMSEXCELFILES_STR2 
                             "Extract workbook data to multiple files"
     IDS_PLUGIN_COMPAREMSEXCELFILES_STR3 "Update external references (links)"
@@ -233,7 +233,7 @@ STRINGTABLE
 BEGIN
     IDS_PLUGIN_COMPAREMSEXCELFILES_STR16 "Compare VBA macros"
     IDS_PLUGIN_COMPAREMSWORDFILES_STR1 
-                            "CompareMSWordFiles.sct WinMerge Plugin Options"
+                            "CompareMSWordFiles.sct WizMerge Plugin Options"
     IDS_PLUGIN_COMPAREMSWORDFILES_STR2 
                             "Extract document data to multiple files"
     IDS_PLUGIN_COMPAREMSWORDFILES_STR3 "Compare document properties"
@@ -250,7 +250,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_PLUGIN_COMPAREMSPOWERPOINTFILES_STR1 
-                            "CompareMSPowerPointFiles.sct WinMerge Plugin Options"
+                            "CompareMSPowerPointFiles.sct WizMerge Plugin Options"
     IDS_PLUGIN_COMPAREMSPOWERPOINTFILES_STR2 
                             "Extract slide data to multiple files"
     IDS_PLUGIN_COMPAREMSPOWERPOINTFILES_STR3 "Compare document properties"
@@ -270,7 +270,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_PLUGIN_COMPAREMSVISIOFILES_STR1 
-                            "CompareMSVisioFiles.sct WinMerge Plugin Options"
+                            "CompareMSVisioFiles.sct WizMerge Plugin Options"
     IDS_PLUGIN_COMPAREMSVISIOFILES_STR2 "Extract page data to multiple files"
     IDS_PLUGIN_COMPAREMSVISIOFILES_STR3 "Compare pages as image (very slow)"
     IDS_PLUGIN_COMPAREMSVISIOFILES_STR4 "Compare texts in shapes"
@@ -282,7 +282,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_PLUGIN_PREDIFFLINEFILTER_STR1 
-                            "PrediffLineFilter.sct WinMerge Plugin Options"
+                            "PrediffLineFilter.sct WizMerge Plugin Options"
     IDS_PLUGIN_PREDIFFLINEFILTER_STR2 "Add"
     IDS_PLUGIN_PREDIFFLINEFILTER_STR3 "Delete"
     IDS_PLUGIN_PREDIFFLINEFILTER_STR4 "Enabled"
@@ -319,7 +319,7 @@ END
 STRINGTABLE
 BEGIN
     IDS_PLUGIN_EDITORADDIN_STR1 
-                            "AI.sct WinMerge Plugin Options"
+                            "AI.sct WizMerge Plugin Options"
     IDS_PLUGIN_EDITORADDIN_STR2
                             "Enter prompt"
     IDS_PLUGIN_EDITORADDIN_STR3 

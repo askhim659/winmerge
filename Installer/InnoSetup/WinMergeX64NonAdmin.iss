@@ -59,9 +59,9 @@
 #endif
 
 [Setup]
-AppName=WinMerge
+AppName=WizMerge
 AppVersion={#AppVersion}
-AppVerName=WinMerge {#ARCH} (Current user, 64-bit)
+AppVerName=WizMerge {#ARCH} (Current user, 64-bit)
 AppPublisher=Thingamahoochie Software
 AppPublisherURL=https://WinMerge.org/
 AppSupportURL=https://WinMerge.org/
@@ -70,7 +70,7 @@ AppCopyright=(c) 1996-{#CurYear} Dean P. Grimm / Thingamahoochie Software
 
 ; Installer executable's version resource info
 VersionInfoCompany=https://winmerge.org
-VersionInfoDescription=WinMerge Installer
+VersionInfoDescription=WizMerge Installer
 VersionInfoVersion={#AppVersion}
 
 ;This is in case an older version of the installer happened to be
@@ -79,14 +79,14 @@ DirExistsWarning=no
 ;Tells the installer to only display a select language dialog if the an exact match wasn't found
 ShowLanguageDialog=auto
 
-DefaultDirName={userpf}\WinMerge
-DefaultGroupName=WinMerge
+DefaultDirName={userpf}\WizMerge
+DefaultGroupName=WizMerge
 DisableStartupPrompt=true
 AllowNoIcons=true
 InfoBeforeFile=..\..\Docs\users\GPL.rtf
 InfoAfterFile=..\..\Docs\users\ReadMe.txt
 
-OutputBaseFilename=WinMerge-{#AppVersion}-{#ARCH}-PerUser-Setup
+OutputBaseFilename=WizMerge-{#AppVersion}-{#ARCH}-PerUser-Setup
 
 PrivilegesRequired=lowest
 
@@ -174,7 +174,7 @@ Name: Vietnamese; MessagesFile: ..\..\Translations\InnoSetup\Unbundled.is5\Vietn
 
 
 [Messages]
-SetupWindowTitle=WinMerge {#AppVersion} {#ARCH}
+SetupWindowTitle=WizMerge {#AppVersion} {#ARCH}
 
 [Types]
 Name: typical; Description: {cm:TypicalInstallation}
@@ -387,8 +387,8 @@ Name: {group}\{cm:ReadMe}.lnk; Type: files; Check: not WizardNoIcons
 Name: {userdesktop}\WinMerge.lnk; Type: files; Check: not IsTaskSelected('DesktopIcon')
 
 ;Removes the Uninstall icon from the start menu...
-Name: {group}\{cm:UninstallProgram,WinMerge}.lnk; Type: files; Check: not WizardNoIcons
-Name: {group}\{cm:UninstallProgram,WinMerge}; Type: files; Check: not WizardNoIcons
+Name: {group}\{cm:UninstallProgram,WizMerge}.lnk; Type: files; Check: not WizardNoIcons
+Name: {group}\{cm:UninstallProgram,WizMerge}; Type: files; Check: not WizardNoIcons
 
 ;Remove ANSI executable link from start menu for NT-based Windows versions
 ;This was installed earlier, but not anymore.
@@ -700,7 +700,7 @@ Name: "{app}\MergePlugins"
 
 [Icons]
 ;Start Menu Icons
-Name: {group}\WinMerge; Filename: {app}\WinMergeU.exe; AppUserModelID: "Thingamahoochie.WinMerge"; Check: not WizardNoIcons
+Name: {group}\WizMerge; Filename: {app}\WinMergeU.exe; AppUserModelID: "Thingamahoochie.WinMerge"; Check: not WizardNoIcons
 Name: {group}\{cm:UsersGuide}; Filename: {app}\Docs\WinMerge.chm; Check: not WizardNoIcons
 
 ;Desktop Icon

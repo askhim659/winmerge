@@ -44,7 +44,7 @@
     
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="$(var.ProgramFilesFolder)">
-        <Directory Id="INSTALLDIR" Name="WinMerge">
+        <Directory Id="INSTALLDIR" Name="WizMerge">
           <Directory Id="DOCSDIR" Name="Docs" />
           <Directory Id="FILTERSDIR" Name="Filters" />
           <Directory Id="LANGDIR" Name="Languages" />
@@ -52,7 +52,7 @@
         </Directory>
       </Directory>
       <Directory Id="ProgramMenuFolder">
-        <Directory Id="WinMergeMenuFolder" Name="WinMerge" />
+        <Directory Id="WinMergeMenuFolder" Name="WizMerge" />
       </Directory>
       <Directory Id="DesktopFolder" />
     </Directory>
@@ -63,7 +63,7 @@
     <FeatureRef Id="WinMerge" />
     
     <!-- TODO: Works this really? -->
-    <Condition Message="WinMerge requires Windows 2000/XP/2003/Vista/2008 or later to install.">
+    <Condition Message="WizMerge requires Windows 2000/XP/2003/Vista/2008 or later to install.">
       <![CDATA[( VersionNT <= 500 ) OR ( Version9x <> 0 )]]>
     </Condition>
     

@@ -3124,3 +3124,72 @@ D2 の `IDT_DEDHIDE` タイマは、入場 1.6 秒後＋カーソル離脱 3 秒
   ログが取れず未特定のまま（§24.4）。再実行要求は queued のまま
   進まなかったが、後続の push による新実行がすべて success して
   おり、再発はしていない。
+
+## 25. Phase 4 W2（プログラム表示名の WizMerge 化）— ブランチ `merge20/phase4-w2`
+
+PR #22。master 94149386 から分岐。D2（PR #21）が先にマージされ §24 を使用したため、2026-11-26 に master fc0e24b3（D2 マージ済み）へリベースし、W2 の記録は §25 に付け替えた。20コミット、20ファイル。すべて表示文字列のみの変更で、行の増減なし（全ファイルで追加行数＝削除行数）。
+
+### 25.1 変更した表示名
+
+| 場所 | 変更前 → 変更後 |
+|---|---|
+| Src/Merge.rc：AFX_IDS_APP_TITLE／IDR_MAINFRAME（タイトルバー） | WinMerge → WizMerge |
+| Src/Merge.rc：メニュー「&WinMerge Help」「&About WinMerge...」（3か所ずつ） | → WizMerge |
+| Src/Merge.rc：About ダイアログ CAPTION「About WinMerge」、リンク「Visit the WinMerge Homepage!」 | → WizMerge |
+| Src/Merge.rc：コードページダイアログ「According to WinMerge User Interface」 | → WizMerge |
+| Src/Merge.rc：IDS_SPLASH_GPLTEXT、IDS_PROJECTFILES の説明、IDS_FILECHANGED_ONDISK、32-bit クリップボード比較、クラッシュ検出メッセージ | → WizMerge |
+| Src/Merge2.rc：バージョンリソース FileDescription／ProductName／InternalName | WinMerge → WizMerge |
+| Plugins/Strings.rc：プラグインオプションダイアログのタイトル 6件 | WinMerge Plugin Options → WizMerge Plugin Options |
+| ShellExtension 2件の.rc：バージョン情報＋右クリックメニュー「Win&Merge」 | → WizMerge／「Wiz&Merge」（M をアクセラレータとして維持） |
+| Installer/InnoSetup/*.iss 5件：AppName／AppVerName／VersionInfoDescription／DefaultDirName／DefaultGroupName／OutputBaseFilename／SetupWindowTitle／ショートカット名／アンインストール表示名 | WinMerge → WizMerge |
+| Installer/WiX：Config.wxi 製品名、WinMerge.wxs のインストール先・スタートメニュー名・条件メッセージ | → WizMerge |
+| ShellExtension/WinMergePkg/AppxManifest.xml.in：パッケージ表示名 3か所 | WinMerge → WizMerge |
+| Src/res/WinMerge.exe.manifest：説明文 | WinMerge Application → WizMerge Application |
+| BuildInstaller.cmd：生成物ファイル名パターン 5件 | Build\WinMerge-*- → Build\WizMerge-*- |
+| BuildArc.cmd：ZIP 内フォルダ名 67か所、Setup exe 名、exe.zip 名 | WinMerge → WizMerge／winmerge-*-exe.zip → wizmerge-*-exe.zip |
+| Translations/InnoSetup/English.islu・Japanese.islu：インストーラー表示文 7件／8件 | WinMerge → WizMerge |
+| Translations/WinMerge/Japanese.po：上記に対応する日本語訳 16 msgid＋msgstr＋msgstrのみ 4件 | WinMerge → WizMerge |
+| Translations/ShellExtension/Japanese.po：右クリックメニュー「Win&Merge」 | → Wiz&Merge |
+
+### 25.2 変更しなかったもの（判断理由）
+
+- exe ファイル名 WinMergeU.exe、Merge2.rc の OriginalFilename：既存ショートカット・スクリプトとの互換のため。
+- レジストリキー（Software\Thingamahoochie\WinMerge、WinMerge.Project.File、App Paths 等）・INIキー・設定ファイル名：設定の移行を壊さないため。
+- ProgID（WinMerge.FileCompare／WinMerge.FolderCompare）、拡張子 *.WinMerge、プラグイン変数 ${WINMERGE_HOME}、AppUserModelID、msix の Identity Name／Verb Id、.rgs の ProgID：識別子のため。
+-.iss の InstallDelete に残る旧 WinMerge.lnk 削除エントリ・WinMerge (ANSI).lnk：旧版の残骸を消すためのもので、新名称に変えると旧版の掃除ができなくなるため。
+-.iss の Get-AppxPackage -name WinMerge 削除コード：Identity Name を変えていないため旧パッケージ名のまま正しい。
+- GitHub Actions の成果物名（WinMerge-x64.zip／WinMerge-x64-Setup-x64.exe）：.github/workflows/main.yml 由来で、トークンに workflow スコープがなく変更不可。CI のアップロードは Build/Releases/*.zip／*.exe の glob のため、生成ファイル名の変更（wizmerge-*-exe.zip、WizMerge-*-Setup.exe）は CI を壊さないことを main.yml の実読で確認済み。
+- ラベル：W1 の担当範囲のため不変。
+- スプラッシュ画像（Src/res/splash.png）・インストーラー画像（Art/*.bmp）・ヘルプ（.chm、Docs/Manual サブモジュール）・README.md：バイナリ／サブモジュール／文書のため未変更。
+- 他言語の.po／.islu：日本語のみ更新。英語以外ではインストーラー表示文などが WinMerge のまま残る。
+- Translations/WinMerge/English.pot：生成物（CreateMasterPotFile.js で再生成されるもの）のため未更新。再生成時に新 msgid が反映される見込み（未確認）。
+- WinMerge.exe.manifest の assemblyIdentity name（Microsoft.Winweb.WinMerge）：識別子のため不変。
+
+### 25.3 既知の影響
+
+- AppName／DefaultDirName の変更により、新規インストール先は Program Files\WizMerge になり、「アプリと機能」の表示も WizMerge になる。既存 WinMerge インストールとは別アプリ扱いになるため、旧版は別途アンインストールが必要（Inno Setup の AppId 未指定時の既定動作）。
+- DefaultGroupName／ショートカット名の変更により、スタートメニュー・デスクトップのショートカットは WizMerge 名になる。
+
+### 25.4 検証
+
+- 変更前後で行数・改行コード（LF／CRLF 混在を含む）・BOM はすべて同一（置換のみ）。`diff -rq` で変更ファイルは意図した 20件のみ。
+- Japanese.po：msgid の重複は新規作成なし（変更前後とも重複は既存の Binary／Diff／Disabled／Folder／None の 5件のみ。いずれも W2 以前から存在）。引用符の対応チェック済み（msgfmt は当 VM に未インストールのため Python による簡易チェック）。
+- 変更した各表示名と.po の対応は全件確認済み。残存する WinMerge は keep-list（上記 25.2）のみであることを grep で全ファイル確認済み。
+- 表記ゆれなし（"WizMerge" で統一。"Wiz Merge"／"WIZMERGE" は 0件）。
+- CI：実行 45732475498 は success（PR #22 の head 8a49319e4464340468c84dd90d46c7e38be131cc）。
+  - GoogleTest：**608 テスト全パス**（`[  PASSED  ] 608 tests.`）。ログ中の "FAILED" 4件は
+    IDS_FILESAVE_FAILED／IDS_MERGE_RESULT_SAVE_FAILED の翻訳文字列 ID で、テスト失敗ではない
+    （Phase 3 L0 と同じ既知のもの）。
+  - 成果物 2件：WinMerge-x64.zip（26,189,453 バイト、ID 15078440098）と
+    WinMerge-x64-Setup-x64.exe（39,687,472 バイト、ID 15077049298）、
+    いずれも 2027-02-24 失効。
+  - CI ログからの追加証拠：BuildTranslations が新 msgid（&WizMerge Help 等）を処理したこと、
+    iscc が Build\WizMerge-2.16.60.0-x64-Setup.exe／PerUser-Setup.exe を生成したこと、
+    BuildArc が .\Build\Releases\wizmerge-2.16.60-32b9b35-x64-exe.zip を作成したこと。
+    生成ファイル名の変更が CI を壊さないこと（OUTPAT の存在確認パスを含む）が実証された。
+  - CI 失敗 0 回（初回実行で success）。
+
+### 25.5 未検証（実機確認が必要）
+
+- タイトルバーに WizMerge と出ること、About ダイアログ（タイトル・バージョン情報・リンク文言）、インストーラーの表示名・インストール先・ショートカット名、エクスプローラ右クリックメニュー、ZIP 内フォルダ名、.chm 以外のヘルプ表示。
+- 日本語 UI で上記の日本語訳（「WizMerge について」等）が出ること。
