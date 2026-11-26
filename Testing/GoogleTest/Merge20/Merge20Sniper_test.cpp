@@ -99,9 +99,13 @@ TEST(Merge20Sniper, DragActionNeedsFiftyPixelsHorizontal)
 	EXPECT_EQ(Merge20SniperDragAction(-49, 0), Merge20SniperDrag::None);
 	EXPECT_EQ(Merge20SniperDragAction(49, 0), Merge20SniperDrag::None);
 	EXPECT_EQ(Merge20SniperDragAction(0, 0), Merge20SniperDrag::None);
-	// A mostly-vertical drag is a scroll, not a diff move.
+	// A mostly-vertical drag is a scroll, not a diff move; a
+	// diagonal drag at exactly 45 degrees is a scroll too (HTML
+	// requires |dx| > |dy| strictly).
 	EXPECT_EQ(Merge20SniperDragAction(-120, 130), Merge20SniperDrag::None);
 	EXPECT_EQ(Merge20SniperDragAction(10, -120), Merge20SniperDrag::None);
+	EXPECT_EQ(Merge20SniperDragAction(-120, 120), Merge20SniperDrag::None);
+	EXPECT_EQ(Merge20SniperDragAction(120, 120), Merge20SniperDrag::None);
 }
 
 TEST(Merge20Sniper, ToggleLayoutSwitchesBothWays)
