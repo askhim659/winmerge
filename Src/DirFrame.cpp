@@ -13,6 +13,8 @@
 
 #include "stdafx.h"
 #include "DirFrame.h"
+#include "OptionsMgr.h"
+#include "OptionsDef.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -78,6 +80,8 @@ BEGIN_MESSAGE_MAP(CDirFrame, CMergeFrameCommon)
 	ON_WM_SIZE()
 	ON_COMMAND(ID_VIEW_DISPLAY_FILTER_BAR_MENU, OnViewDisplayFilterBar)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_DISPLAY_FILTER_BAR_MENU, OnUpdateDisplayViewFilterBar)
+	ON_COMMAND_EX(ID_VIEW_MERGE20_FILTER_DECK, OnBarCheck)
+	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_FILTER_DECK, OnUpdateControlBarMenu)
 	ON_COMMAND(IDCANCEL, OnDisplayFilterBarClose)
 	ON_COMMAND(IDC_FILTERFILE_MASK_MENU, OnDisplayFilterBarMenu)
 	//}}AFX_MSG_MAP
@@ -102,6 +106,21 @@ int CDirFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create header bar\n");
 		return -1;      // fail to create
 	}	
+
+	// Merge20 (H-FILTER): filter deck bar, docked at the top
+	// (CMerge20DedBar / CMerge20FileListBar precedent). Created
+	// here like the header bar; docked below, and shown or hidden
+	// from the saved toggle after the dock state is restored.
+	String sDeckCaption = _("Filter Deck");
+	if (!m_wndFilterDeckBar.Create(this, sDeckCaption.c_str(), WS_CHILD | WS_VISIBLE, ID_VIEW_MERGE20_FILTER_DECK))
+	{
+		TRACE0("Failed to create filter deck bar\n");
+		return -1;      // fail to create
+	}
+	m_wndFilterDeckBar.SetBarStyle(m_wndFilterDeckBar.GetBarStyle() |
+		CBRS_SIZE_DYNAMIC | CBRS_ALIGN_TOP);
+	m_wndFilterDeckBar.EnableDocking(CBRS_ALIGN_TOP | CBRS_ALIGN_BOTTOM);
+	DockControlBar(&m_wndFilterDeckBar, AFX_IDW_DOCKBAR_TOP);
 
 	// Directory frame has a status bar
 	if (!m_wndStatusBar.Create(this, WS_CHILD | WS_VISIBLE | CBRS_BOTTOM, AFX_IDW_CONTROLBAR_FIRST+30) ||
@@ -131,6 +150,12 @@ int CDirFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	CDockState dockState;
 	dockState.LoadState(_T("Settings-DirFrame"));
 	SetDockState(dockState);
+
+	// Merge20 (H-FILTER): the deck bar keeps its own size (DedBar
+	// precedent) and its visibility follows the saved toggle
+	// (OPT_MERGE20_FILTERDECK_VISIBLE, Panel P0 precedent).
+	m_wndFilterDeckBar.LoadState(_T("Settings-DirFrame"));
+	ShowControlBar(&m_wndFilterDeckBar, GetOptionsMgr()->GetBool(OPT_MERGE20_FILTERDECK_VISIBLE), FALSE);
 
 	return 0;
 }
@@ -198,12 +223,27 @@ BOOL CDirFrame::DestroyWindow()
 {
 	HideProgressBar();
 	HideFilterBar();
+	// Merge20 (H-FILTER): persist the deck bar size (MergeEditFrame
+	// SavePosition precedent: each sizing bar saves its own state).
+	if (m_wndFilterDeckBar.GetSafeHwnd() != nullptr)
+		m_wndFilterDeckBar.SaveState(_T("Settings-DirFrame"));
 	// save docking positions and sizes
 	CDockState dockState;
 	GetDockState(dockState);
 	dockState.SaveState(_T("Settings-DirFrame"));
 	SaveWindowState();
 	return __super::DestroyWindow();
+}
+
+BOOL CDirFrame::OnBarCheck(UINT nID)
+{
+	BOOL result = __super::OnBarCheck(nID);
+	// Merge20 (H-FILTER, Panel P0 precedent): persist the deck bar
+	// toggle in its own key. The bar's close button also comes
+	// through here.
+	if (nID == ID_VIEW_MERGE20_FILTER_DECK)
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_FILTERDECK_VISIBLE, !!m_wndFilterDeckBar.IsWindowVisible());
+	return result;
 }
 
 void CDirFrame::OnSize(UINT nType, int cx, int cy) 
