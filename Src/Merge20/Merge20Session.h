@@ -150,6 +150,13 @@ struct Merge20SessionDisplay
 	bool treeMode = false;
 	/** @brief Review-state filter initial values (OPT_MERGE20_SHOW_REVIEW_*). */
 	bool reviewFilter[5] = { true, true, true, true, true };
+	/** @brief Filter-deck existence filter (OPT_MERGE20_SHOW_STATUS_*,
+	 * H-FILTER). Index is static_cast<int>(Merge20FileStatus). */
+	bool statusFilter[4] = { true, true, true, true };
+	/** @brief Filter-deck action-category filter
+	 * (OPT_MERGE20_SHOW_ACTION_*, H-FILTER). Index is
+	 * static_cast<int>(ActionCategory). */
+	bool actionFilter[7] = { true, true, true, true, true, true, true };
 	/** @brief Dedicated compare mode was on when saved (design
 	 * section 4.1(b), D11). Restored into OPT_MERGE20_DED_MODE, so
 	 * the next file compare opens dedicated again. */

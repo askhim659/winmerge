@@ -30,6 +30,9 @@ namespace
 		session.display.showIdentical = false;
 		session.display.treeMode = true;
 		session.display.reviewFilter[1] = false;
+		// Merge20 (H-FILTER): filter-deck existence and action filters.
+		session.display.statusFilter[0] = false;
+		session.display.actionFilter[2] = false;
 		// Merge20 (Phase 4 D11, design section 4.1(b)).
 		session.display.dedMode = true;
 		session.display.dedPinned = true;
@@ -198,6 +201,11 @@ TEST(Merge20Session, SessionRoundTrip)
 	EXPECT_FALSE(back.display.showIdentical);
 	EXPECT_TRUE(back.display.treeMode);
 	EXPECT_FALSE(back.display.reviewFilter[1]);
+	// Merge20 (H-FILTER): the deck filters survive the round trip.
+	EXPECT_FALSE(back.display.statusFilter[0]);
+	EXPECT_TRUE(back.display.statusFilter[1]);
+	EXPECT_FALSE(back.display.actionFilter[2]);
+	EXPECT_TRUE(back.display.actionFilter[0]);
 	// Merge20 (Phase 4 D11, design section 4.1(b)).
 	EXPECT_TRUE(back.display.dedMode);
 	EXPECT_TRUE(back.display.dedPinned);
@@ -327,6 +335,13 @@ TEST(Merge20Session, DisplayFieldsBackwardCompat)
 	EXPECT_EQ(back.display.dedZoom, 0);
 	EXPECT_FALSE(back.display.slim);
 	EXPECT_TRUE(back.display.grepText.empty());
+	// Merge20 (H-FILTER): a file saved before H-FILTER has no deck
+	// filter fields and still loads, with the deck at its defaults
+	// (everything shown).
+	for (int i = 0; i < 4; ++i)
+		EXPECT_TRUE(back.display.statusFilter[i]);
+	for (int i = 0; i < 7; ++i)
+		EXPECT_TRUE(back.display.actionFilter[i]);
 	// A dedZoom outside the option range (350-2200) fails the load,
 	// like a bad topIndex does. 0 (not stored) is accepted.
 	ASSERT_TRUE(Merge20SessionFromJson(

@@ -50,6 +50,7 @@
 #include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20Patrol.h"
 #include "Merge20/Merge20SessionDoc.h"
+#include "Merge20/Merge20FilterDeckBar.h"
 #include "Merge20/Merge20Slim.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
@@ -845,6 +846,40 @@ static const String& Merge20ShowReviewKey(int index)
 	case 4: return OPT_MERGE20_SHOW_REVIEW_KEEP;
 	case 0:
 	default: return OPT_MERGE20_SHOW_REVIEW_TODO;
+	}
+}
+
+// Merge20 (H-FILTER): option key of an existence-filter toggle, by
+// Merge20FileStatus index (0 Modified, 1 OldOnly, 2 NewOnly,
+// 3 Identical).
+static const String& Merge20ShowStatusKey(int index)
+{
+	switch (index)
+	{
+	case 1: return OPT_MERGE20_SHOW_STATUS_OLD_ONLY;
+	case 2: return OPT_MERGE20_SHOW_STATUS_NEW_ONLY;
+	case 3: return OPT_MERGE20_SHOW_STATUS_IDENTICAL;
+	case 0:
+	default: return OPT_MERGE20_SHOW_STATUS_MODIFIED;
+	}
+}
+
+// Merge20 (H-FILTER): option key of an action-filter toggle, by
+// ActionCategory index (0 MERGE_CLEAN_OLD, 1 REVIEW_MIXED,
+// 2 REVIEW_MOD_ONLY, 3 NO_MERGE_NEW_ADD, 4 COPY_OLD_FILE,
+// 5 SKIP_NEW_FILE, 6 NO_ACTION_IDENTICAL).
+static const String& Merge20ShowActionKey(int index)
+{
+	switch (index)
+	{
+	case 1: return OPT_MERGE20_SHOW_ACTION_REVIEW_MIXED;
+	case 2: return OPT_MERGE20_SHOW_ACTION_REVIEW_MOD_ONLY;
+	case 3: return OPT_MERGE20_SHOW_ACTION_NO_MERGE_NEW_ADD;
+	case 4: return OPT_MERGE20_SHOW_ACTION_COPY_OLD_FILE;
+	case 5: return OPT_MERGE20_SHOW_ACTION_SKIP_NEW_FILE;
+	case 6: return OPT_MERGE20_SHOW_ACTION_NO_ACTION_IDENTICAL;
+	case 0:
+	default: return OPT_MERGE20_SHOW_ACTION_MERGE_CLEAN_OLD;
 	}
 }
 
@@ -3869,6 +3904,41 @@ void CDirView::OnMerge20ShowReview(UINT nID)
 	GetOptionsMgr()->SaveOption(Merge20ShowReviewKey(index), bShow);
 	m_dirfilter.show_review[index] = bShow;
 	Redisplay();
+	// Merge20 (H-FILTER): the deck bar shows the same five review
+	// toggles; refresh its checkboxes so the submenu and the deck
+	// never disagree.
+	Merge20SyncFilterDeckBar();
+}
+
+/**
+ * @brief Merge20 (H-FILTER): re-read the deck option keys into the
+ * view's filter settings and rebuild the list (same pattern as
+ * OnMerge20ShowReview, for all three deck groups at once). Called
+ * by the deck bar after a checkbox, preset or show-all change.
+ */
+void CDirView::Merge20RefreshFilterDeck()
+{
+	for (int i = 0; i < 4; ++i)
+		m_dirfilter.show_status[i] = GetOptionsMgr()->GetBool(Merge20ShowStatusKey(i));
+	for (int i = 0; i < 7; ++i)
+		m_dirfilter.show_action[i] = GetOptionsMgr()->GetBool(Merge20ShowActionKey(i));
+	for (int i = 0; i < 5; ++i)
+		m_dirfilter.show_review[i] = GetOptionsMgr()->GetBool(Merge20ShowReviewKey(i));
+	Redisplay();
+}
+
+/**
+ * @brief Merge20 (H-FILTER): push the current deck option state
+ * into the deck bar's checkboxes. The bar guards itself while its
+ * window does not exist yet (frame creation order).
+ */
+void CDirView::Merge20SyncFilterDeckBar()
+{
+	CDirFrame* pFrame = GetParentFrame();
+	if (pFrame == nullptr)
+		return;
+	if (CMerge20FilterDeckBar* pBar = pFrame->GetFilterDeckBar())
+		pBar->SyncCheckboxes();
 }
 
 /**
@@ -4350,6 +4420,19 @@ void CDirView::Merge20GetDisplaySettings(Merge20SessionDisplay& display)
 	display.reviewFilter[2] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_HOLD);
 	display.reviewFilter[3] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_SPECIAL);
 	display.reviewFilter[4] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_KEEP);
+	// Merge20 (H-FILTER): the deck existence and action filters
+	// travel with the session, like the review filter above.
+	display.statusFilter[0] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_STATUS_MODIFIED);
+	display.statusFilter[1] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_STATUS_OLD_ONLY);
+	display.statusFilter[2] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_STATUS_NEW_ONLY);
+	display.statusFilter[3] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_STATUS_IDENTICAL);
+	display.actionFilter[0] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_MERGE_CLEAN_OLD);
+	display.actionFilter[1] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_REVIEW_MIXED);
+	display.actionFilter[2] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_REVIEW_MOD_ONLY);
+	display.actionFilter[3] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_NO_MERGE_NEW_ADD);
+	display.actionFilter[4] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_COPY_OLD_FILE);
+	display.actionFilter[5] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_SKIP_NEW_FILE);
+	display.actionFilter[6] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_ACTION_NO_ACTION_IDENTICAL);
 	// Merge20 (Phase 4 D11, design section 4.1(b)): the slim flag
 	// itself is saved, so a restore brings back the slim list (the
 	// remembered full layout travels in columnOrders/columnWidths).
@@ -4427,6 +4510,32 @@ void CDirView::Merge20SetDisplayFilter(const Merge20SessionDisplay& display)
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_SPECIAL, display.reviewFilter[3]);
 	m_dirfilter.show_review[4] = display.reviewFilter[4];
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_REVIEW_KEEP, display.reviewFilter[4]);
+	// Merge20 (H-FILTER): apply the saved deck existence and
+	// action filters. Same pattern as the show_* filters: written
+	// back to the global options and into the view's filter
+	// settings, so IsShowable (DirActions.cpp) picks them up.
+	m_dirfilter.show_status[0] = display.statusFilter[0];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_STATUS_MODIFIED, display.statusFilter[0]);
+	m_dirfilter.show_status[1] = display.statusFilter[1];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_STATUS_OLD_ONLY, display.statusFilter[1]);
+	m_dirfilter.show_status[2] = display.statusFilter[2];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_STATUS_NEW_ONLY, display.statusFilter[2]);
+	m_dirfilter.show_status[3] = display.statusFilter[3];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_STATUS_IDENTICAL, display.statusFilter[3]);
+	m_dirfilter.show_action[0] = display.actionFilter[0];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_MERGE_CLEAN_OLD, display.actionFilter[0]);
+	m_dirfilter.show_action[1] = display.actionFilter[1];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_REVIEW_MIXED, display.actionFilter[1]);
+	m_dirfilter.show_action[2] = display.actionFilter[2];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_REVIEW_MOD_ONLY, display.actionFilter[2]);
+	m_dirfilter.show_action[3] = display.actionFilter[3];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_NO_MERGE_NEW_ADD, display.actionFilter[3]);
+	m_dirfilter.show_action[4] = display.actionFilter[4];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_COPY_OLD_FILE, display.actionFilter[4]);
+	m_dirfilter.show_action[5] = display.actionFilter[5];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_SKIP_NEW_FILE, display.actionFilter[5]);
+	m_dirfilter.show_action[6] = display.actionFilter[6];
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SHOW_ACTION_NO_ACTION_IDENTICAL, display.actionFilter[6]);
 	// Merge20 (Phase 4 D11): the slim flag is restored before the
 	// list is rebuilt. SetMerge20Slim rebuilds the list itself
 	// (except when leaving slim off while already off); Redisplay is
@@ -4435,6 +4544,10 @@ void CDirView::Merge20SetDisplayFilter(const Merge20SessionDisplay& display)
 		SetMerge20Slim(display.slim);
 	else
 		Redisplay();
+	// Merge20 (H-FILTER): the restored deck state must reach the
+	// deck bar's checkboxes too, or the bar would show the
+	// pre-restore state while the list already follows the session.
+	Merge20SyncFilterDeckBar();
 }
 
 /**

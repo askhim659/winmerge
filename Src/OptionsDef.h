@@ -346,6 +346,26 @@ inline const String OPT_MERGE20_SHOW_REVIEW_HOLD {_T("Merge20/ShowReviewHold"s)}
 inline const String OPT_MERGE20_SHOW_REVIEW_SPECIAL {_T("Merge20/ShowReviewSpecial"s)};
 inline const String OPT_MERGE20_SHOW_REVIEW_KEEP {_T("Merge20/ShowReviewKeep"s)};
 
+// Merge20 (H-FILTER, coverage matrix H-11/H-13/H-39): filter-deck
+// state. The existence group (Merge20FileStatus order) and the
+// action group (ActionCategory order) are new keys; the review
+// group reuses the OPT_MERGE20_SHOW_REVIEW_* keys above (D11), so
+// the deck checkboxes and the folder-list context-menu submenu
+// ("Show review states") edit one stored state. The bar visibility
+// has its own key (P0 precedent: one key per bar, never shared).
+inline const String OPT_MERGE20_SHOW_STATUS_MODIFIED {_T("Merge20/ShowStatusModified"s)};
+inline const String OPT_MERGE20_SHOW_STATUS_OLD_ONLY {_T("Merge20/ShowStatusOldOnly"s)};
+inline const String OPT_MERGE20_SHOW_STATUS_NEW_ONLY {_T("Merge20/ShowStatusNewOnly"s)};
+inline const String OPT_MERGE20_SHOW_STATUS_IDENTICAL {_T("Merge20/ShowStatusIdentical"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_MERGE_CLEAN_OLD {_T("Merge20/ShowActionMergeCleanOld"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_REVIEW_MIXED {_T("Merge20/ShowActionReviewMixed"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_REVIEW_MOD_ONLY {_T("Merge20/ShowActionReviewModOnly"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_NO_MERGE_NEW_ADD {_T("Merge20/ShowActionNoMergeNewAdd"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_COPY_OLD_FILE {_T("Merge20/ShowActionCopyOldFile"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_SKIP_NEW_FILE {_T("Merge20/ShowActionSkipNewFile"s)};
+inline const String OPT_MERGE20_SHOW_ACTION_NO_ACTION_IDENTICAL {_T("Merge20/ShowActionNoActionIdentical"s)};
+inline const String OPT_MERGE20_FILTERDECK_VISIBLE {_T("Merge20/FilterDeckVisible"s)};
+
 // Merge20 (Phase 4 D0, design sections 4.1 and 5.2/D0): dedicated
 // compare mode, auto sniper, unreviewed-only tour, slim list, focus
 // dock and Grep. Defaults match the HTML tool (17_v17.15.html):

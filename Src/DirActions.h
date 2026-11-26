@@ -117,6 +117,25 @@ struct DirViewFilterSettings
 		show_review[2] = getoptbool(OPT_MERGE20_SHOW_REVIEW_HOLD);
 		show_review[3] = getoptbool(OPT_MERGE20_SHOW_REVIEW_SPECIAL);
 		show_review[4] = getoptbool(OPT_MERGE20_SHOW_REVIEW_KEEP);
+		// Merge20 (H-FILTER): filter-deck existence and action
+		// filters. Index is static_cast<int>(Merge20FileStatus)
+		// (Modified, OldOnly, NewOnly, Identical) and
+		// static_cast<int>(ActionCategory) (the seven ALL_AC
+		// values in enum order). Kept apart from the stock
+		// show_different / show_unique_* / show_identical flags
+		// (H-11: the deck is a different filter from the stock
+		// compare-result filter); IsShowable ANDs both.
+		show_status[0] = getoptbool(OPT_MERGE20_SHOW_STATUS_MODIFIED);
+		show_status[1] = getoptbool(OPT_MERGE20_SHOW_STATUS_OLD_ONLY);
+		show_status[2] = getoptbool(OPT_MERGE20_SHOW_STATUS_NEW_ONLY);
+		show_status[3] = getoptbool(OPT_MERGE20_SHOW_STATUS_IDENTICAL);
+		show_action[0] = getoptbool(OPT_MERGE20_SHOW_ACTION_MERGE_CLEAN_OLD);
+		show_action[1] = getoptbool(OPT_MERGE20_SHOW_ACTION_REVIEW_MIXED);
+		show_action[2] = getoptbool(OPT_MERGE20_SHOW_ACTION_REVIEW_MOD_ONLY);
+		show_action[3] = getoptbool(OPT_MERGE20_SHOW_ACTION_NO_MERGE_NEW_ADD);
+		show_action[4] = getoptbool(OPT_MERGE20_SHOW_ACTION_COPY_OLD_FILE);
+		show_action[5] = getoptbool(OPT_MERGE20_SHOW_ACTION_SKIP_NEW_FILE);
+		show_action[6] = getoptbool(OPT_MERGE20_SHOW_ACTION_NO_ACTION_IDENTICAL);
 	};
 	bool show_skipped;
 	bool show_unique_left;
@@ -137,6 +156,14 @@ struct DirViewFilterSettings
 	 * index is static_cast<int>(ReviewState): 0 TODO, 1 DONE,
 	 * 2 HOLD, 3 SPECIAL, 4 KEEP. */
 	bool show_review[5];
+	/** @brief Existence filter (OPT_MERGE20_SHOW_STATUS_*, H-FILTER):
+	 * index is static_cast<int>(Merge20FileStatus): 0 Modified,
+	 * 1 OldOnly, 2 NewOnly, 3 Identical. */
+	bool show_status[4];
+	/** @brief Action-category filter (OPT_MERGE20_SHOW_ACTION_*,
+	 * H-FILTER): index is static_cast<int>(ActionCategory), the
+	 * seven ALL_AC values in enum order. */
+	bool show_action[7];
 	FileFilterHelper displayFilterHelper; /**< File filter helper */
 };
 

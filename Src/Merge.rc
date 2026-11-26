@@ -624,6 +624,7 @@ BEGIN
         END
         MENUITEM "Men&u Bar",                   ID_VIEW_MENU_BAR
         MENUITEM "Displa&y Filter Bar\tCtrl+Shift+L", ID_VIEW_DISPLAY_FILTER_BAR_MENU
+        MENUITEM "Filter Deck",                 ID_VIEW_MERGE20_FILTER_DECK
         MENUITEM "&Output Pane",                ID_VIEW_OUTPUT_BAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
         MENUITEM SEPARATOR
