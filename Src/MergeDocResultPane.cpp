@@ -698,6 +698,24 @@ bool CMergeDoc::IsResultDiffPending(int nDiff) const
 }
 
 /**
+ * @brief Merge20 (Phase 4 D3): is the diff still waiting for a
+ * decision (the TODO-only diff-patrol predicate)?
+ *
+ * Unlike IsResultDiffPending, a diff without a result segment counts
+ * as unresolved: result segments only exist while a merge session is
+ * running (BuildMergeResult runs from StartMergeSession), so in a
+ * plain file compare every diff is a patrol target and TODO-only
+ * patrol is the normal diff order plus wrap-around.
+ */
+bool CMergeDoc::Merge20IsDiffUnresolved(int nDiff) const
+{
+	const MergeResultSegment* pSegment = GetResultSegmentByDiff(nDiff);
+	return pSegment == nullptr ||
+		pSegment->state == ResultSegmentState::Unresolved ||
+		pSegment->state == ResultSegmentState::Conflict;
+}
+
+/**
  * @brief Is the line a placeholder for an unresolved difference?
  * Placeholder lines are not editable: the difference must be resolved
  * with a Choose command first.
