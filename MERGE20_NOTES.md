@@ -3739,3 +3739,202 @@ PR #26。2026-11-26。master f0db9181（D3＝PR #24 マージ済み）から分�
 - `resource.h` の `_APS_NEXT_CONTROL_VALUE` はコメント中にも出現するため、置換時は `#define` 行を狙うこと（最初のスクリプトはコメントに当たって失敗した）。
 - master の .po を編集するときは、末尾だけでなく全体を二重エンコード等の破損がないか走査すること（今回は D3 の 2項目を発見・修正）。
 - 新規ファイルの `Merge20FocusActions` 配列は FocusDock.cpp の無名名前空間にあり、純粋モジュール側にはない。`OnButtonClicked` の索引計算とボタンの ID 順・enum 順が一致していることが前提。
+
+## 29. W2f（.cpp／.sct 側の WizMerge 化）— ブランチ `merge20/phase4-w2f`
+
+> 節番号について：D3 が §27、D4 が §28 を取得したため、本節は §29 とした。
+> ベースは master 56136579（D3＝PR #24、D4＝PR #26 マージ済み）にリベースしたものである。
+
+PR #25。master `0aefc6dd` から分岐し、2026-11-26 に master `56136579`（D3＝PR #24、D4＝PR #26 マージ済み）へリベース。記録は §27 から §29 に付け替えた。リベース後のコード 17 コミット＋本記録 1 で 18コミット、18ファイル。
+すべて表示文字列のみの変更で、行の増減なし（全ファイルで追加行数＝削除行数）。
+
+### 29.0 要約
+
+- W2（PR #22）は.rc／.po の表示名を "WinMerge"→"WizMerge" に変えたが、
+.cpp／.sct のソース文字列は変えていなかった。W1 の監査（§26.7）で判明した
+不整合：.cpp に残る "WinMerge" の `_()` 文字列は、.po の msgid が
+"WizMerge" 化されたため検索が外れて英語表示になっていた（W2 以前は日本語
+だったものが英語に戻る）。本 PR は.cpp／.sct 側も "WizMerge" 化して
+検索を当たるようにする。
+- Src ツリー全体を grep し、"WinMerge" を含む `_()` 文字列を全数列挙した
+結果、該当は 6 種類の msgid（8 か所）のみだった（.pot の WinMerge 項目と
+突き合わせて完全性を確認。29.4 参照）。うち 5 種類（7 か所）を変更し、
+1 種類（FileFiltersDlg.cpp:520）はパス参照のため変更しなかった（29.2）。
+-.sct 8 ファイルの `<title>` を "WizMerge Plugin Options" に変えた。
+W1 があえて "WinMerge" のままにしていた Merge20Exclude.sct の.po 項目も
+"WizMerge" に合わせた。ApplyPatch.sct は.po 項目が存在しなかったため
+新規追加した。
+
+### 29.1 変更した文字列の一覧
+
+| ファイル・行 | 変更前 → 変更後 |.po の対応（W2 が作成済みの "WizMerge" 版 msgid） |
+|---|---|---|
+| Src/ClipboardHistory.cpp:180 | "32-bit WinMerge does not support Clipboard Compare" → "32-bit WizMerge does not support Clipboard Compare" | msgid 同文、msgstr「32bit版 WizMerge ではクリップボード比較はサポートされていません。」 |
+| Src/CrashLogger/CrashLogger.cpp:411 | "WinMerge detected a previous crash. Please report this if possible." → "WizMerge detected a previous crash...." | msgid 同文、msgstr「以前の WizMerge のクラッシュを検出しました。可能であればご報告ください。」 |
+| Src/HexMergeDoc.cpp:240 | "Another application updated\n%1\nsince WinMerge loaded it.\n\nOverwrite?" → "since WizMerge loaded it." | msgid 同文（複数行）、msgstr「%1\nこのファイルは WizMerge 以外のアプリケーションで修正されています。修正されたファイルに上書きしますか?」 |
+| Src/MergeDoc.cpp:1135 | 同上（HexMergeDoc と同一 msgid） | 同上 |
+| Src/MainFrm.cpp:2868 | "WinMerge Project Files (*.WinMerge)|*.WinMerge||" → "WizMerge Project Files (*.WinMerge)|*.WinMerge||"（表示名のみ。拡張子 `*.WinMerge` と `.WinMerge` は不変） | msgid 同文、msgstr「WizMerge プロジェクト ファイル (*.WinMerge)|*.WinMerge||」 |
+| Src/OpenView.cpp:1254 | 同上（MainFrm と同一 msgid） | 同上 |
+| Src/MergeApp.cpp:154 | "WinMerge comes with ABSOLUTELY NO WARRANTY...." → "WizMerge comes with..." | msgid 同文、msgstr は msgid と同一（GPL 文は英語のまま。W2 の方針どおり） |
+| Plugins/dlls/AI.sct:325 | `<title>${AI.sct WinMerge Plugin Options}</title>` → WizMerge | msgid "AI.sct WizMerge Plugin Options"、msgstr「AI.sct WizMerge プラグイン オプション」 |
+| Plugins/dlls/ApplyPatch.sct:474 | `<title>${ApplyPatch.sct WinMerge Plugin Options}</title>` → WizMerge | 本 PR で.po に新規追加（29.3）。msgstr「ApplyPatch.sct WizMerge プラグインオプション」 |
+| Plugins/dlls/CompareMSExcelFiles.sct:787 | 同様に WizMerge | msgid 同文あり（W2 作成）、msgstr「CompareMSExcelFiles.sct WizMerge プラグインオプション」 |
+| Plugins/dlls/CompareMSPowerPointFiles.sct:437 | 同様に WizMerge | msgid 同文あり（W2 作成） |
+| Plugins/dlls/CompareMSVisioFiles.sct:396 | 同様に WizMerge | msgid 同文あり（W2 作成） |
+| Plugins/dlls/CompareMSWordFiles.sct:436 | 同様に WizMerge | msgid 同文あり（W2 作成） |
+| Plugins/dlls/Merge20Exclude.sct:294 | 同様に WizMerge |.po 項目を "WinMerge"→"WizMerge" に改名（29.3） |
+| Plugins/dlls/PrediffLineFilter.sct:294 | 同様に WizMerge | msgid 同文あり（W2 作成） |
+| Plugins/dlls/ApplyPatch.sct:51 | `var PLUGIN_NAME = "ApplyPatch.sct WinMerge Plugin";` → WizMerge |.po 項目なし（`mergeApp.InputBox` のタイトルにそのまま渡される非翻訳文字列。英語表示のまま改名のみ）。変更理由：InputBox のダイアログタイトルとして表示される表示名のため。 |
+
+### 29.2 変更しなかったもの（判断理由）
+
+- FileFiltersDlg.cpp:520 および Src/Merge.rc:4921（IDS_FILEFILTER_TMPL_MISSING）
+`"Cannot find filter template!\n\nCopy %1 to WinMerge/Filters Folder:\n%2."`：
+"WinMerge/Filters Folder" はディスク上の実フォルダ名を指す。
+`%2` は `GetGlobalFilterPathWithCreate()` の返す実パス（`%APPDATA%\WinMerge\Filters`
+または `My Documents\WinMerge\Filters`。FileFilterHelper.cpp:769-770、
+FileFiltersDlg.cpp:485）で、表示ラベルを "WizMerge" にすると `%2` の実パスと
+矛盾し、ユーザーを誤ったフォルダへ誘導する。W2 の keep-list（パスは変えない）
+に従い不変とした。.po／.pot の "WinMerge" 版 msgid（訳付き）もそのまま残し、
+日本語表示は維持される。
+- exe ファイル名 WinMergeU.exe、レジストリキー（`Software\Thingamahoochie\WinMerge`）、
+INIキー（`[WinMerge]`）、設定ファイル名（`WinMerge.txt`、`WinMergeCrashInfo.txt`、
+`WinMerge*.dmp`）、ユーザーデータフォルダ（`WinMergeUserDataFolder`）、
+ProgID（`WinMerge.FileCompare`／`WinMerge.FolderCompare`）、拡張子 `*.WinMerge`
+（ProjectFile.cpp の `PROJECTFILE_EXT` を含む）、URL（`https://winmerge.org/`）、
+`${WINMERGE_HOME}`、プラグインのクラス名 `WinMergeScript`、識別子
+（`WinMergePluginBase`、`WinMergeDarkMode`、`CWinMergeProfile`、
+`LoadWinMergeDiffsFromDiffUtilsScript` 等）：W2 の keep-list どおり不変。
+- コメント文中の "WinMerge"（.cpp／.h／.sct の注釈、Merge20 のヘッダコメントを含む）：
+表示されないため不変。
+- 診断ファイルのヘッダ行（`_()` 経由でないため本タスクの対象外。将来の検討課題として
+29.7 に記録）：Src/ConfigLog.cpp:343 `"WinMerge Configuration Log\r\n"`、
+Src/CrashLogger/CrashLogger.cpp:128 `"WinMerge Crash Information\r\n"`、
+Src/PatchHTML.cpp:40 および Src/FileCmpReport.cpp:89
+`"<title>WinMerge File Compare Report</title>"`（生成される HTML レポートのタイトル）。
+- 他言語の.po は触らない（W2 と同じ方針）。英語以外ではインストーラー表示文などが
+WinMerge のまま残るが、.cpp の msgid が "WizMerge" になったため他言語でも
+msgid フォールバックで "WizMerge" と表示される。
+- Plugins/Strings.rc は触らない（W1 の Merge20Exclude.sct と同じく、.sct タイトルは
+.po への直接追加で対応。W1 §26.2 の.ps1 マージ方式で.pot に無い項目も保持される
+ことが W1 の出荷物確認で実証済み）。
+
+### 29.3 日本語.po／.pot の更新内容
+
+- `Translations/WinMerge/Japanese.po`（11,175 行 → 11,180 行、+5 行）：
+- Merge20Exclude.sct の項目を改名：msgid／msgstr の "WinMerge"→"WizMerge"
+（`#. Merge20 (W1):...` コメントと `#: Plugins/dlls/Merge20Exclude.sct:294` は不変）。
+- ApplyPatch.sct の項目を新規追加（W2 に存在しなかったため）：
+`#. Merge20 (W2f): ApplyPatch.sct settings dialog title (Plugins/dlls/ApplyPatch.sct)`、
+`#: Plugins/dlls/ApplyPatch.sct:474`、msgid "ApplyPatch.sct WizMerge Plugin Options"、
+msgstr "ApplyPatch.sct WizMerge プラグインオプション"。
+挿入位置は Merge20Exclude.sct の項目の直後。
+- 削除すべき "WinMerge" 版 msgid はリポジトリの.po には存在しなかった。
+5 件の.cpp 文字列の "WinMerge" 版は W2 の時点で.po になく、ビルド時の
+.pot 再生成で出荷.po に未訳（msgstr 空）で追加されていただけのため、
+本 PR の.cpp 変更で今後は追加されなくなる（29.4 の出荷物確認で検証）。
+残る "WinMerge" は keep-list のみ（ヘッダ 3 行、`${WINMERGE_HOME}`、
+ProgID 由来の.rc 項目、フィルタテンプレート、プロジェクトファイルの `*.WinMerge` 部分）。
+- msgid の重複は新規作成なし（(ctx,msgid) の重複は 0 件。引用符の対応チェック済み）。
+- `Translations/WinMerge/English.pot`（10,454 行 → 10,433 行、−21 行）：
+.cpp 由来の "WinMerge" 版 5 エントリを除去（`#: ClipboardHistory.cpp:180`、
+`#: CrashLogger/CrashLogger.cpp:411`、`#: HexMergeDoc.cpp:240`、
+`#: MainFrm.cpp:2868`、`#: MergeApp.cpp:154`）。"WizMerge" 版は Merge.rc 由来
+（`#: Merge.rc:4746` GPL、`#: Merge.rc:4846` プロジェクトファイル、
+`#: Merge.rc:5052` 他アプリ更新、`#: Merge.rc:5965` クリップボード、
+`#: Merge.rc:6096` クラッシュ検出）で残る。フィルタテンプレートの
+"WinMerge" 版（`#: Merge.rc:4921`）は残る。
+CI のビルド時に CreateMasterPotFile.js（.cpp 抽出付き）が.pot を再生成するため、
+再生成結果は本コミットの.pot と一致するはずである（.cpp 変更後は "WizMerge" 版が
+.rc と重複して.rc 側が勝ち、"WinMerge" 版は出なくなる。行の増減がないため
+`#: ` の行番号も変わらない）。不一致があれば CI 側の.pot が使われるため
+自己修復される（W1 §26.2 参照）。
+
+### 29.4 検証
+
+- (a) 変更した各文字列と.po の対応：Src ツリー全体の grep で "WinMerge" を含む
+`_()`／`N_()`／`NC_()` 文字列を全数列挙し、6 種類の msgid（8 か所）であることを確認。
+完全性の裏付け：コミット前の `English.pot` の "WinMerge" 項目は 13 行で、内訳は
+ヘッダ 3 行、`${WINMERGE_HOME}` 1 行、ProgID 2 行、フィルタテンプレート 1 行、
+.cpp 由来 5 項目（複数行 msgid のため 5 行）＋.sct タイトル 0 行（.sct は.pot
+抽出対象外）であり、列挙した 6 種類と一致した（フィルタテンプレートを除く 5 種類が
+.pot の.cpp 由来 5 項目と一致）。変更した 7 か所の.cpp 文字列はすべて.po の
+"WizMerge" 版 msgid（訳付き）と文字列完全一致することを確認（複数行 msgid の
+結合後も含む）。8 件の.sct タイトルもすべて.po の "WizMerge" 版 msgid と一致する
+ことを確認。検証スクリプトの結果：全チェック PASS、FAIL 0 件。
+- (b) 変更していないもの：識別子・レジストリキー・INIキー・exe 名・ProgID・拡張子・
+URL・`${WINMERGE_HOME}` が変わっていないことを grep で確認（29.2 の一覧）。
+FileFiltersDlg.cpp:520 と Merge.rc:4921 が "WinMerge" のままであることも確認。
+- (c) CI 緑＋成果物 2 件の存在を API で確認した（29.5）。出荷 .po の内容も成果物 ZIP の中身を直接確認した。
+- (d) 回帰：表示文字列のみの変更であり、C++ のロジック変更はない（各ファイル 1 行の
+文字列リテラル置換のみ。行数・改行コード・BOM は変更前と同一）。
+フォルダ比較・ファイル比較の動作に影響する変更はない。
+- 追加の検証：出荷.po の内容確認（CI 成果物 ZIP の中の `WinMerge/Languages/Japanese.po`
+を直接確認。29.5）。
+
+### 29.5 CI 結果（PR #25）
+
+> 以下の 3 実行はリベース前の head（master 0aefc6dd ベース）での結果である。リベース後の最終 head での CI 実行は本節末尾に追記する（追記予定）。
+
+- PR：https://github.com/askhim659/winmerge/pull/25
+  （ブランチ `merge20/phase4-w2f`。マージはしないこと。コーディネーターが検証してマージする。）
+- コード 17 コミットでの CI 実行 45744972468（`pull_request`、head `4739130703f09f3e48b5c6561d6951eee16e2d47`）：**結論 success**。
+  ジョブ 139658697017（`build`）：completed／success。GoogleTest：`[  PASSED  ] 608 tests.`。
+  ジョブログの "FAILED" は 0 件（"error " の 4 件は MSBuild の "Structured output is enabled..." という情報行のみ）。
+  成果物 2 件：`WinMerge-x64.zip`（ID 15082313806、26,302,958 バイト）と
+  `WinMerge-x64-Setup-x64.exe`（ID 15083556380、39,738,091 バイト）、
+  いずれも 2027-02-24T02:49:36Z 失効。
+  ジョブログで MergeLang ステップ（`Creating POT file from Merge.rc...`、
+  `Updating PO files from POT file...`、`All PO files updated`）と番兵チェック
+  （`Checking bundled Japanese.po for Merge20 strings...`／
+  `Merge20 strings present in the bundled Japanese.po.`）の通過を確認。
+  CI 失敗 0 回（初回実行で success）。
+- 成果物 ZIP の直接確認：外側 ZIP の中身は `wizmerge-2.16.60-21e3ac5-x64-exe.zip` 1 件。
+  内側の `WizMerge/Languages/Japanese.po`（W2 の改名によりフォルダ名が `WinMerge` から
+  `WizMerge` になっている）は 180,744 バイト・2,083 項目、
+  SHA256 `7fccca5c2db3f6d2883c9d725df0267f51d89d86878d0d41fcfbf703d255acc7`。
+  変更した 5 件の "WizMerge" 版 msgid はすべて訳付きで存在し、旧 "WinMerge" 版 5 件は
+  存在しない（出荷 .po に未訳で追加されなくなったことを確認）。
+  .sct タイトル 8 件（"WizMerge Plugin Options"）もすべて存在し、
+  旧 "Merge20Exclude.sct WinMerge Plugin Options" は存在しない。
+  フィルタテンプレートの "WinMerge" 版 msgid（訳付き）も存在する。
+- 記録のみのコミット後の最終 head（`f6d7950b3a5aa2e1e557631e5b7110a7b6be3b0d`）での CI 実行 45746328162：**結論 success**。ジョブ 139663172908（`build`）：completed／success。成果物 2 件：`WinMerge-x64.zip`（ID 15084195816、26,302,693 バイト）と `WinMerge-x64-Setup-x64.exe`（ID 15084160838、39,741,525 バイト）、いずれも 2027-02-24T03:02:27Z 失効。コードは最終 head と同一のため、GoogleTest・番兵・出荷 .po の内容は上記の実行 45744972468 と同じである（本コミットは記録のみ）。
+- リベース後の最終 head での CI 実行は（追記予定）。
+
+### 29.6 Windows 実機で確認してもらう項目（未検証）
+
+- 以下の項目は Linux VM では確認できないため、実機での確認が必要。
+「できた」ではなく「未検証」として残す。
+- 1. 32-bit 版でクリップボード比較が使えない場合のメッセージが日本語
+（「32bit版 WizMerge ではクリップボード比較はサポートされていません。」）で出ること。
+- 2. 前回クラッシュ検出時のメッセージが日本語
+（「以前の WizMerge のクラッシュを検出しました。可能であればご報告ください。」）で出ること。
+（前回のクラッシュを再現させる必要があるため、実機での確認は任意。）
+- 3. 他アプリで更新されたファイルを開き直すときの確認メッセージが日本語
+（「このファイルは WizMerge 以外のアプリケーションで修正されています。…」）で出ること。
+- 4. プロジェクトファイルを開く／保存するダイアログのフィルタ表示が
+「WizMerge プロジェクト ファイル (*.WinMerge)」になっていること
+（拡張子は `*.WinMerge` のまま）。
+- 5. About ダイアログ／スプラッシュの GPL 文が "WizMerge comes with ABSOLUTELY NO WARRANTY..."
+になっていること。
+- 6. プラグインの設定ダイアログ（MS Excel／Word／PowerPoint／Visio ファイル比較、
+PrediffLineFilter、AI、ApplyPatch、Merge20Exclude）のタイトルが日本語
+（「○○.sct WizMerge プラグインオプション」）で出ること。
+特に ApplyPatch.sct と Merge20Exclude.sct（本 PR で.po を追加／改名したもの）。
+- 7. フィルタテンプレートが見つからないときのメッセージが従来どおり日本語で出ること
+（「ファイル %1 を以下の WinMerge/Filters フォルダーにコピーしてください:」。
+変更していないことの確認。表示されるフォルダパス `%2` が実在の
+`WinMerge\Filters` フォルダであること）。
+- 8. 既存のファイル比較・フォルダ比較が従来どおり動くこと（回帰確認）。
+
+### 29.7 残課題・引き継ぎ
+
+- D3 は §27、D4 は §28 でマージ済みのため、節番号の衝突は解消した（リベース前は D3 のブランチが §26 を使っており、本節冒頭の注意書きに記録していた）。
+- 診断ファイルのヘッダ（ConfigLog "WinMerge Configuration Log"、CrashLogger
+"WinMerge Crash Information"）と HTML レポートのタイトル（"WinMerge File Compare Report"）
+は `_()` 経由でないため今回は不変とした。表示名として変えるかどうかは別途判断が必要。
+（PatchHTML／FileCmpReport のタイトルはテストが参照している可能性があるため、変える場合は
+テストの確認も行うこと。）
+- `WinMerge\Filters` 等のユーザーデータフォルダ名そのものを "WizMerge" に変えるかどうかは
+未決定（変えると既存の設定・フィルタ・学習データの移行が必要になるため、別途検討）。
+- ラベルを「Wiz」から「WizMerge」にするかはユーザーに未確認（W1 §26.3 参照）。注：本節では全角括弧の記法がツール経由で欠落する問題があったため「Wiz」と表記した。意味は W1 の「Wiz」ラベルと同じ。
