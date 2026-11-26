@@ -808,6 +808,15 @@
 #define IDC_MERGE20_DED_SNIPER          1755
 #define IDC_MERGE20_DED_ZOOM            1756
 #define IDC_MERGE20_DED_FILE_INFO     1757
+#define IDC_MERGE20_FOCUS_INFO        1758
+#define IDC_MERGE20_FOCUS_INSERT_OLD  1759
+#define IDC_MERGE20_FOCUS_REJECT      1760
+#define IDC_MERGE20_FOCUS_NEW         1761
+#define IDC_MERGE20_FOCUS_OLD         1762
+#define IDC_MERGE20_FOCUS_BOTH        1763
+#define IDC_MERGE20_FOCUS_SPLIT       1764
+#define IDC_MERGE20_FOCUS_REGROUP     1765
+#define IDC_MERGE20_FOCUS_RESULT      1766
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2507,14 +2516,15 @@
 // for the Phase 4 dialogs and commands. D1 consumes 38941
 // (ID_VIEW_MERGE20_DEDICATED_MODE); D2 consumes commands 38942-38953
 // (dedicated-bar actions) and controls 1745-1756 (dedicated-bar buttons);
-// D3 consumes control 1757 (dedicated-bar file info); D4-D9 allocate
+// D3 consumes control 1757 (dedicated-bar file info); D4 consumes
+// controls 1758-1766 (focus dock header + result view); D5-D9 allocate
 // from these ranges.
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 297 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
 //   (IDR_LOGO), 310 (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already
 //   taken; dialog IDs must skip those values.
-// - controls (IDC_*): from 1758 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1767 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603).
 // - commands (ID_*): from 38954 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands;
@@ -2529,7 +2539,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        297
 #define _APS_NEXT_COMMAND_VALUE         38954
-#define _APS_NEXT_CONTROL_VALUE         1758
+#define _APS_NEXT_CONTROL_VALUE         1767
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif

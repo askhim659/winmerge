@@ -129,6 +129,7 @@ class CEncodingErrorBar;
 class CLocationView;
 class CMergeEditSplitterView;
 class CMergeResultView;
+class CMerge20FocusDock;
 
 /**
  * @brief Document class for merging two files
@@ -340,6 +341,9 @@ public:
 public:
 	CMergeResultView* GetMergeResultView() const { return m_pMergeResultView; }
 	void SetMergeResultView(CMergeResultView* pView) { m_pMergeResultView = pView; }
+	/** @brief Merge20 (Phase 4 D4): focus dock showing the current diff's result segment, or nullptr */
+	CMerge20FocusDock* GetMerge20FocusDock() const { return m_pMerge20FocusDock; }
+	void SetMerge20FocusDock(CMerge20FocusDock* pDock) { m_pMerge20FocusDock = pDock; }
 	CMergeResultTextBuffer* GetMergeResultBuffer() const { return m_ptResultBuf.get(); }
 	bool IsMergeResultPaneVisible() const;
 	int GetMergeBasePane() const { return m_nMergeBasePane; }
@@ -381,6 +385,16 @@ public:
 	void ResultChooseSources(int nDiff, const std::vector<int>& srcPanes, bool bGroupWithPrevious = false);
 	/** @brief Merge20 (S8): set the resolution state of one result segment (used when restoring a saved Auto judgment: ResultChooseSources marks it Chosen). */
 	void Merge20SetResultSegmentState(int nDiff, ResultSegmentState state);
+	/** @brief Merge20 (Phase 4 D4): the current diff's result segment as text for the focus dock.
+	 * @param [in] nDiff Index in the diff list.
+	 * @param [out] sText The segment's lines from the result buffer (with EOLs).
+	 * @param [out] nState The segment's ResultSegmentState value, or -1.
+	 * @param [out] nOp The diff's DIFFRANGE op value (Merge20FocusOp*), or 0.
+	 * @return False when there is no merge session yet or the diff has no segment. */
+	bool Merge20GetFocusResultText(int nDiff, String& sText, int& nState, int& nOp);
+	/** @brief Merge20 (Phase 4 D4): apply a focus-dock judgement (ResultChooseSources plus the
+	 * Phase 3 L2 learning record, like OnMergeChooseSource). Refreshes the focus dock. */
+	void Merge20FocusApplyJudgment(int nDiff, const std::vector<int>& srcPanes);
 	/** @brief Merge20 (Phase 3 L2): learning candidates for this doc (diff index -> candidate). Candidates never touch m_resultSegments: a diff with a candidate stays Unresolved/Conflict until a person accepts it (spec section 4(c)). */
 	std::map<int, Merge20LearnCandidate>& GetMerge20LearnCandidates() { return m_merge20LearnCandidates; }
 	/** @brief Merge20 (Phase 3 L2): read-only view of the learning candidates. */
@@ -417,6 +431,7 @@ private:
 	void EnsureNoLinesPlaceholder(int nSegment);
 	std::unique_ptr<CMergeResultTextBuffer> m_ptResultBuf; /**< Merge result buffer (not part of the diff) */
 	CMergeResultView* m_pMergeResultView; /**< Merge result view, or nullptr */
+	CMerge20FocusDock* m_pMerge20FocusDock; /**< Merge20 (Phase 4 D4): focus dock, or nullptr */
 	std::vector<MergeResultSegment> m_resultSegments; /**< Segments covering the result buffer */
 	std::vector<int> m_resultDiffToSegment; /**< diff index -> segment index or -1 */
 	std::map<int, Merge20LearnCandidate> m_merge20LearnCandidates; /**< Merge20 (Phase 3 L2): learning candidate per diff index, kept apart from m_resultSegments so a candidate never changes the result (spec section 4(c)) */

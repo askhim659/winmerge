@@ -1051,6 +1051,9 @@
     <ClInclude Include="Merge20\Merge20CsvExportDlg.h" />
     <ClInclude Include="Merge20\Merge20DedBar.h" />
     <ClInclude Include="Merge20\Merge20FileStates.h" />
+    <ClInclude Include="Merge20\Merge20Focus.h" />
+    <ClInclude Include="Merge20\Merge20FocusDock.h" />
+    <ClInclude Include="Merge20\Merge20FocusResultView.h" />
     <ClInclude Include="Merge20\Merge20Learn.h" />
     <ClInclude Include="Merge20\Merge20LearnDoc.h" />
     <ClInclude Include="Merge20\Merge20LearnDlg.h" />
@@ -1366,6 +1369,13 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Focus.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FocusDock.cpp" />
+    <ClCompile Include="Merge20\Merge20FocusResultView.cpp" />
     <ClCompile Include="Merge20\Merge20Learn.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

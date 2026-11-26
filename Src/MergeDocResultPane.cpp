@@ -14,6 +14,8 @@
 #include "MergeResultPane.h"
 #include "MergeDoc.h"
 #include "MergeResultView.h"
+#include "Merge20/Merge20FocusDock.h"
+#include "Merge20/Merge20Focus.h"
 #include "MergeResultTextBuffer.h"
 #include "MergeEditView.h"
 #include "MergeEditFrm.h"
@@ -462,6 +464,11 @@ void CMergeDoc::BuildMergeResult()
 		m_pMergeResultView->RefreshOptions();
 		m_pMergeResultView->Invalidate();
 	}
+
+	// Merge20 (Phase 4 D4): the result was rebuilt, so the focus
+	// dock's segment text is stale; refresh it.
+	if (m_pMerge20FocusDock != nullptr)
+		m_pMerge20FocusDock->ShowDiff(GetCurrentDiff());
 }
 
 void CMergeDoc::ApplyAutoMergeToResult()
@@ -1134,6 +1141,12 @@ void CMergeDoc::ResultChooseSources(int nDiff, const std::vector<int>& srcPanes,
 
 	if (m_pMergeResultView != nullptr && m_pMergeResultView->GetSafeHwnd() != nullptr)
 		m_pMergeResultView->Invalidate();
+
+	// Merge20 (Phase 4 D4): the focus dock shows this diff's result
+	// segment; a judgement changes its text, so refresh it. The dock
+	// always shows the current diff, not the judged one.
+	if (m_pMerge20FocusDock != nullptr)
+		m_pMerge20FocusDock->ShowDiff(GetCurrentDiff());
 }
 
 /**
@@ -1314,6 +1327,54 @@ bool CMergeDoc::SaveMergeResult(bool bSaveAs)
 	m_strMergeResultSavePath = strPath;
 	m_bResultSaved = true;
 	return true;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D4): the current diff's result segment
+ * as text, for the focus dock's third segment. The text is the
+ * segment's lines straight from the result buffer, so it matches
+ * what the main result pane shows (including the conflict block
+ * or the "<No Lines>" placeholder).
+ */
+bool CMergeDoc::Merge20GetFocusResultText(int nDiff, String& sText, int& nState, int& nOp)
+{
+	sText.clear();
+	nState = -1;
+	nOp = Merge20FocusOpNone;
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= static_cast<int>(m_resultDiffToSegment.size()))
+		return false;
+	const MergeResultSegment* pSegment = GetResultSegmentByDiff(nDiff);
+	if (pSegment == nullptr)
+		return false;
+	const DIFFRANGE* pdi = (nDiff < m_diffList.GetSize()) ?
+		m_diffList.DiffRangeAt(nDiff) : nullptr;
+	if (pdi == nullptr)
+		return false;
+	nState = static_cast<int>(pSegment->state);
+	nOp = static_cast<int>(pdi->op);
+	sText = GetResultBufferLinesText(pSegment->nStartLine, pSegment->nLines);
+	return true;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D4): apply a focus-dock judgement.
+ * ResultChooseSources plus the Phase 3 L2 learning record, exactly
+ * like a judgement made in the result pane (OnMergeChooseSource):
+ * an explicit judgement is recorded for learning, while batch
+ * approval, auto-merge and session restore go through
+ * ResultChooseSources directly and stay unrecorded. The dock
+ * refresh itself happens inside ResultChooseSources.
+ */
+void CMergeDoc::Merge20FocusApplyJudgment(int nDiff, const std::vector<int>& srcPanes)
+{
+	ResultChooseSources(nDiff, srcPanes);
+	if (Merge20LearnRecordDiffJudgment(*this, nDiff))
+	{
+		String errStr;
+		if (!Merge20LearnSaveStore(errStr))
+			ShowMessageBox(errStr, MB_OK | MB_ICONWARNING);
+		Merge20LearnRefreshAllOpenDocs();
+	}
 }
 
 /**

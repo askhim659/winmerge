@@ -23,6 +23,7 @@
 #include "MergeEditView.h"
 #include "MergeEditFrm.h"
 #include "MergeResultView.h"
+#include "Merge20/Merge20FocusDock.h"
 #include "MergeResultTextBuffer.h"
 #include "MergeLogger.h"
 #include "MergeTextFormatter.h"
@@ -186,6 +187,7 @@ CMergeDoc::CMergeDoc()
 , m_nBuffers(m_nBuffersTemp)
 , m_documentType(m_documentTypeTemp)
 , m_pMergeResultView(nullptr)
+, m_pMerge20FocusDock(nullptr)
 , m_bResultBuilt(false)
 , m_bResultSaved(false)
 , m_nMergeBasePane(1)
@@ -1360,6 +1362,9 @@ void CMergeDoc::SetCurrentDiff(int nDiff)
 		m_nCurDiff = nDiff;
 	else
 		m_nCurDiff = -1;
+	// Merge20 (Phase 4 D4): the focus dock follows the current diff.
+	if (m_pMerge20FocusDock != nullptr)
+		m_pMerge20FocusDock->ShowDiff(m_nCurDiff);
 }
 
 /**

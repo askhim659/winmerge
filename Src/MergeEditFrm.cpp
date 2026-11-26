@@ -13,6 +13,8 @@
 
 #include "stdafx.h"
 #include "MergeEditFrm.h"
+#include "Merge20/Merge20FocusDock.h"
+#include "Merge20/Merge20FocusResultView.h"
 #include "FrameWndHelper.h"
 #include "MergeDoc.h"
 #include "MergeEditView.h"
@@ -145,13 +147,43 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 		return FALSE;
 	}
 
+	// Merge20 (Phase 4 D4): the Diff Pane is now a focus dock: the
+	// bar's single child (SCBS_SIZECHILD) is the dock container,
+	// which holds the header strip, the detail splitter view and
+	// the result-segment view (design section 3.5). The splitter
+	// view is created with the dock as its parent instead of the
+	// bar, so the bar keeps sizing exactly one child.
+	if (!m_wndFocusDock.Create(&m_wndDetailBar))
+	{
+		TRACE0("Failed to create Merge20FocusDock\n");
+		return FALSE;
+	}
+
 	m_pwndDetailMergeEditSplitterView = new CMergeEditSplitterView();
 	m_pwndDetailMergeEditSplitterView->m_bDetailView = true;
-	if (!m_pwndDetailMergeEditSplitterView->Create(nullptr, nullptr, dwStyle, CRect(0,0,1,1), &m_wndDetailBar, ID_VIEW_DETAIL_BAR+1, pContext))
+	if (!m_pwndDetailMergeEditSplitterView->Create(nullptr, nullptr, dwStyle, CRect(0,0,1,1), &m_wndFocusDock, ID_VIEW_DETAIL_BAR+1, pContext))
 	{
 		TRACE0("Failed to create CMergeEditSplitterView\n");
 		return FALSE;
 	}
+
+	// Merge20 (Phase 4 D4): the third segment: the result pane's
+	// lines for the current diff, in a read-only view (design
+	// section 3.5, option (b): the lines are extracted from the
+	// result buffer, so the dock never fights the document's
+	// single result view).
+	CMerge20FocusResultView* pFocusResultView = new CMerge20FocusResultView();
+	if (!pFocusResultView->Create(nullptr, nullptr, dwStyle, CRect(0,0,1,1), &m_wndFocusDock, IDC_MERGE20_FOCUS_RESULT, pContext))
+	{
+		TRACE0("Failed to create CMerge20FocusResultView\n");
+		delete pFocusResultView;
+		return FALSE;
+	}
+	pFocusResultView->SendMessage(WM_INITIALUPDATE);
+
+	m_wndFocusDock.SetViews(m_pwndDetailMergeEditSplitterView, pFocusResultView);
+	m_wndFocusDock.SetMergeDoc(dynamic_cast<CMergeDoc*>(pContext->m_pCurrentDoc));
+	m_wndFocusDock.ShowDiff(-1); // No diff selected yet: placeholder + disabled buttons.
 
 	// Merge20 (Phase 4 D1/D2): dedicated-mode bar. D2 adds the
 	// Prev/Next, review-state, pin/toggle, zoom and exit buttons,
@@ -353,6 +385,9 @@ BOOL CMergeEditFrame::OnBarCheck(UINT nID)
 	{
 		int nDiff = m_pMergeDoc->GetCurrentDiff();
 		m_pMergeDoc->ForEachView ([nDiff](auto& pView) { if (pView->m_bDetailView) pView->OnDisplayDiff(nDiff); });
+		// Merge20 (Phase 4 D4): reopening the bar also refreshes the
+		// focus dock (its result segment may have changed while hidden).
+		m_wndFocusDock.ShowDiff(nDiff);
 	}
 	// The merge result pane's own state follows the bar's visibility, which
 	// is synchronized in OnIdleUpdateCmdUI (the bar can also be closed with
@@ -1064,6 +1099,7 @@ void CMergeEditFrame::UpdateResources()
 	m_wndStatusBar.UpdateResources();
 	m_wndLocationBar.UpdateResources();
 	m_wndDetailBar.UpdateResources();
+	m_wndFocusDock.UpdateResources();
 	m_wndDedBar.UpdateResources();
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.UpdateResources();
