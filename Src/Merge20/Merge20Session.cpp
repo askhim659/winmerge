@@ -989,6 +989,13 @@ bool Merge20SessionToJson(const Merge20Session& session, std::string& outUtf8)
 	std::vector<Merge20JsonValue> reviewFilter;
 	for (int i = 0; i < 5; ++i)
 		reviewFilter.push_back(Merge20JsonBool(session.display.reviewFilter[i]));
+	// Merge20 (H-FILTER): filter-deck existence and action filters.
+	std::vector<Merge20JsonValue> statusFilter;
+	for (int i = 0; i < 4; ++i)
+		statusFilter.push_back(Merge20JsonBool(session.display.statusFilter[i]));
+	std::vector<Merge20JsonValue> actionFilter;
+	for (int i = 0; i < 7; ++i)
+		actionFilter.push_back(Merge20JsonBool(session.display.actionFilter[i]));
 	std::vector<Merge20JsonValue> hiddenItems;
 	for (const String& item : session.display.hiddenItems)
 		hiddenItems.push_back(Merge20JsonText(item));
@@ -1029,6 +1036,8 @@ bool Merge20SessionToJson(const Merge20Session& session, std::string& outUtf8)
 			{ L"showEmptyFolders", Merge20JsonBool(session.display.showEmptyFolders) },
 			{ L"treeMode", Merge20JsonBool(session.display.treeMode) },
 			{ L"reviewFilter", Merge20JsonArray(std::move(reviewFilter)) },
+			{ L"statusFilter", Merge20JsonArray(std::move(statusFilter)) },
+			{ L"actionFilter", Merge20JsonArray(std::move(actionFilter)) },
 			// Merge20 (Phase 4 D11, design section 4.1(b)): dedicated
 			// mode, pin, unreviewed-only tour, dedicated zoom, slim
 			// list and the latest Grep search string.
@@ -1193,6 +1202,33 @@ bool Merge20SessionFromJson(const std::string& utf8, Merge20Session& out, std::s
 				if (reviewFilter->array[i].type != Merge20JsonValue::Type::Bool)
 					return false;
 				session.display.reviewFilter[i] = reviewFilter->array[i].boolean;
+			}
+		}
+		// Merge20 (H-FILTER): filter-deck existence and action
+		// filters. Missing keys (sessions saved before H-FILTER)
+		// keep the all-true defaults, like reviewFilter above.
+		const Merge20JsonValue* statusFilter = display->Find(L"statusFilter");
+		if (statusFilter != nullptr)
+		{
+			if (statusFilter->type != Merge20JsonValue::Type::Array || statusFilter->array.size() != 4)
+				return false;
+			for (int i = 0; i < 4; ++i)
+			{
+				if (statusFilter->array[i].type != Merge20JsonValue::Type::Bool)
+					return false;
+				session.display.statusFilter[i] = statusFilter->array[i].boolean;
+			}
+		}
+		const Merge20JsonValue* actionFilter = display->Find(L"actionFilter");
+		if (actionFilter != nullptr)
+		{
+			if (actionFilter->type != Merge20JsonValue::Type::Array || actionFilter->array.size() != 7)
+				return false;
+			for (int i = 0; i < 7; ++i)
+			{
+				if (actionFilter->array[i].type != Merge20JsonValue::Type::Bool)
+					return false;
+				session.display.actionFilter[i] = actionFilter->array[i].boolean;
 			}
 		}
 		const Merge20JsonValue* hiddenItems = display->Find(L"hiddenItems");
