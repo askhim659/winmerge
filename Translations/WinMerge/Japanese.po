@@ -893,6 +893,17 @@ msgstr "ヘルプ(&H)"
 msgid "&WizMerge Help\tF1"
 msgstr "&WizMerge ヘルプ\tF1"
 
+#. Merge20 (H-DOC): WizMerge user manual menu item in the Help menu
+#. IDR_MERGEDOCTYPE, ID_MERGE20_USER_MANUAL
+#: Merge.rc:509 Merge.rc:688 Merge.rc:1036
+msgid "&User Manual"
+msgstr "【Wiz】使い方マニュアル(&U)"
+
+#. Merge20 (H-DOC): message when Docs/WizMergeManual.html is missing
+#: Src/MainFrm.cpp
+msgid "WizMerge user manual (Docs\\WizMergeManual.html) was not found."
+msgstr "WizMerge の使い方マニュアル（Docs\\WizMergeManual.html）が見つかりませんでした。"
+
 #. IDR_MERGEDOCTYPE, ID_HELP_RELEASENOTES
 #: Merge.rc:500 Merge.rc:677 Merge.rc:1022
 msgid "R&elease Notes"
