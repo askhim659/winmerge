@@ -506,6 +506,7 @@ BEGIN
     POPUP "&Help"
     BEGIN
         MENUITEM "&WizMerge Help\tF1",          ID_HELP_CONTENTS
+        MENUITEM "&User Manual",        ID_MERGE20_USER_MANUAL
         MENUITEM SEPARATOR
         MENUITEM "R&elease Notes",              ID_HELP_RELEASENOTES
         MENUITEM "&Translations",               ID_HELP_TRANSLATIONS
@@ -684,6 +685,7 @@ BEGIN
     POPUP "&Help"
     BEGIN
         MENUITEM "&WizMerge Help\tF1",          ID_HELP_CONTENTS
+        MENUITEM "&User Manual",        ID_MERGE20_USER_MANUAL
         MENUITEM SEPARATOR
         MENUITEM "R&elease Notes",              ID_HELP_RELEASENOTES
         MENUITEM "&Translations",               ID_HELP_TRANSLATIONS
@@ -1031,6 +1033,7 @@ BEGIN
     POPUP "&Help"
     BEGIN
         MENUITEM "&WizMerge Help\tF1",          ID_HELP_CONTENTS
+        MENUITEM "&User Manual",        ID_MERGE20_USER_MANUAL
         MENUITEM SEPARATOR
         MENUITEM "R&elease Notes",              ID_HELP_RELEASENOTES
         MENUITEM "&Translations",               ID_HELP_TRANSLATIONS
