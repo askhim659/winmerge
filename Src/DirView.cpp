@@ -22,6 +22,9 @@
 #include "IMergeDoc.h"
 #include "FileLocation.h"
 #include "MainFrm.h"
+#include "MergeEditFrm.h"
+#include "MergeDoc.h"
+#include "MergeEditView.h"
 #include "resource.h"
 #include "FileTransform.h"
 #include "SelectPluginDlg.h"
@@ -157,6 +160,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_SESSION_RESTORE, OnMerge20SessionRestore)
 	ON_COMMAND(ID_MERGE20_MEMO_EDIT, OnMerge20MemoEdit)
 	ON_COMMAND(ID_MERGE20_LEARN, OnMerge20Learn)
+	ON_COMMAND(ID_MERGE20_GREP, OnMerge20Grep)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
@@ -916,6 +920,10 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// CSV export, next to the batch check. Always offered.
 	String sMerge20CsvExport = _("Export diff list as CSV...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_CSV_EXPORT, sMerge20CsvExport.c_str());
+	// Merge20 (Phase 4 D7, design section 5.2/D7, spec section 3 (4/4)):
+	// Grep cross-file search. Always offered.
+	String sMerge20Grep = _("Cross-File Search...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_GREP, sMerge20Grep.c_str());
 	// Merge20 (S8, design section 3.6, spec section 6.1): session
 	// save/restore, next to the batch check and CSV export. Always offered.
 	String sMerge20SessionSave = _("Save session");
@@ -1432,6 +1440,9 @@ void CDirView::SortColumnsAppropriately()
 /// Do any last minute work as view closes
 void CDirView::OnDestroy()
 {
+	// The Grep dialog is a child window: its own OnDestroy stops
+	// the scan, but close it explicitly so no scan outlives the view.
+	m_wndGrep.CloseGrep();
 	DeleteAllDisplayItems();
 
 	{
@@ -3673,6 +3684,123 @@ void CDirView::OnMerge20Learn()
 {
 	Merge20LearnDlg dlg(this);
 	dlg.DoModal();
+}
+
+/**
+ * @brief Merge20 (Phase 4 D7, design sections 3.7 and 5.2/D7, spec
+ * section 3 (4/4)): open the Grep cross-file search dialog
+ * (modeless, owned by this view). Ctrl+Shift+F and the context
+ * menu both land here. The dialog rebuilds its scan file list
+ * and history on every show.
+ */
+void CDirView::OnMerge20Grep()
+{
+	m_wndGrep.ShowGrep(this);
+}
+
+/**
+ * @brief Merge20 (Phase 4 D7): all compared files for the Grep
+ * scan, in folder-list order (depth-first tree walk, the same
+ * order the list shows). Directories are skipped; one-sided
+ * files contribute only their existing side (empty path for the
+ * missing side); hidden and filtered-out files are included
+ * (design: OLD/NEW "all files", not just the displayed rows).
+ */
+std::vector<Merge20GrepFile> CDirView::Merge20BuildGrepFiles()
+{
+	CDiffContext& ctxt = GetDiffContext();
+	std::vector<Merge20GrepFile> files;
+	for (DIFFITEM* pos = ctxt.GetFirstDiffPosition(); pos != nullptr;)
+	{
+		DIFFITEM& di = ctxt.GetNextDiffRefPosition(pos);
+		if (di.diffcode.isDirectory())
+			continue;
+		Merge20GrepFile file;
+		file.relPath = di.getItemRelativePath();
+		PathContext paths;
+		ctxt.GetComparePaths(di, paths);
+		const int nDirs = ctxt.GetCompareDirs();
+		file.paths.resize(static_cast<size_t>(nDirs));
+		for (int i = 0; i < nDirs; ++i)
+			file.paths[static_cast<size_t>(i)] = di.diffcode.exists(i) ? paths[i] : String();
+		files.push_back(std::move(file));
+	}
+	return files;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D7, design section 4.3): jump from a
+ * Grep hit to its file and diff. Selects the file row and opens
+ * the file compare (the usual OpenSelection path), then moves
+ * the compare to the hit line (GotoLine with the real line) and
+ * selects its diff when the line is inside one (LineToDiff on
+ * the apparent line; -1 for a hit in a common area or an
+ * identical file means "line only, no diff"). A file hidden by
+ * the current filter has no list row to select, so the jump is
+ * refused with an explanation instead of opening the wrong file.
+ */
+void CDirView::Merge20OpenFileAtLine(const Merge20GrepHit& hit)
+{
+	CDiffContext& ctxt = GetDiffContext();
+	DIFFITEM* pItem = nullptr;
+	for (DIFFITEM* pos = ctxt.GetFirstDiffPosition(); pos != nullptr;)
+	{
+		DIFFITEM& di = ctxt.GetNextDiffRefPosition(pos);
+		if (!di.diffcode.isDirectory() && di.getItemRelativePath() == hit.relPath)
+		{
+			pItem = &di;
+			break;
+		}
+	}
+	if (pItem == nullptr)
+		return;
+	const int nIdx = GetItemIndex(pItem);
+	if (nIdx == -1)
+	{
+		AfxMessageBox(_("Cannot open the file because it is hidden by the current filter.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	// OpenSelection opens the selected rows: clear any other
+	// selection first, or several files would open at once.
+	const int nCount = m_pList->GetItemCount();
+	for (int i = 0; i < nCount; ++i)
+		m_pList->SetItemState(i, 0, LVIS_SELECTED | LVIS_FOCUSED);
+	m_pList->SetItemState(nIdx, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+	m_pList->EnsureVisible(nIdx, FALSE);
+	OpenSelection();
+
+	// The compare just opened is the active MDI child; verify it
+	// really is this file before moving inside it.
+	CMergeEditFrame* pFrame = dynamic_cast<CMergeEditFrame*>(GetMainFrame()->GetActiveFrame());
+	if (pFrame == nullptr)
+		return;
+	CMergeDoc* pDoc = pFrame->GetMergeDoc();
+	if (pDoc == nullptr || pDoc->GetFileCount() <= hit.pane)
+		return;
+	PathContext paths;
+	ctxt.GetComparePaths(*pItem, paths);
+	for (int i = 0; i < pDoc->GetFileCount(); ++i)
+	{
+		if (!paths[i].empty() && pDoc->GetPath(i) != paths[i])
+			return;
+	}
+	CMergeEditView* pView = pDoc->GetView(0, hit.pane);
+	if (pView == nullptr)
+		pView = pDoc->GetActiveMergeView();
+	if (pView == nullptr)
+		return;
+	// Clamp the hit line to the buffer: the file may have changed
+	// on disk between the scan and the click. LineToDiff works on
+	// apparent (ghost-included) lines; GotoLine takes the real
+	// file line when bRealLine is true.
+	const int nLines = pDoc->m_ptBuf[hit.pane]->GetLineCount();
+	const int nRealLine = std::min(hit.line, std::max(0, nLines - 1));
+	const int nApparent = pDoc->m_ptBuf[hit.pane]->ComputeApparentLine(nRealLine);
+	const int nDiff = pDoc->m_diffList.LineToDiff(nApparent);
+	if (nDiff >= 0)
+		pView->SelectDiff(nDiff);
+	pView->SetActivePane();
+	pView->GotoLine(static_cast<UINT>(nRealLine), true, hit.pane);
 }
 
 /**
