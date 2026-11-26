@@ -1056,6 +1056,7 @@
     <ClInclude Include="Merge20\Merge20LearnDlg.h" />
     <ClInclude Include="Merge20\Merge20Measure.h" />
     <ClInclude Include="Merge20\Merge20MemoDlg.h" />
+    <ClInclude Include="Merge20\Merge20Patrol.h" />
     <ClInclude Include="Merge20\Merge20Session.h" />
     <ClInclude Include="Merge20\Merge20SessionDoc.h" />
     <ClInclude Include="Merge20\Merge20Types.h" />
@@ -1378,6 +1379,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20MemoDlg.cpp" />
+    <ClCompile Include="Merge20\Merge20Patrol.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20Session.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
