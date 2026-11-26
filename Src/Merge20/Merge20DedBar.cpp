@@ -68,9 +68,13 @@ namespace
 		IDC_MERGE20_DED_EXIT,
 	};
 
-	/** @brief Frame commands the buttons forward, in bar order. */
+	/** @brief Frame commands the buttons forward, in control-ID order
+	 * (IDC_MERGE20_DED_EXIT..IDC_MERGE20_DED_ZOOM): OnButtonClicked
+	 * indexes this table by (nID - IDC_MERGE20_DED_EXIT), so the order
+	 * here must follow the IDC values, not the bar order. */
 	constexpr UINT Merge20DedBarCommands[] =
 	{
+		ID_MERGE20_DED_EXIT,
 		ID_MERGE20_DED_PREV_FILE,
 		ID_MERGE20_DED_NEXT_FILE,
 		ID_MERGE20_DED_REVIEW_TODO,
@@ -82,7 +86,6 @@ namespace
 		ID_MERGE20_DED_TODO_ONLY,
 		ID_MERGE20_DED_SNIPER,
 		ID_MERGE20_DED_ZOOM_RESET,
-		ID_MERGE20_DED_EXIT,
 	};
 } // namespace
 
