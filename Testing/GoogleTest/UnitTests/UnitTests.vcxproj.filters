@@ -165,6 +165,9 @@
     <ClCompile Include="..\Merge20\Merge20Split_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20Sniper_test.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\DirItem\DirItem_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
@@ -367,6 +370,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Split.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20Sniper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Common\VersionInfo.cpp">
@@ -600,6 +606,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Split.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20Sniper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Types.h">

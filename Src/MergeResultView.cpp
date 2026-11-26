@@ -17,6 +17,7 @@
 #include "MergeDoc.h"
 #include "Merge20/Merge20LearnDoc.h"
 #include "MergeEditView.h"
+#include "MergeEditFrm.h"
 #include "OptionsMgr.h"
 #include "OptionsDef.h"
 #include "SyntaxColors.h"
@@ -493,6 +494,32 @@ void CMergeResultView::OnLButtonDblClk(UINT nFlags, CPoint point)
 	const MergeResultSegment* pSegment = pDoc->GetResultSegmentByLine(pos.y);
 	if (pSegment == nullptr || pSegment->diffIdx < 0)
 		return;
+	// Merge20 (Phase 4 D6, design section 3.6, spec section 4(g)):
+	// with the sniper ON in dedicated mode, a double-click opens
+	// the sniper overlay for this diff instead of only selecting
+	// it. The check sits before the "already current" early return
+	// below, so double-clicking the current diff opens the overlay
+	// too. With the sniper OFF (or outside dedicated mode) the
+	// existing behaviour is unchanged: the double-click only
+	// selects the diff. The compare panes' double-click (word
+	// selection) is untouched: only the result view hooks the
+	// sniper, as the design specifies.
+	if (auto* pFrame = dynamic_cast<CMergeEditFrame*>(GetParentFrame()))
+	{
+		if (pFrame->IsDedicatedMode() &&
+			GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON))
+		{
+			if (pSegment->diffIdx != pDoc->GetCurrentDiff())
+			{
+				m_bSyncingCurrentDiff = true;
+				SelectDiff(pSegment->diffIdx, true, false);
+				m_bSyncingCurrentDiff = false;
+				Invalidate();
+			}
+			pFrame->ShowMerge20Sniper(pSegment->diffIdx);
+			return;
+		}
+	}
 	if (pSegment->diffIdx == pDoc->GetCurrentDiff())
 		return;
 	m_bSyncingCurrentDiff = true;

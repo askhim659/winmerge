@@ -3091,6 +3091,17 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,417,292,56,14
 END
 
+// Merge20 (Phase 4 D6): auto sniper overlay. The dialog has no
+// controls in the template: the header buttons and the three panels
+// are created in code by CMerge20SniperDlg::OnInitDialog (like the
+// dedicated bar creates its buttons), and the dialog is sized to
+// the monitor at runtime, so the template size is a placeholder.
+IDD_MERGE20_SNIPER DIALOGEX 0, 0, 800, 600
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP
+FONT 8, FONTNAME, 0, 0, 0x1
+BEGIN
+END
+
 IDD_PROPPAGE_CODEPAGE DIALOGEX 0, 0, 325, 294
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
 CAPTION "Codepage"

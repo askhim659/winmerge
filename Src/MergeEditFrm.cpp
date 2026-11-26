@@ -494,6 +494,10 @@ void CMergeEditFrame::ExitDedicatedMode()
 			pView->ZoomTextTo(m_nDedPrevZoom);
 	}
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_SNIPER_ON, false);
+	// Merge20 (Phase 4 D6): leaving dedicated mode closes the
+	// sniper overlay as well (the option above only flips the
+	// toggle; the dialog itself must be hidden here).
+	m_wndSniper.CloseSniper();
 
 	ShowControlBar(&m_wndDedBar, FALSE, FALSE);
 	ShowControlBar(&m_wndFilePathBar, m_bDedFilePathBarVisible, FALSE);
@@ -675,7 +679,28 @@ void CMergeEditFrame::OnMerge20DedSniper()
 {
 	const bool bSniperOn = !GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON);
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_SNIPER_ON, bSniperOn);
+	// Merge20 (Phase 4 D6): turning the sniper off closes an open
+	// overlay (turning it on only arms the double-click).
+	if (!bSniperOn)
+		m_wndSniper.CloseSniper();
 	FlashDedBar();
+}
+
+/**
+ * @brief Open the auto sniper overlay for the given diff
+ * (Merge20 Phase 4 D6). Called from the result view's
+ * double-click while sniper mode is ON in dedicated mode.
+ */
+void CMergeEditFrame::ShowMerge20Sniper(int nDiff)
+{
+	if (m_pMergeDoc == nullptr)
+		return;
+	if (m_wndSniper.GetSafeHwnd() == nullptr && !m_wndSniper.Create(this))
+	{
+		TRACE0("Failed to create CMerge20SniperDlg\n");
+		return;
+	}
+	m_wndSniper.OpenSniper(m_pMergeDoc, nDiff);
 }
 
 /**
@@ -708,6 +733,17 @@ void CMergeEditFrame::OnMerge20DedZoomReset()
  */
 BOOL CMergeEditFrame::PreTranslateMessage(MSG* pMsg)
 {
+	// Merge20 (Phase 4 D6): while the sniper overlay is open, its
+	// keys (Esc/J/K/arrows) work even when the focus is on a header
+	// button. The panels handle their own keys in
+	// CMerge20SniperView::OnKeyDown; the dialog's own
+	// PreTranslateMessage is not reached by the pump for a modeless
+	// dialog, so the frame forwards here, through the dialog's
+	// public HandleSniperKey (CWnd::PreTranslateMessage is
+	// protected and cannot be called from the frame).
+	if (m_wndSniper.IsOpen() && pMsg->message == WM_KEYDOWN &&
+		m_wndSniper.HandleSniperKey(static_cast<UINT>(pMsg->wParam)))
+		return TRUE;
 	if (m_bDedicatedMode && pMsg->message == WM_KEYDOWN &&
 		pMsg->wParam == 'R' &&
 		(GetKeyState(VK_CONTROL) & 0x8000) == 0 &&
@@ -815,6 +851,9 @@ void CMergeEditFrame::SaveActivePane()
 
 void CMergeEditFrame::OnClose() 
 {
+	// Merge20 (Phase 4 D6): hide the sniper overlay before the
+	// frame (and its document) goes away.
+	m_wndSniper.CloseSniper();
 	// clean up pointers.
 	CMergeFrameCommon::OnClose();
 }

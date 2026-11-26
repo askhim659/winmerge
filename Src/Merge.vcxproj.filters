@@ -651,10 +651,19 @@
     <ClCompile Include="Merge20\Merge20Split.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Sniper.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20FocusDock.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20FocusResultView.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20SniperDlg.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20SniperView.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20Learn.cpp">
@@ -1493,10 +1502,19 @@
     <ClInclude Include="Merge20\Merge20Split.h">
       <Filter>Merge20</Filter>
     </ClInclude>
+    <ClInclude Include="Merge20\Merge20Sniper.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
     <ClInclude Include="Merge20\Merge20FocusDock.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FocusResultView.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20SniperDlg.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20SniperView.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Learn.h">

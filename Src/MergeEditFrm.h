@@ -18,6 +18,7 @@
 #include "DiffViewBar.h"
 #include "Merge20/Merge20FocusDock.h"
 #include "Merge20/Merge20DedBar.h"
+#include "Merge20/Merge20SniperDlg.h"
 #include "MergeResultBar.h"
 #include "LocationBar.h"
 #include "LineFilterBar.h"
@@ -50,6 +51,7 @@ public:
 	void HideFilterBar();
 	CLineFilterBar* GetFilterBar() { return m_pFilterBar.get(); }
 	void ShowMergeResultPane(bool bVisible = true);
+	void ShowMerge20Sniper(int nDiff);
 	void SetDedicatedMode(bool bEnable);
 	bool IsDedicatedMode() const { return m_bDedicatedMode; }
 	void FlashDedBar();
@@ -61,6 +63,7 @@ protected:
 	CDiffViewBar m_wndDetailBar;
 	CMerge20FocusDock m_wndFocusDock; /**< Focus dock (Merge20 Phase 4 D4): the Diff Pane's single child, holding the header strip, the detail splitter view and the result-segment view */
 	CMerge20DedBar m_wndDedBar; /**< Dedicated-mode bar (Merge20 Phase 4 D1) */
+	CMerge20SniperDlg m_wndSniper; /**< Auto sniper overlay (Merge20 Phase 4 D6): modeless, created on first use, hidden on close */
 	CMergeEditSplitterView *m_pwndDetailMergeEditSplitterView;
 	CMergeResultBar m_wndResultBar;
 	CMergeResultView *m_pMergeResultView;
