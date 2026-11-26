@@ -368,8 +368,17 @@ exitPrepAndCompare:
 	di.diffcode.diffcode |= code;
 	di.nsdiffs = m_ndiffs;
 	di.nidiffs = m_ntrivialdiffs;
+	// Merge20 (S0-F1): carry the per-side counts into the item, but
+	// only when the compare actually ran. On the early-exit paths
+	// above (unpack/prediff/OpenFiles failure) m_ndiffs stays
+	// DIFFS_UNKNOWN, and a partial count from a side that ran first
+	// would be misleading, so mark the counts unknown instead.
+	// Quick compare leaves m_ndiffs at DIFFS_UNKNOWN_QUICKCOMPARE,
+	// which is not DIFFS_UNKNOWN: the prediffer did run there, so
+	// its counts are real and are kept. (One-sided items get
+	// DIFFS_UNKNOWN here too, but the column hides them anyway.)
 	for (int i = 0; i < nDirs; ++i)
-		di.nexcluded[i] = nExcluded[i];
+		di.nexcluded[i] = (m_ndiffs == CDiffContext::DIFFS_UNKNOWN) ? -1 : nExcluded[i];
 
 	errno = errnoSaved;
 }
