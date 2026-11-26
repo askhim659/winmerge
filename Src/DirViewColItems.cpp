@@ -1930,8 +1930,8 @@ static DirColInfo f_cols[] =
 	{ _T("Prediffer"), nullptr, COLHDR_PREDIFFER, COLDESC_PREDIFFER, &ColPluginPipelineGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Lname"), nullptr, COLHDR_LFILENAME, COLDESC_LFILENAME, &ColSideFileNameGet, &ColSideFileNameSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Rname"), nullptr, COLHDR_RFILENAME, COLDESC_RFILENAME, &ColSideFileNameGet, &ColSideFileNameSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
-	{ _T("Lpath"), nullptr, COLHDR_LDIR, COLDESC_LDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
-	{ _T("Rpath"), nullptr, COLHDR_RDIR, COLDESC_RDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
+	{ _T("Lpath"), "DirView|ColumnHeader", COLHDR_LDIR, COLDESC_LDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
+	{ _T("Rpath"), "DirView|ColumnHeader", COLHDR_RDIR, COLDESC_RDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Lext"), nullptr, COLHDR_LEXTENSION, COLDESC_LEXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Rext"), nullptr, COLHDR_REXTENSION, COLDESC_REXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	// Merge20 (S1, design sections 3.2 and 7, spec section 4(b)): review
@@ -2012,9 +2012,9 @@ static DirColInfo f_cols3[] =
 	{ _T("Lname"), nullptr, COLHDR_LFILENAME, COLDESC_LFILENAME, &ColSideFileNameGet, &ColSideFileNameSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Mname"), nullptr, COLHDR_MFILENAME, COLDESC_MFILENAME, &ColSideFileNameGet, &ColSideFileNameSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Rname"), nullptr, COLHDR_RFILENAME, COLDESC_RFILENAME, &ColSideFileNameGet, &ColSideFileNameSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },
-	{ _T("Lpath"), nullptr, COLHDR_LDIR, COLDESC_LDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
-	{ _T("Mpath"), nullptr, COLHDR_MDIR, COLDESC_MDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
-	{ _T("Rpath"), nullptr, COLHDR_RDIR, COLDESC_RDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },
+	{ _T("Lpath"), "DirView|ColumnHeader", COLHDR_LDIR, COLDESC_LDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
+	{ _T("Mpath"), "DirView|ColumnHeader", COLHDR_MDIR, COLDESC_MDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
+	{ _T("Rpath"), "DirView|ColumnHeader", COLHDR_RDIR, COLDESC_RDIR, &ColSidePathGet, &ColSidePathSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },
 	{ _T("Lext"), nullptr, COLHDR_LEXTENSION, COLDESC_LEXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Mext"), nullptr, COLHDR_MEXTENSION, COLDESC_MEXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Rext"), nullptr, COLHDR_REXTENSION, COLDESC_REXTENSION, &ColSideExtensionGet, &ColSideExtensionSort, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },
@@ -2741,4 +2741,48 @@ String DirViewColItems::SaveColumnOrders()
 		result += m_cols[m_invcolorder[i]].regName;
 	}
 	return result;
+}
+
+/**
+ * @brief Merge20 (W1, D1.5): append the Merge20 columns that a saved layout
+ * hides to the end of the display order.
+ *
+ * LoadColumnOrders() leaves every column that is not in the saved string
+ * hidden, so a layout saved before S1/S2/S4 (or by stock WinMerge) never
+ * shows the five Merge20 columns (review state, output, action category,
+ * risk, summary) even though they are visible by default for a fresh
+ * layout. CDirView::OnInitialUpdate calls this once, right after
+ * LoadColumnOrders(), when the saved layout version is older than 1.
+ * Stock columns are never touched, and the two columns that are hidden
+ * by default (memo, excluded diffs) are out of scope.
+ * @return true if at least one column was appended.
+ */
+bool DirViewColItems::MigrateMerge20Columns()
+{
+	if (m_dispcols < 0 || m_dispcols >= m_numcols)
+		return false;
+	static const tchar_t * const merge20Cols[] = {
+		_T("Sreview"), _T("Soutput"), _T("Saction"), _T("Srisk"), _T("Ssummary")
+	};
+	std::vector<std::pair<int, int>> toAppend; // (default order, logical col)
+	for (const tchar_t *name : merge20Cols)
+	{
+		const int col = GetColIndexByName(name);
+		if (col < 0)
+			continue;
+		if (GetColDefaultOrder(col) < 0 || m_colorder[col] >= 0)
+			continue; // hidden by default, or already displayed
+		toAppend.emplace_back(GetColDefaultOrder(col), col);
+	}
+	std::sort(toAppend.begin(), toAppend.end());
+	bool appended = false;
+	for (const auto& item : toAppend)
+	{
+		const int col = item.second;
+		m_colorder[col] = m_dispcols;
+		m_invcolorder[m_dispcols] = col;
+		++m_dispcols;
+		appended = true;
+	}
+	return appended;
 }
