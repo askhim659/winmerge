@@ -33,6 +33,7 @@
 #include "Merge20/Merge20ClassifyDoc.h"
 #include "DirView.h"
 #include "DirDoc.h"
+#include "DiffContext.h"
 #include "PathContext.h"
 #include "OptionsMgr.h"
 #include "OptionsDef.h"
@@ -462,6 +463,19 @@ void CMerge20BulkClassifyDlg::DrainPendingResults()
 		std::lock_guard<std::mutex> lock(m_mutex);
 		pending.swap(m_pendingResults);
 	}
+	// Merge20 (Panel P1, design section 12.5): suspend the per-file
+	// panel notification while draining, so a bulk run posts one
+	// refresh instead of one per classified file (each
+	// SetMerge20Classification notifies on its own). Resume notifies
+	// once when a change happened while suspended.
+	const CDiffContext* pCtxt = nullptr;
+	if (m_pDirView != nullptr)
+	{
+		if (CDirDoc* pDoc = m_pDirView->GetDocument())
+			pCtxt = &pDoc->GetDiffContext();
+	}
+	if (pCtxt != nullptr)
+		pCtxt->SuspendMerge20FileListNotify();
 	for (const Merge20BulkClassifyResult& result : pending)
 	{
 		if (result.skipped)
@@ -479,6 +493,8 @@ void CMerge20BulkClassifyDlg::DrainPendingResults()
 		}
 		m_stFile.SetWindowText(result.relPath.c_str());
 	}
+	if (pCtxt != nullptr)
+		pCtxt->ResumeMerge20FileListNotify();
 }
 
 void CMerge20BulkClassifyDlg::StartRun()
