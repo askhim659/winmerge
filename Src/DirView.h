@@ -25,6 +25,7 @@
 #include "FileOpenFlags.h"
 #include "7zCommon.h"
 #include "Merge20/Merge20GrepDlg.h"
+#include "Merge20/Merge20BulkClassifyDlg.h"
 
 class FileActionScript;
 
