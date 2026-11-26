@@ -11374,3 +11374,173 @@ msgstr "【Wiz】検索文字列を入力してください。"
 #: Src/DirView.cpp
 msgid "Cannot open the file because it is hidden by the current filter."
 msgstr "【Wiz】現在のフィルタで隠れているため開けません。フィルタを解除してから開いてください。"
+
+#. Merge20 (D8): Master Management dialog title (CMerge20MasterDlg) and.rc caption (IDD_MERGE20_MASTER)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Master Management"
+msgstr "マスタ管理"
+
+#. Merge20 (D8): Master management context-menu item (CDirView)
+#: Src/DirView.cpp
+msgid "Master Management..."
+msgstr "マスタ管理…"
+
+#. Merge20 (D8): Master management master-select label (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Master:"
+msgstr "マスタ："
+
+#. Merge20 (D8): Master management master name, exclude words (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Exclude Words Master"
+msgstr "除外ワードマスタ"
+
+#. Merge20 (D8): Master management master name, highlight (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Highlight Master"
+msgstr "強調文字マスタ"
+
+#. Merge20 (D8): Master management master name, risk keywords (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Risk Keywords"
+msgstr "リスク重要語"
+
+#. Merge20 (D8): Master management list column and editor label (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Pattern"
+msgstr "パターン"
+
+#. Merge20 (D8): Master management list column and editor label, highlight name (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Display Name"
+msgstr "表示名"
+
+#. Merge20 (D8): Master management list column, plain-match kind (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Plain match"
+msgstr "部分一致"
+
+#. Merge20 (D8): Master management list column, risk keyword (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Risk Keyword"
+msgstr "重要語"
+
+#. Merge20 (D8): Master management check box, ignore 2nd-line version (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Ignore 2nd line version number"
+msgstr "2行目のバージョン番号を無視する"
+
+#. Merge20 (D8): Master management button, check regex (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Check regular expression"
+msgstr "正規表現をチェック"
+
+#. Merge20 (D8): Master management button, update rule (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Update"
+msgstr "更新"
+
+#. Merge20 (D8): Master management button, move rule up (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Move up"
+msgstr "上へ"
+
+#. Merge20 (D8): Master management button, move rule down (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Move down"
+msgstr "下へ"
+
+#. Merge20 (D8): Master management error, empty pattern (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Enter a pattern."
+msgstr "パターンを入力してください。"
+
+#. Merge20 (D8): Master management error, invalid regex (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Invalid regular expression."
+msgstr "正規表現が無効です。"
+
+#. Merge20 (D8): Master management result, regex valid (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Regular expression is valid."
+msgstr "正規表現は有効です。"
+
+#. Merge20 (D8): Master management error, duplicate pattern (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "A rule with the same pattern already exists."
+msgstr "同じパターンのルールが既にあります。"
+
+#. Merge20 (D8): Master management error, no selection (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Select a rule to update or delete."
+msgstr "更新または削除するルールを選択してください。"
+
+#. Merge20 (D8): Master management sharing notice, export confirm (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Master data contains source code fragments. Share only through approved internal channels. Do not take it outside the company or save it to a personal cloud."
+msgstr "マスタデータにはソースコードの断片が含まれます。承認された内部経路でのみ共有してください。社外へ持ち出したり、個人のクラウドへ保存したりしないでください。"
+
+#. Merge20 (D8): Master management export confirm, destination (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Export the master data to:\n%1"
+msgstr "マスタデータを次へエクスポートします：\n%1"
+
+#. Merge20 (D8): Master management export done (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Exported the master data (%1 exclude rules, %2 highlight rules) to:\n%3"
+msgstr "マスタデータをエクスポートしました（除外ワード %1件、強調文字 %2件）：\n%3"
+
+#. Merge20 (D8): Master management export failed (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Could not export the master data: %1"
+msgstr "マスタデータをエクスポートできませんでした：%1"
+
+#. Merge20 (D8): Master management import failed (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Could not import the master data: %1"
+msgstr "マスタデータをインポートできませんでした：%1"
+
+#. Merge20 (D8): Master management import done (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Imported the master data (%1 exclude rules, %2 highlight rules, %3 risk keywords)"
+msgstr "マスタデータをインポートしました（除外ワード %1件、強調文字 %2件、リスク重要語 %3件）"
+
+#. Merge20 (D8): Master management import note, save to apply (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Press Save to apply the imported masters."
+msgstr "保存を押すと取り込んだマスタが反映されます。"
+
+#. Merge20 (D8): Master management hint, risk keywords (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Risk keywords are separated by ';'. They are used the next time a file is classified."
+msgstr "リスク重要語は「;」区切りです。次にファイルを分類するときに使われます。"
+
+#. Merge20 (D8): Master management hint, highlight (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Highlight rules are stored in the master file. Showing them in the compare views is not implemented yet."
+msgstr "強調文字ルールはマスタファイルに保存されます。比較画面での表示は未実装です。"
+
+#. Merge20 (D8): Master management hint, exclude words (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "In a plain (non-RegExp) pattern, % matches any text. Excluded lines are blanked out before diffing; the line count is kept."
+msgstr "正規表現でないパターンでは、% は任意の文字列に一致します。除外した行は比較前に空行化され、行数は保持されます。"
+
+#. Merge20 (D8): Master management load failed (Merge20MasterDoc)
+#: Src/Merge20/Merge20MasterDoc.cpp
+msgid "Could not load the master data: %1"
+msgstr "マスタデータを読み込めませんでした：%1"
+
+#. Merge20 (D8): Master management folder create failed (Merge20MasterDoc)
+#: Src/Merge20/Merge20MasterDoc.cpp
+msgid "Cannot create the master data folder:\n%1"
+msgstr "マスタデータのフォルダを作成できません：\n%1"
+
+#. Merge20 (D8): Master management save failed (Merge20MasterDoc)
+#: Src/Merge20/Merge20MasterDoc.cpp
+msgid "Could not save the master data: %1"
+msgstr "マスタデータを保存できませんでした：%1"
+
+#. Merge20 (D8): Master management save failed, serialize (Merge20MasterDoc)
+#: Src/Merge20/Merge20MasterDoc.cpp
+msgid "Could not save the master data: failed to serialize master data"
+msgstr "マスタデータを保存できませんでした：シリアライズに失敗しました"
