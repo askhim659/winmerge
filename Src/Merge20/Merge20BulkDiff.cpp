@@ -171,6 +171,43 @@ void GroupOpsIntoRanges(const std::vector<BulkOp>& ops, const std::vector<String
 
 } // namespace
 
+bool Merge20BulkIsSimple(const Merge20BulkLineReader& getOldLine, int oldCount,
+	const Merge20BulkLineReader& getNewLine, int newCount,
+	const Merge20BulkDiffOptions& options)
+{
+	if (options.simpleThreshold <= 0 || oldCount < 0 || newCount < 0)
+		return false;
+	// Common prefix / suffix on normalized lines (HTML `diffFast`).
+	// Only prefix/suffix lines are read: the scan stops at the first
+	// mismatch, so callers that read from text buffers pay no
+	// per-line copy for the (usually huge) middle.
+	int st = 0;
+	while (st < oldCount && st < newCount)
+	{
+		String oldLine, newLine;
+		if (!getOldLine(st, oldLine) || !getNewLine(st, newLine))
+			break;
+		if (NormalizeLine(oldLine, options) != NormalizeLine(newLine, options))
+			break;
+		++st;
+	}
+	int eO = oldCount - 1, eN = newCount - 1;
+	while (eO >= st && eN >= st)
+	{
+		String oldLine, newLine;
+		if (!getOldLine(eO, oldLine) || !getNewLine(eN, newLine))
+			break;
+		if (NormalizeLine(oldLine, options) != NormalizeLine(newLine, options))
+			break;
+		--eO;
+		--eN;
+	}
+	// int64_t: n*m overflows int for files over ~46k lines a side.
+	const int64_t nMid = static_cast<int64_t>(eO - st + 1);
+	const int64_t mMid = static_cast<int64_t>(eN - st + 1);
+	return nMid * mMid > options.simpleThreshold;
+}
+
 Merge20BulkDiffResult Merge20BulkDiff(const std::vector<String>& oldLines, const std::vector<String>& newLines,
 	const Merge20BulkDiffOptions& options)
 {
@@ -209,8 +246,23 @@ Merge20BulkDiffResult Merge20BulkDiff(const std::vector<String>& oldLines, const
 		ops.push_back(op);
 	}
 
-	const bool useSimple = options.simpleThreshold > 0 &&
-		static_cast<int64_t>(nMid) * static_cast<int64_t>(mMid) > options.simpleThreshold;
+	// The threshold decision is shared with the opened-file path
+	// (Merge20BulkIsSimple): the bulk differ and the merge doc must
+	// agree, or the [Simple] badge would flicker when a
+	// bulk-classified file is opened.
+	const Merge20BulkLineReader getOldLine = [&](int line, String& text) -> bool {
+		if (line < 0 || line >= n)
+			return false;
+		text = oldLines[static_cast<size_t>(line)];
+		return true;
+	};
+	const Merge20BulkLineReader getNewLine = [&](int line, String& text) -> bool {
+		if (line < 0 || line >= m)
+			return false;
+		text = newLines[static_cast<size_t>(line)];
+		return true;
+	};
+	const bool useSimple = Merge20BulkIsSimple(getOldLine, n, getNewLine, m, options);
 	if (useSimple)
 	{
 		// HTML `lcs` fallback: positional alignment (same index on
