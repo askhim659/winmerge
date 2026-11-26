@@ -235,6 +235,23 @@ void Init(COptionsMgr *pOptions)
 	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_SPECIAL, true);
 	pOptions->InitOption(OPT_MERGE20_SHOW_REVIEW_KEEP, true);
 
+	// Merge20 (H-FILTER): filter-deck defaults (default: show all;
+	// the deck is an exclusion filter, like the show_* filters and
+	// the D11 review filter. The HTML defaults hide IDENTICAL; the
+	// fork does not, see MERGE20_NOTES.md section 43).
+	pOptions->InitOption(OPT_MERGE20_SHOW_STATUS_MODIFIED, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_STATUS_OLD_ONLY, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_STATUS_NEW_ONLY, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_STATUS_IDENTICAL, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_MERGE_CLEAN_OLD, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_REVIEW_MIXED, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_REVIEW_MOD_ONLY, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_NO_MERGE_NEW_ADD, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_COPY_OLD_FILE, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_SKIP_NEW_FILE, true);
+	pOptions->InitOption(OPT_MERGE20_SHOW_ACTION_NO_ACTION_IDENTICAL, true);
+	pOptions->InitOption(OPT_MERGE20_FILTERDECK_VISIBLE, true);
+
 	// Merge20 (Phase 4 D0, design section 4.1): dedicated compare
 	// mode and its companions. Defaults match the HTML tool:
 	// dedMode/dedPinned/todoOnly/sniperOn/slim/dockHid are off,
