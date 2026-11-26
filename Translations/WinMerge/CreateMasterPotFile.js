@@ -16,6 +16,7 @@ var ACCELERATORS_BLOCK = 5;
 var PATH_ENGLISH_POT = "English.pot";
 var PATH_MERGE_RC = "../../Src/Merge.rc";
 var PATH_PLUGIN_STRINGS_RC = "../../Plugins/Strings.rc";
+var PATH_SRC_FOLDER = "../../Src";
 
 var oFSO = new ActiveXObject("Scripting.FileSystemObject");
 
@@ -43,9 +44,16 @@ function Main() {
   }
   
   if (bNecessary) { //If update necessary...
+    // Merge20 (W1): also scan the C++ sources for _()/N_()/NC_() strings.
+    // The RC files alone do not cover strings that only exist in code, so
+    // those translations were deleted from every shipped .po by the PO
+    // updater (111 Merge20 msgids in the 2026-11-25 build). RC entries win
+    // on a key conflict (they carry the resource ID as the #. comment).
     var oStrings = MergeDictionaries(
-      GetStringsFromRcFile(PATH_MERGE_RC),
-      GetStringsFromRcFile(PATH_PLUGIN_STRINGS_RC));
+      MergeDictionaries(
+        GetStringsFromRcFile(PATH_MERGE_RC),
+        GetStringsFromRcFile(PATH_PLUGIN_STRINGS_RC)),
+      GetStringsFromCppFiles(PATH_SRC_FOLDER));
     CreateMasterPotFile(PATH_ENGLISH_POT, oStrings);
     SetArchiveBit(PATH_MERGE_RC, false);
     SetArchiveBit(PATH_PLUGIN_STRINGS_RC, false);
@@ -257,6 +265,108 @@ function GetStringBlacklist(sTxtFilePath) {
     oTxtFile.Close();
   }
   return oBlacklist;
+}
+
+////
+/// Merge20 (W1): collect _()/N_()/NC_() string literals from the C++
+/// sources below a folder (recursive, *.cpp/*.h). The POT file used to be
+/// built from the RC files only, so strings that exist only in code never
+/// reached the translators and were deleted from the shipped .po files.
+/// The scan is deliberately narrow: only a literal string (with adjacent
+/// literals joined, e.g. _("a" "b") or a literal split across lines) right
+/// after _(/N_(/NC_( counts. A call with a variable argument, _T(), or a
+/// _() inside a longer identifier does not match. The #. comment is left
+/// empty (there is no resource ID); the #: reference (Src-relative path
+/// and line) is the provenance. Files are scanned in sorted relative-path
+/// order so the POT file is deterministic.
+function GetStringsFromCppFiles(sFolderPath) {
+  var oBlacklist = GetStringBlacklist("StringBlacklist.txt");
+  var oStrings = {};
+  var aFiles = [];
+  CollectCppFiles(oFSO.GetFolder(sFolderPath), "", aFiles);
+  aFiles.sort(function (a, b) { return a.rel < b.rel ? -1 : (a.rel > b.rel ? 1 : 0); });
+  for (var i = 0; i < aFiles.length; i++) {
+    var oFileStrings = GetStringsFromCppFile(aFiles[i].path, aFiles[i].rel, oBlacklist);
+    for (var sKey in oFileStrings) {
+      if (!(sKey in oStrings)) {
+        oStrings[sKey] = oFileStrings[sKey];
+      }
+    }
+  }
+  return oStrings;
+}
+
+////
+/// ...
+function CollectCppFiles(oFolder, sRelDir, aFiles) {
+  var oFiles = new Enumerator(oFolder.Files);
+  for (; !oFiles.atEnd(); oFiles.moveNext()) {
+    var oFile = oFiles.item();
+    var sExt = oFSO.GetExtensionName(oFile.Name).toLowerCase();
+    if (sExt === "cpp" || sExt === "h") {
+      aFiles.push({ path: oFile.Path, rel: sRelDir + oFile.Name });
+    }
+  }
+  var oSubFolders = new Enumerator(oFolder.SubFolders);
+  for (; !oSubFolders.atEnd(); oSubFolders.moveNext()) {
+    var oSub = oSubFolders.item();
+    CollectCppFiles(oSub, sRelDir + oSub.Name + "/", aFiles);
+  }
+}
+
+////
+/// ...
+function GetStringsFromCppFile(sFilePath, sRelPath, oBlacklist) {
+  var oStrings = {};
+  var oFile = oFSO.OpenTextFile(sFilePath, ForReading);
+  var sText = oFile.ReadAll();
+  oFile.Close();
+  // _(...) / N_(...) / NC_(ctx, ...); the string literal follows the
+  // opening parenthesis (whitespace/newlines allowed), adjacent literals
+  // are joined. The leading (^|[^A-Za-z0-9_]) keeps _T() and identifiers
+  // such as foo_() from matching.
+  var reCall = /(^|[^A-Za-z0-9_])(NC_|N_|_)\s*\(\s*(?:"((?:\\.|[^"\\])*)"\s*,\s*)?"((?:\\.|[^"\\])*)"/g;
+  var reNext = /^\s*"((?:\\.|[^"\\])*)"/;
+  var oMatch;
+  while ((oMatch = reCall.exec(sText)) != null) {
+    var sContext = "";
+    var sString = "";
+    if (oMatch[2] === "NC_") {
+      sContext = oMatch[3] || "";
+      sString = oMatch[4] || "";
+    } else {
+      sString = oMatch[4] || "";
+    }
+    var iPos = reCall.lastIndex;
+    var oNext;
+    while ((oNext = reNext.exec(sText.substr(iPos))) != null) {
+      sString += oNext[1];
+      iPos += oNext[0].length;
+    }
+    reCall.lastIndex = iPos;
+    if (sString === "" || (sString in oBlacklist)) {
+      continue;
+    }
+    var sKey = sContext + sString;
+    var oString = { "Comment": "", "References": "", "Context": "", "Id": "", "Str": "" };
+    if (sKey in oStrings) {
+      oString = oStrings[sKey];
+    }
+    if (bInsertLineNumbers) {
+      var iLine = sText.substring(0, oMatch.index).split("\n").length;
+      var sReference = sRelPath + ":" + iLine;
+      if (oString.References !== "") {
+        oString.References = oString.References + "\t" + sReference;
+      } else {
+        oString.References = sReference;
+      }
+    }
+    oString.Context = sContext;
+    oString.Id = sString;
+    oString.Str = "";
+    oStrings[sKey] = oString;
+  }
+  return oStrings;
 }
 
 ////
