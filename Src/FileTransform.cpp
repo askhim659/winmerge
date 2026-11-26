@@ -12,6 +12,7 @@
 
 #include "pch.h"
 #include "FileTransform.h"
+#include "Merge20/Merge20ExcludedLines.h"
 #include <vector>
 #include <Poco/Exception.h>
 #include <Poco/Mutex.h>
@@ -1313,6 +1314,9 @@ bool PrediffingInfo::Prediffing(int target, String & filepath, bool bMayOverwrit
 
 		if (!expressions.empty())
 		{
+			// Merge20 (S0-F1): filter expressions are arbitrary line
+			// transforms (FilterExpression::TransformLine), not blanking
+			// by contract, so no excluded-line count is taken here.
 			filepath = ApplyFilterExpressionsToFile(target, filepath, context, bMayOverwrite, expressions, errorMessage);
 			if (!errorMessage.empty())
 			{
@@ -1336,6 +1340,9 @@ bool PrediffingInfo::Prediffing(int target, String & filepath, bool bMayOverwrit
 
 		if (bWithFile)
 		{
+			// Merge20 (S0-F1): FILE_PREDIFF plugins work on temp files;
+			// counting blanked lines there would need a second
+			// encoding-aware file read, so they are not counted.
 			// use a temporary dest name
 			String srcFileName = bufferData.GetDataFile(); // <-Call order is important
 			String dstFileName = bufferData.GetDestFileName(); // <-Call order is important
@@ -1349,11 +1356,29 @@ bool PrediffingInfo::Prediffing(int target, String & filepath, bool bMayOverwrit
 		else
 		{
 			// probably it is for VB/VBscript so use a BSTR as argument
+			// Merge20 (S0-F1): snapshot the buffer before the plugin
+			// runs, so the lines it blanked can be counted afterwards.
+			// The copy is O(file size) and only happens when a
+			// BUFFER_PREDIFF plugin actually runs for this file; the
+			// count itself is one O(lines) scan of the two buffers.
+			std::wstring before;
+			BSTR * pBufBefore = bufferData.GetDataBufferUnicode();
+			if (pExcludedLines != nullptr && pBufBefore != nullptr && *pBufBefore != nullptr)
+				before.assign(*pBufBefore, SysStringLen(*pBufBefore));
 			bHandled = plugin::InvokePrediffBuffer(*bufferData.GetDataBufferUnicode(),
 				bufferData.GetNChanged(),
 				piScript);
 			if (bHandled)
+			{
 				bufferData.ValidateNewBuffer();
+				if (pExcludedLines != nullptr && bufferData.GetNChanged() > 0 && !before.empty())
+				{
+					BSTR * pBufAfter = bufferData.GetDataBufferUnicode();
+					if (pBufAfter != nullptr && *pBufAfter != nullptr)
+						*pExcludedLines += Merge20CountExcludedLines(before,
+							std::wstring_view(*pBufAfter, SysStringLen(*pBufAfter)));
+				}
+			}
 		}
 
 		// if this unpacker does not work, that is an error
