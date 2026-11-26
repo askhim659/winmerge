@@ -420,15 +420,6 @@ protected:
 	// Merge20 (Phase 4 D11): review-state filter toggle (command range
 	// ID_MERGE20_SHOW_REVIEW_TODO..ID_MERGE20_SHOW_REVIEW_KEEP)
 	afx_msg void OnMerge20ShowReview(UINT nID);
-	// Merge20 (H-FILTER): re-read the deck option keys into
-	// m_dirfilter and rebuild the list. Called by the deck bar
-	// after a toggle, and by Merge20SetDisplayFilter.
-	void Merge20RefreshFilterDeck();
-	// Merge20 (H-FILTER): push the current deck option state into
-	// the deck bar's checkboxes. The bar can go stale when the
-	// review submenu or a session restore changes the same keys.
-	// No-op when the frame has no deck bar yet.
-	void Merge20SyncFilterDeckBar();
 	// Merge20 (S8): session save/restore, audit-memo editor
 	afx_msg void OnMerge20SessionSave();
 	afx_msg void OnMerge20SessionRestore();
@@ -570,6 +561,16 @@ public:
 	// Merge20 (S8): display settings for the session save/restore
 	void Merge20GetDisplaySettings(Merge20SessionDisplay& display);
 	void Merge20SetDisplayFilter(const Merge20SessionDisplay& display);
+	// Merge20 (H-FILTER): re-read the deck option keys into
+	// m_dirfilter and rebuild the list. Called by the deck bar
+	// after a toggle, and by Merge20SetDisplayFilter. Public so the
+	// deck bar (not a CDirView member) can call it.
+	void Merge20RefreshFilterDeck();
+	// Merge20 (H-FILTER): push the current deck option state into
+	// the deck bar's checkboxes. The bar can go stale when the
+	// review submenu or a session restore changes the same keys.
+	// No-op when the frame has no deck bar yet.
+	void Merge20SyncFilterDeckBar();
 	void Merge20ApplyColumnSettings(const String& orders, const String& widths);
 	void Merge20RestoreViewPosition(const String& focusedPath, int topIndex);
 	// Merge20 (Phase 4 D11, design section 4.1(b)): put the saved
