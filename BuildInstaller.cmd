@@ -60,11 +60,11 @@ rem iscc.exe can exit 0 while producing nothing, so verify the installer
 rem file was actually produced (BuildArc.cmd copies it to Build\Releases).
 rem NOTE: do not use "|| pause" after iscc.exe: in CI there is no keyboard
 rem and the job would hang until it times out.
-if "%PLATFORM%" == "x64" set "OUTPAT=Build\WinMerge-*-x64-Setup.exe"
-if "%PLATFORM%" == "x64NonAdmin" set "OUTPAT=Build\WinMerge-*-x64-PerUser-Setup.exe"
-if "%PLATFORM%" == "ARM64" set "OUTPAT=Build\WinMerge-*-ARM64-Setup.exe"
-if "%PLATFORM%" == "x86" set "OUTPAT=Build\WinMerge-*-Setup.exe"
-if not defined OUTPAT set "OUTPAT=Build\WinMerge-*-%PLATFORM%-Setup.exe"
+if "%PLATFORM%" == "x64" set "OUTPAT=Build\WizMerge-*-x64-Setup.exe"
+if "%PLATFORM%" == "x64NonAdmin" set "OUTPAT=Build\WizMerge-*-x64-PerUser-Setup.exe"
+if "%PLATFORM%" == "ARM64" set "OUTPAT=Build\WizMerge-*-ARM64-Setup.exe"
+if "%PLATFORM%" == "x86" set "OUTPAT=Build\WizMerge-*-Setup.exe"
+if not defined OUTPAT set "OUTPAT=Build\WizMerge-*-%PLATFORM%-Setup.exe"
 if not exist "%OUTPAT%" (
   echo ERROR: iscc.exe finished but %OUTPAT% was not produced.
   exit /b 1
