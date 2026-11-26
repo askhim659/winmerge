@@ -206,6 +206,8 @@ public:
 	void SetMerge20Memo(const String& relPath, const String& memo);
 	/** @brief Store the per-diff judgments of one file (S8). */
 	void SetMerge20DiffJudgments(const String& relPath, const std::vector<Merge20DiffJudgment>& judgments);
+	/** @brief Store the split diff groups of one file (D5). */
+	void SetMerge20SplitGroups(const String& relPath, const std::vector<Merge20SplitGroup>& groups);
 	/**
 	 * @brief Restore a whole saved per-file state (S8): review state,
 	 * output flag, classification, memo and diff judgments. Used by
