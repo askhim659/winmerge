@@ -4417,6 +4417,52 @@ void CMergeEditView::ZoomText(short amount)
 	GetOptionsMgr()->SaveOption(OPT_VIEW_ZOOM, nPointSize * 1000 / nOrgPointSize);
 }
 
+/**
+ * @brief Set the font size (zoom) to an absolute OPT_VIEW_ZOOM value.
+ * @param [in] nZoom Zoom in thousandths (1000 = 100%), clamped to the
+ *  OPT_VIEW_ZOOM range 100-8000.
+ *
+ * Merge20 (Phase 4 D2, design section 3.2): dedicated mode applies the
+ * stored OPT_MERGE20_DED_ZOOM on entry and the R key resets to 750
+ * (75%, the HTML DEF_SCALE); neither is what ZoomText(0) does (it
+ * resets to the original font size, i.e. 100%), so an absolute setter
+ * is needed. The font is built from theApp.m_lfDiff the same way
+ * OnInitialUpdate builds it, and applied to all panes plus the merge
+ * result view, exactly as ZoomText does.
+ */
+void CMergeEditView::ZoomTextTo(int nZoom)
+{
+	if (nZoom < 100)
+		nZoom = 100;
+	if (nZoom > 8000)
+		nZoom = 8000;
+
+	LOGFONT lf = theApp.m_lfDiff;
+	lf.lfHeight = static_cast<LONG>(lf.lfHeight * nZoom / 1000.0);
+
+	CMergeDoc *pDoc = GetDocument();
+	ASSERT(pDoc != nullptr);
+
+	if (pDoc != nullptr)
+	{
+		for (int nPane = 0; nPane < pDoc->m_nBuffers; nPane++)
+		{
+			CMergeEditView *pView = GetGroupView(nPane);
+			ASSERT(pView != nullptr);
+
+			if (pView != nullptr)
+			{
+				pView->SetFont(lf);
+			}
+		}
+		if (CMergeResultView* pView = pDoc->GetMergeResultView())
+			pView->SetFont(lf);
+	}
+	RepaintLocationPane();
+
+	GetOptionsMgr()->SaveOption(OPT_VIEW_ZOOM, nZoom);
+}
+
 bool CMergeEditView::QueryEditable()
 {
 	return m_bDetailView ? false : !GetDocument()->m_ptBuf[m_nThisPane]->GetReadOnly();
