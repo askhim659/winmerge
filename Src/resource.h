@@ -873,6 +873,24 @@
 #define IDC_MERGE20_FILELIST_COLLAPSE_ALL 1816
 #define IDC_MERGE20_FILELIST_FILTER_TABS 1817
 #define IDC_MERGE20_FILELIST_SLIM       1818
+#define IDC_MERGE20_FILTERDECK_STATUS_MODIFIED 1819
+#define IDC_MERGE20_FILTERDECK_STATUS_OLD_ONLY 1820
+#define IDC_MERGE20_FILTERDECK_STATUS_NEW_ONLY 1821
+#define IDC_MERGE20_FILTERDECK_STATUS_IDENTICAL 1822
+#define IDC_MERGE20_FILTERDECK_ACTION_MERGE_CLEAN_OLD 1823
+#define IDC_MERGE20_FILTERDECK_ACTION_REVIEW_MIXED 1824
+#define IDC_MERGE20_FILTERDECK_ACTION_REVIEW_MOD_ONLY 1825
+#define IDC_MERGE20_FILTERDECK_ACTION_NO_MERGE_NEW_ADD 1826
+#define IDC_MERGE20_FILTERDECK_ACTION_COPY_OLD_FILE 1827
+#define IDC_MERGE20_FILTERDECK_ACTION_SKIP_NEW_FILE 1828
+#define IDC_MERGE20_FILTERDECK_ACTION_NO_ACTION_IDENTICAL 1829
+#define IDC_MERGE20_FILTERDECK_REVIEW_TODO 1830
+#define IDC_MERGE20_FILTERDECK_REVIEW_DONE 1831
+#define IDC_MERGE20_FILTERDECK_REVIEW_HOLD 1832
+#define IDC_MERGE20_FILTERDECK_REVIEW_SPECIAL 1833
+#define IDC_MERGE20_FILTERDECK_REVIEW_KEEP 1834
+#define IDC_MERGE20_FILTERDECK_PRESET       1835
+#define IDC_MERGE20_FILTERDECK_SHOW_ALL     1836
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1848,6 +1866,7 @@
 #define ID_MERGE20_SHOW_REVIEW_KEEP    38965
 #define ID_VIEW_MERGE20_FILELIST_PANEL 38966
 #define ID_MERGE20_FILELIST_TOGGLE_OUTPUT 38967
+#define ID_VIEW_MERGE20_FILTER_DECK     38968
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2606,6 +2625,8 @@
 // (panel count line). P2 consumes controls 1813-1817 (panel search
 // edit, batch-check button, expand-all button, collapse-all button,
 // filter tabs). P4 consumes control 1818 (panel slim toggle button).
+// H-FILTER consumes controls 1819-1836 (deck checkboxes 1819-1834, preset 1835,
+// show-all 1836) and command 38968 (deck bar toggle).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2617,7 +2638,7 @@
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
 //   diffs-only and slim commands;
-//   _APS_NEXT_COMMAND_VALUE is now 38968), free up to 38976
+//   _APS_NEXT_COMMAND_VALUE is now 38969), free up to 38976
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2627,8 +2648,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
-#define _APS_NEXT_COMMAND_VALUE         38968
-#define _APS_NEXT_CONTROL_VALUE         1819
+#define _APS_NEXT_COMMAND_VALUE         38969
+#define _APS_NEXT_CONTROL_VALUE         1837
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
