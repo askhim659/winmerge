@@ -261,7 +261,7 @@ void CMerge20GrepDlg::ShowGrep(CDirView* pDirView)
 	m_nFilesTotal = static_cast<int>(m_files.size());
 	m_nPanes = 2;
 	for (const Merge20GrepFile& file : m_files)
-		m_nPanes = std::max(m_nPanes, static_cast<int>(file.paths.size()));
+		m_nPanes = (std::max)(m_nPanes, static_cast<int>(file.paths.size()));
 	if (m_hWnd == nullptr && !Create(pDirView))
 		return;
 	RefreshHistoryCombo();
@@ -370,18 +370,18 @@ void CMerge20GrepDlg::LayoutAll()
 	const int xCombo = GrepMargin + GrepLabelWidth + GrepRowGap;
 	const int xStop = cx - GrepMargin - GrepButtonWidth;
 	const int xSearch = xStop - GrepRowGap - GrepButtonWidth;
-	m_cbQuery.MoveWindow(xCombo, yTop, std::max(60, xSearch - GrepRowGap - xCombo), 160, TRUE);
+	m_cbQuery.MoveWindow(xCombo, yTop, (std::max)(60, xSearch - GrepRowGap - xCombo), 160, TRUE);
 	m_btnSearch.MoveWindow(xSearch, yTop, GrepButtonWidth, GrepTopRowHeight, TRUE);
 	m_btnStop.MoveWindow(xStop, yTop, GrepButtonWidth, GrepTopRowHeight, TRUE);
 	m_stStatus.MoveWindow(GrepMargin, yStatus, cx - 2 * GrepMargin, GrepStatusHeight, TRUE);
-	m_list.MoveWindow(GrepMargin, yList, cx - 2 * GrepMargin, std::max(40, listBottom - yList), TRUE);
+	m_list.MoveWindow(GrepMargin, yList, cx - 2 * GrepMargin, (std::max)(40, listBottom - yList), TRUE);
 	m_btnClose.MoveWindow(cx - GrepMargin - GrepButtonWidth, yClose, GrepButtonWidth, GrepCloseRowHeight, TRUE);
 
 	// The excerpt column takes the remaining width.
 	CRect rcList;
 	m_list.GetClientRect(&rcList);
 	const int fixed = 280 + 70 + 70;
-	m_list.SetColumnWidth(3, std::max(80, rcList.Width() - fixed - 4));
+	m_list.SetColumnWidth(3, (std::max)(80, rcList.Width() - fixed - 4));
 }
 
 void CMerge20GrepDlg::OnButtonClicked(UINT nID)
