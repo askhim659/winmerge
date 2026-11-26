@@ -12,6 +12,7 @@
 
 #include "pch.h"
 #include "DirActions.h"
+#include "Merge20/Merge20FilterDeck.h"
 #include "I18n.h"
 #include "UnicodeString.h"
 #include "Logger.h"
@@ -731,16 +732,76 @@ static bool IsReviewShown(const DirViewFilterSettings& filter, ReviewState revie
 	return filter.show_review[index];
 }
 
-// Merge20 (Phase 4 D11): true when the review-state filter hides at
-// least one state, so a folder child scan is worth doing at all.
-static bool IsReviewFilterActive(const DirViewFilterSettings& filter)
+// Merge20 (H-FILTER): existence category of one item, from its
+// diffcode (the HTML selSt model: MODIFIED / OLD_ONLY / NEW_ONLY /
+// IDENTICAL). 2-way compares map exactly (first-only -> OldOnly,
+// second-only -> NewOnly, same -> Identical, any other diff ->
+// Modified). 3-way has no middle-only status in the deck model, so
+// second-only (middle-only) and the missing-* codes collapse into
+// Modified: they are differences, and the deck must never hide a
+// difference it cannot name. Skipped/error items never reach here
+// (IsShowable returns early for them).
+static Merge20FileStatus Merge20StatusFromDiffCode(const CDiffContext& ctxt, const DIFFITEM& di)
 {
-	for (int i = 0; i < 5; ++i)
+	if (di.diffcode.isSideFirstOnly())
+		return Merge20FileStatus::OldOnly;
+	if (ctxt.GetCompareDirs() < 3)
 	{
-		if (!filter.show_review[i])
-			return true;
+		if (di.diffcode.isSideSecondOnly())
+			return Merge20FileStatus::NewOnly;
 	}
-	return false;
+	else if (di.diffcode.isSideThirdOnly())
+	{
+		return Merge20FileStatus::NewOnly;
+	}
+	if (di.diffcode.isResultSame())
+		return Merge20FileStatus::Identical;
+	return Merge20FileStatus::Modified;
+}
+
+// Merge20 (H-FILTER): true when the existence filter shows this
+// status (DirViewFilterSettings::show_status, indexed by
+// static_cast<int>(Merge20FileStatus)). An out-of-range status is
+// shown, like IsReviewShown.
+static bool IsStatusShown(const DirViewFilterSettings& filter, Merge20FileStatus status)
+{
+	const int index = static_cast<int>(status);
+	if (index < 0 || index >= 4)
+		return true;
+	return filter.show_status[index];
+}
+
+// Merge20 (H-FILTER): true when the action-category filter shows
+// this file (DirViewFilterSettings::show_action, indexed by
+// static_cast<int>(ActionCategory)). Unclassified files (S4 has not
+// run yet: the file was never opened) are always shown, so the deck
+// can never hide a file whose action is still unknown (see
+// Merge20FilterDeck.h).
+static bool IsActionShown(const CDiffContext& ctxt, const DirViewFilterSettings& filter, const DIFFITEM& di)
+{
+	const Merge20FileState& state = ctxt.GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!state.classified)
+		return true;
+	const int index = static_cast<int>(state.action);
+	if (index < 0 || index >= 7)
+		return true;
+	return filter.show_action[index];
+}
+
+// Merge20 (H-FILTER): true when any deck dimension hides at least
+// one value, so a folder child scan is worth doing at all. This
+// generalizes the D11 IsReviewFilterActive (review only) to the
+// three deck groups; the D11 helper is folded into this one.
+static bool IsMerge20FilterActive(const DirViewFilterSettings& filter)
+{
+	Merge20FilterDeckState state;
+	for (int i = 0; i < 4; ++i)
+		state.showStatus[i] = filter.show_status[i];
+	for (int i = 0; i < 7; ++i)
+		state.showAction[i] = filter.show_action[i];
+	for (int i = 0; i < 5; ++i)
+		state.showReview[i] = filter.show_review[i];
+	return Merge20FilterDeckIsActive(state);
 }
 
 
@@ -889,14 +950,15 @@ bool IsShowable(const CDiffContext& ctxt, const DIFFITEM &di, const DirViewFilte
 					}
 					return false;
 				}
-				// Merge20 (Phase 4 D11): the folder passes the result
-				// filters, but the review filter may still hide every
+				// Merge20 (H-FILTER): the folder passes the result
+				// filters, but a deck dimension may still hide every
 				// child. Hide the folder then, so tree mode never
 				// shows a folder with no visible file in it. The scan
-				// runs only while the review filter hides at least one
-				// state, so the default (all states shown) costs
-				// nothing here.
-				if (IsReviewFilterActive(filter))
+				// runs only while the deck hides at least one value
+				// (IsMerge20FilterActive generalizes the D11 review
+				// scan to all three deck groups), so the default
+				// (everything shown) costs nothing here.
+				if (IsMerge20FilterActive(filter))
 				{
 					DIFFITEM *diffpos = ctxt.GetFirstChildDiffPosition(&di);
 					bool bAnyChildShowable = false;
@@ -997,6 +1059,17 @@ bool IsShowable(const CDiffContext& ctxt, const DIFFITEM &di, const DirViewFilte
 		// no entry yet); directories are not filtered themselves (see
 		// the tree-mode folder scan above).
 		if (!IsReviewShown(filter, ctxt.GetMerge20FileStates().GetReviewState(di.getItemRelativePath())))
+			return false;
+		// Merge20 (H-FILTER): filter-deck existence and action
+		// filters. The stock show_* filters above already ran, so
+		// these are an AND on top of them (H-11: the deck is a
+		// different filter from the stock compare-result filter).
+		// Directories are not filtered themselves (see the
+		// tree-mode folder scan above); in flat mode directory rows
+		// are not listed at all for a recursive compare.
+		if (!IsStatusShown(filter, Merge20StatusFromDiffCode(ctxt, di)))
+			return false;
+		if (!IsActionShown(ctxt, filter, di))
 			return false;
 	}
 	return true;
