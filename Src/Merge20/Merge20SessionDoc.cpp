@@ -508,6 +508,14 @@ namespace
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_TODO_ONLY, session.display.todoOnly);
 	if (session.display.dedZoom > 0)
 		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_ZOOM, session.display.dedZoom);
+
+	// Merge20 (Panel P1, design section 12.5): the per-file setters
+	// above (SetMerge20SessionState / ResetMerge20ChangedFile) do
+	// not notify, so a restore would leave every open file-list
+	// panel stale until the next activation. Notify once here,
+	// after the whole restore, so all open panels refresh with the
+	// restored review states, output flags and classifications.
+	ctxt.NotifyMerge20FileListChanged();
 }
 
 } // namespace
