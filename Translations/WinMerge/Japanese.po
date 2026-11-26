@@ -11559,3 +11559,43 @@ msgstr "【Wiz】スリムリスト"
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Diffs only"
 msgstr "【Wiz】差分のみ"
+
+#. Merge20 (D10): Bulk classification menu item (CDirView)
+#: Src/DirView.cpp
+msgid "Bulk classify unopened files..."
+msgstr "【Wiz】未開封ファイルを一括分類…"
+
+#. Merge20 (D10): Bulk classification dialog title (CMerge20BulkClassifyDlg)
+#: Src/Merge20/Merge20BulkClassifyDlg.cpp
+msgid "Bulk Classify"
+msgstr "【Wiz】一括分類"
+
+#. Merge20 (D10): Bulk classification 3-way refusal (CMerge20BulkClassifyDlg)
+#: Src/Merge20/Merge20BulkClassifyDlg.cpp
+msgid "Bulk classification supports 2-way folder compares only."
+msgstr "【Wiz】一括分類は2方向フォルダ比較のみ対応しています。"
+
+#. Merge20 (D10): Bulk classification nothing to do (CMerge20BulkClassifyDlg)
+#: Src/Merge20/Merge20BulkClassifyDlg.cpp
+msgid "No unclassified files."
+msgstr "【Wiz】未分類のファイルがありません。"
+
+#. Merge20 (D10): Bulk classification running status (CMerge20BulkClassifyDlg)
+#: Src/Merge20/Merge20BulkClassifyDlg.cpp
+msgid "Classifying... %1 of %2 files (%3 classified)"
+msgstr "【Wiz】一括分類中… %2 件中 %1 件（分類済み %3 件）"
+
+#. Merge20 (D10): Bulk classification stopped status (CMerge20BulkClassifyDlg)
+#: Src/Merge20/Merge20BulkClassifyDlg.cpp
+msgid "Classification stopped"
+msgstr "【Wiz】一括分類を停止しました"
+
+#. Merge20 (D10): Bulk classification finished status (CMerge20BulkClassifyDlg)
+#: Src/Merge20/Merge20BulkClassifyDlg.cpp
+msgid "Done: %1 files classified (%2 simple), %3 skipped"
+msgstr "【Wiz】完了：%1 件を分類しました（簡易 %2 件）、%3 件をスキップ"
+
+#. Merge20 (D10): Simple-compare badge word, no Wiz mark (matches the HTML "[簡易]" literal) (CDiffContext)
+#: Src/DirViewColItems.cpp
+msgid "Simple"
+msgstr "簡易"
