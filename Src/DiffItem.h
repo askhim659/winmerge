@@ -247,7 +247,8 @@ public:
 	DiffFileInfo diffFileInfo[3];	/**< Fileinfo for left/middle/right file. */
 	int	nsdiffs;					/**< Amount of non-ignored differences */
 	int nidiffs;					/**< Amount of ignored differences */
-									// Note: Keep `diffFileInfo[]`, `nsdiffs` and `nidiffs`
+	int nexcluded[3];				/**< Per-side counts of lines blanked by the prediffer (Merge20 S0-F1); -1 = unknown */
+									// Note: Keep `diffFileInfo[]`, `nsdiffs`, `nidiffs` and `nexcluded`
 									//		 near front of class for small offsets.
 									// (see `DirColInfo` arrays in `DirViewColItems.cpp`) *>
 	DIFFCODE diffcode;				/**< Compare result */
@@ -256,6 +257,18 @@ public:
 
 	String getFilepath(int nIndex, const String &sRoot) const;
 	String getItemRelativePath() const;
+
+	/** @brief Total excluded-line count for display: the largest known per-side count, or -1 when unknown. */
+	int GetExcludedTotal() const
+	{
+		int total = -1;
+		for (int i = 0; i < 3; ++i)
+		{
+			if (nexcluded[i] >= 0 && nexcluded[i] > total)
+				total = nexcluded[i];
+		}
+		return total;
+	}
 
 	void Swap(int idx1, int idx2);
 	void ClearAllAdditionalProperties();
@@ -301,7 +314,7 @@ public:
 //**** CTOR, DTOR
 public:
 	DIFFITEM() : parent(nullptr), children(nullptr), Flink(nullptr), Blink(nullptr), 
-					nidiffs(-1), nsdiffs(-1), customFlags(ViewCustomFlags::INVALID_CODE),
+					nidiffs(-1), nsdiffs(-1), nexcluded{-1, -1, -1}, customFlags(ViewCustomFlags::INVALID_CODE),
 					renameMoveGroupId(-1)
 					// `DiffFileInfo` and `DIFFCODE` have their own initializers. 
 					{}
