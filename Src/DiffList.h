@@ -121,6 +121,10 @@ public:
 	int GetSignificantDiffs() const;
 	DiffCounts GetDiffCounts(int currentDiff) const;
 	void AddDiff(const DIFFRANGE & di);
+	/** @brief Merge20 (Phase 4 D5): insert a diff before nDiff (nDiff == GetSize() appends). The caller must call ConstructSignificantChain() afterwards; the chain links of the stored ranges are rebuilt there. @return False when nDiff is out of range. */
+	bool InsertDiff(int nDiff, const DIFFRANGE & di);
+	/** @brief Merge20 (Phase 4 D5): erase nCount diffs starting at nFirst. The caller must call ConstructSignificantChain() afterwards. @return False when the range is out of bounds. */
+	bool EraseDiffs(int nFirst, int nCount);
 	bool IsDiffSignificant(int nDiff) const;
 	int GetSignificantIndex(int nDiff) const;
 	int GetDiffFromSignificantIndex(int nSignificantIndex) const;
