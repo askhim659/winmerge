@@ -4056,7 +4056,14 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 
 ### 31.3 CI 結果（PR #28）
 
-（PR 作成後に記入する）
+最終 head `f2b7d76e640764e19e817ca77b383ff64fa8c186`（28 commits）の CI run **45766219011**（2026-11-26 15:21 JST 完了）: conclusion **success**。job `build`（139727649719）success。全文ログで確認済み。
+
+- GoogleTest: `[  PASSED  ] 647 tests.`（647 tests from 52 test suites ran, 1247 ms）。D5 時 636 + 新規 Merge20Sniper 11件（WrapNextMovesForward / WrapNextWrapsFromLastToFirst / WrapNextNoDiffAtAll / WrapPrevMovesBackward / WrapPrevWrapsFromFirstToLast / WrapPrevNoDiffAtAll / ClampFontKeepsInsideRange / StepFontStepsByTwoAndClamps / ScrollLinesConvertsPixels / DragActionNeedsFiftyPixelsHorizontal / ToggleLayoutSwitchesBothWays）が全 OK。FAILED は 0件。
+- コンパイル／リンクエラー: `error C*` / `error LNK*` / `error MSB*` は 0件。
+- .po チェック: `Merge20 strings present in the bundled Japanese.po.` を確認。
+- 成果物（API で確認）: `WinMerge-x64.zip`（ID 15092616422、26,333,744 bytes）と `WinMerge-x64-Setup-x64.exe`（ID 15092467082、39,792,788 bytes）。失効日は両方とも 2027-02-24T06:09:13Z、expired: false。
+- 失敗した先行 run（修正の記録）: head `4d9c1224` の run 45764098391 と head `dd099c71` の run 45764443411 は failure。原因は 3件。(1) `MergeEditFrm.cpp` の TRACE0 文字列リテラル内に実改行が入っていた（C2001/C1057。Python heredoc で `\n` が実改行に展開されていた）。(2) `CMergeDoc::GetPaneApparentLinesText` が private（C2248）。(3) `CCrystalTextView::GetLineHeight` が protected（C2248）。修正コミット 4件（`MergeEditFrm.cpp` の `\n` 復旧、`MergeDoc.h` で当該宣言を public へ移動、`Merge20SniperView.h` に public アクセサ `GetSniperLineHeight` を追加、`Merge20SniperDlg.cpp` で同アクセサ経由に変更）。その後の run 45765083881（head `421bbdc6`）も failure。原因は 1件: `CWnd::PreTranslateMessage` は protected のためフレームから呼べない（C2248）。修正は `MergeEditFrm.cpp` のみ 1行: フレームの転送先をダイアログの public メソッド `HandleSniperKey`（既存、ビューも利用）に変更し、コメントも更新。以上の修正が最終 head `f2b7d76e` に含まれ、success となった。なお `GetPaneApparentLinesText` の public 化と `GetSniperLineHeight` の追加は、D6 のスナイパー以外からの利用を増やすものではなく、定義・挙動の変更はない。
+
 
 ### 31.4 検証ゲート
 
