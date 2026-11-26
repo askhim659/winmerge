@@ -4205,6 +4205,39 @@ void CDirView::Merge20OpenFileAtLine(const Merge20GrepHit& hit)
 }
 
 /**
+ * @brief Merge20 (Panel P3, design section 12.7): open one folder item
+ * in a file compare (P-R7). The panel's row click goes through
+ * CDirDoc::Merge20MoveToFile, which closes the current file compare
+ * first; this is the selection step, mirroring Merge20OpenFileAtLine
+ * (Grep jump): select the item's row (clearing any other selection,
+ * so only this file opens) and open the selection. GetItemIndex
+ * returns 0 on a miss (upstream behaviour, not -1), so the row is
+ * verified through GetItemKey: an item hidden by the current folder
+ * filter cannot be opened, and the same message as the Grep jump
+ * explains why instead of opening row 0.
+ */
+void CDirView::Merge20OpenFile(const DIFFITEM& di)
+{
+	// GetItemIndex takes a non-const pointer but only compares it
+	// against the list keys (see its implementation); the item is
+	// not modified.
+	const int nIdx = GetItemIndex(const_cast<DIFFITEM*>(&di));
+	if (nIdx < 0 || nIdx >= m_pList->GetItemCount() || GetItemKey(nIdx) != &di)
+	{
+		AfxMessageBox(_("Cannot open the file because it is hidden by the current filter.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	// OpenSelection opens the selected rows: clear any other
+	// selection first, or several files would open at once.
+	const int nCount = m_pList->GetItemCount();
+	for (int i = 0; i < nCount; ++i)
+		m_pList->SetItemState(i, 0, LVIS_SELECTED | LVIS_FOCUSED);
+	m_pList->SetItemState(nIdx, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+	m_pList->EnsureVisible(nIdx, FALSE);
+	OpenSelection();
+}
+
+/**
  * @brief Merge20 (S8, design section 3.6, spec section 6.1): save the
  * current session (review states, output checks, memos, merge
  * judgments, display settings) to the session file of this folder
