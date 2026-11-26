@@ -2,12 +2,14 @@
 /**
  * @file Merge20FileListNotify_test.cpp
  *
- * @brief Merge20 (Panel P0) unit tests for the folder-compare
+ * @brief Merge20 (Panel P0/P1) unit tests for the folder-compare
  * state-change notification (CDiffContext::SetMerge20FileList-
- * NotifyCallback / NotifyMerge20FileListChanged, design section
- * 12.5). The callback is what lets the file-list panel refresh
- * without polling: the frame registers a callback that posts
- * MSG_MERGE20_FILELIST_REFRESH to itself.
+ * NotifyCallback / AddMerge20FileListNotifyCallback /
+ * SuspendMerge20FileListNotify / ResumeMerge20FileListNotify /
+ * NotifyMerge20FileListChanged, design section 12.5). The callback
+ * is what lets the file-list panel refresh without polling: the
+ * frame registers a callback that posts MSG_MERGE20_FILELIST_REFRESH
+ * to itself.
  *
  * Only the path-based setters are covered here: the DIFFITEM
  * overloads need a built DIFFITEM, and ApplyMerge20ReviewState
@@ -79,4 +81,95 @@ TEST(Merge20FileListNotify, CallbackReplace)
 	ctxt.SetMerge20FileListNotifyCallback(nullptr);
 	ctxt.SetMerge20ReviewState(_T("d.txt"), ReviewState::TODO);
 	EXPECT_EQ(nSecond, 1);
+}
+
+// Merge20 (Panel P1): every frame registered with Add is notified,
+// so two open file compares from the same folder compare both
+// refresh (P0 notified only the last registered frame).
+TEST(Merge20FileListNotify, AddMulticastBothFire)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nFirst = 0;
+	int nSecond = 0;
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nFirst]() { ++nFirst; });
+	ctxt.AddMerge20FileListNotifyCallback(2, [&nSecond]() { ++nSecond; });
+	ctxt.SetMerge20ReviewState(_T("e.txt"), ReviewState::DONE);
+	EXPECT_EQ(nFirst, 1);
+	EXPECT_EQ(nSecond, 1);
+}
+
+// Merge20 (Panel P1): registering twice with the same key replaces
+// that frame's callback instead of notifying it twice.
+TEST(Merge20FileListNotify, AddSameKeyReplaces)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nFirst = 0;
+	int nSecond = 0;
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nFirst]() { ++nFirst; });
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nSecond]() { ++nSecond; });
+	ctxt.SetMerge20ReviewState(_T("f.txt"), ReviewState::DONE);
+	EXPECT_EQ(nFirst, 0);
+	EXPECT_EQ(nSecond, 1);
+}
+
+// Merge20 (Panel P1): the single Set callback and the Add callbacks
+// are independent channels; both fire.
+TEST(Merge20FileListNotify, AddAndSetBothFire)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nSingle = 0;
+	int nExtra = 0;
+	ctxt.SetMerge20FileListNotifyCallback([&nSingle]() { ++nSingle; });
+	ctxt.AddMerge20FileListNotifyCallback(7, [&nExtra]() { ++nExtra; });
+	ctxt.SetMerge20ReviewState(_T("g.txt"), ReviewState::DONE);
+	EXPECT_EQ(nSingle, 1);
+	EXPECT_EQ(nExtra, 1);
+}
+
+// Merge20 (Panel P1): while suspended, state changes are silent;
+// Resume notifies exactly once with the final state, and later
+// changes notify normally again.
+TEST(Merge20FileListNotify, SuspendSuppressesAndResumeNotifiesOnce)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nCalls = 0;
+	ctxt.SetMerge20FileListNotifyCallback([&nCalls]() { ++nCalls; });
+	ctxt.SuspendMerge20FileListNotify();
+	ctxt.SetMerge20ReviewState(_T("h.txt"), ReviewState::DONE);
+	ctxt.SetMerge20ReviewState(_T("h.txt"), ReviewState::HOLD);
+	EXPECT_EQ(nCalls, 0);
+	ctxt.ResumeMerge20FileListNotify();
+	EXPECT_EQ(nCalls, 1);
+	ctxt.SetMerge20ReviewState(_T("h.txt"), ReviewState::TODO);
+	EXPECT_EQ(nCalls, 2);
+}
+
+// Merge20 (Panel P1): nested suspends nest; only the outermost
+// Resume notifies.
+TEST(Merge20FileListNotify, SuspendNested)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nCalls = 0;
+	ctxt.SetMerge20FileListNotifyCallback([&nCalls]() { ++nCalls; });
+	ctxt.SuspendMerge20FileListNotify();
+	ctxt.SuspendMerge20FileListNotify();
+	ctxt.SetMerge20ReviewState(_T("i.txt"), ReviewState::DONE);
+	ctxt.ResumeMerge20FileListNotify();
+	EXPECT_EQ(nCalls, 0);
+	ctxt.ResumeMerge20FileListNotify();
+	EXPECT_EQ(nCalls, 1);
+}
+
+// Merge20 (Panel P1): Resume with no suspend and no pending change
+// is a no-op (no spurious notification), and a change with no
+// suspend still notifies.
+TEST(Merge20FileListNotify, ResumeWithoutSuspendIsNoop)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nCalls = 0;
+	ctxt.SetMerge20FileListNotifyCallback([&nCalls]() { ++nCalls; });
+	ctxt.ResumeMerge20FileListNotify();
+	EXPECT_EQ(nCalls, 0);
+	ctxt.SetMerge20ReviewState(_T("j.txt"), ReviewState::DONE);
+	EXPECT_EQ(nCalls, 1);
 }
