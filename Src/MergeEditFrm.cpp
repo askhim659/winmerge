@@ -442,6 +442,12 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	const bool bShowFileList = GetOptionsMgr()->GetBool(OPT_MERGE20_FILELIST_VISIBLE) &&
 		m_pMergeDoc != nullptr && m_pMergeDoc->GetDirDoc() != nullptr;
 	ShowControlBar(&m_wndFileListBar, bShowFileList, FALSE);
+	// Merge20 (Panel P4, design section 12.7): restore the panel
+	// state (search string, filter tab, folded directories, slim)
+	// before the first refresh, so the first list already shows
+	// the restored state. The display toggle and the width are
+	// restored above (P0: the option key and LoadState).
+	m_wndFileListBar.RestorePanelState();
 	RefreshFileListPanel();
 
 	// Merge20 (Phase 4 D1): if the previous session left dedicated mode
@@ -1019,6 +1025,13 @@ void CMergeEditFrame::SavePosition()
 	m_wndDetailBar.SaveState(_T("Settings"));
 	m_wndDedBar.SaveState(_T("Settings"));
 	m_wndFileListBar.SaveState(_T("Settings"));
+	// Merge20 (Panel P4, design section 12.7): persist the panel
+	// state (search string, filter tab, folded directories, slim).
+	// DestroyWindow restores the normal layout before SavePosition
+	// (D1), and the delayed pane-size save is suppressed while
+	// dedicated mode is active, so a dedicated-mode layout never
+	// leaks into the saved state.
+	m_wndFileListBar.SavePanelState();
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.SaveState(_T("Settings"));
 
