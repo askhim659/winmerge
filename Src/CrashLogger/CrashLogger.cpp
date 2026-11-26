@@ -408,6 +408,6 @@ namespace CrashLogger
 			OutputCrashInfo(tempPath, content, configLogPath);
 
 		DeleteFile(tempPath.c_str());
-		RootLogger::Error(_("WinMerge detected a previous crash. Please report this if possible."));
+		RootLogger::Error(_("WizMerge detected a previous crash. Please report this if possible."));
 	}
 }
