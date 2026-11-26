@@ -133,7 +133,7 @@ const char *COLDESC_LENCODING   = N_("Left side encoding.");
 const char *COLDESC_RENCODING   = N_("Right side encoding.");
 const char *COLDESC_MENCODING   = N_("Middle side encoding.");
 const char *COLDESC_NIDIFFS     = N_("Number of ignored differences in file. Ignored and cannot be merged.");
-const char *COLDESC_EXCLUDED    = N_("Number of ignored differences in file (prediffer exclusions). Interim display for the excluded-line count; this is a diff count, not a line count.");
+const char *COLDESC_EXCLUDED    = N_("Number of lines blanked by the prediffer (excluded lines) in the file. Shows the largest side count; hover over the cell for the per-side breakdown.");
 const char *COLDESC_REVIEWSTATE = N_("Review state of the file: Not reviewed, Done, On hold, Needs manual work, or Keep as is. All files start as Not reviewed; nothing is applied automatically.");
 const char *COLDESC_OUTPUT      = N_("Whether the file is included in the output (ZIP / merged files). Checked means included. Done turns it on again, On hold and Keep as is turn it off.");
 const char *COLDESC_ACTION      = N_("Action category of the file, derived from the existence category and the diff breakdown (missing / changed / added lines). Shown only after the file has been opened; unopened files show Not calculated.");
@@ -597,36 +597,58 @@ static String ColDiffsGet(const CDiffContext *, const void *p, int)
 
 /**
  * @brief Format Excluded-lines column data.
- * @param [in] p Pointer to integer having count of ignored differences.
+ * @param [in] p Pointer to DIFFITEM.
  * @return String to show in the column: U+2205 (N-ARY COPRODUCT) followed
  * by the count, e.g. the excluded-lines mark with N.
  *
- * Merge20 (S0, design section 4.2 plan 2): the prediffer API only reports
- * whether the buffer changed (Plugins.h: InvokePrediffBuffer), so the true
- * excluded-line count is not available yet. Until plan 1 (count the lines
- * blanked by the prediffer in PrediffingInfo::Prediffing) lands, this
- * column shows DIFFITEM::nidiffs, i.e. a diff count, not a line count;
- * the column description says so. This file stays ASCII, so the U+2205
- * character is written as an escape.
+ * Merge20 (S0-F1, coverage matrix S0-F1/H-08/H-28): this is the true
+ * excluded-line count, i.e. the number of lines the prediffer blanked
+ * before diffing (DIFFITEM::nexcluded, counted in
+ * PrediffingInfo::Prediffing). The value shown is the largest per-side
+ * count; the per-side breakdown is in the cell tooltip (DirView.cpp).
+ * It is NOT the trivial-diff count (DIFFITEM::nidiffs, shown by the
+ * stock "Ignored Differences" column): a line the prediffer blanked
+ * never reaches the differ at all. Files compared by a method that
+ * does not run the prediffer, and one-sided files, show nothing, and
+ * so do files with no excluded lines. This file stays ASCII, so the
+ * U+2205 character is written as an escape.
  */
 static String ColExcludedGet(const CDiffContext *, const void *p, int)
 {
-	const int &r = *static_cast<const int*>(p);
-	String s;
-	if (r == CDiffContext::DIFFS_UNKNOWN_QUICKCOMPARE)
-	{ // QuickCompare, unknown
-		s = _T("*");
-	}
-	else if (r == CDiffContext::DIFFS_UNKNOWN)
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (!di.diffcode.existAll())
 	{ // Unique item
-		s.clear();
+		return String();
 	}
-	else if (r > 0)
-	{
-		s = _T("\x2205");
-		s += locality::NumToLocaleStr(r);
+	const int total = di.GetExcludedTotal();
+	if (total <= 0)
+	{ // Unknown (-1), or no excluded lines
+		return String();
 	}
+	String s = _T("\x2205");
+	s += locality::NumToLocaleStr(total);
 	return s;
+}
+
+/**
+ * @brief Compare excluded-line counts.
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result; unknown counts sort last.
+ */
+static int ColExcludedSort(const CDiffContext *, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const int l = ldi.GetExcludedTotal();
+	const int r = rdi.GetExcludedTotal();
+	if (l < 0 && r < 0)
+		return 0;
+	if (l < 0)
+		return 1;
+	if (r < 0)
+		return -1;
+	return l - r;
 }
 
 /**
@@ -2120,7 +2142,14 @@ static DirColInfo f_cols[] =
 	{ _T("Rencoding"), nullptr, COLHDR_RENCODING, COLDESC_RENCODING, &ColEncodingGet, &ColEncodingSort, FIELD_OFFSET(DIFFITEM, diffFileInfo[1]), -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Snsdiffs"), nullptr, COLHDR_NSDIFFS, COLDESC_NSDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nsdiffs), -1, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Snidiffs"), nullptr, COLHDR_NIDIFFS, COLDESC_NIDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
-	{ _T("Sexcluded"), nullptr, COLHDR_EXCLUDED, COLDESC_EXCLUDED, ColExcludedGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
+	// Merge20 (S0-F1, coverage matrix S0-F1/H-08/H-28): true
+	// excluded-line count column. Shown by default (order 11, after
+	// the summary column): the S0 default (-1, hidden) was one reason
+	// the column could not be found on a real machine (2026-11-26).
+	// The getter reads the whole DIFFITEM (offset 0), not the nidiffs
+	// field: the value is the largest per-side DIFFITEM::nexcluded
+	// count, and the sort puts unknown counts last.
+	{ _T("Sexcluded"), nullptr, COLHDR_EXCLUDED, COLDESC_EXCLUDED, ColExcludedGet, ColExcludedSort, 0, 11, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Leoltype"), nullptr, COLHDR_LEOL_TYPE, COLDESC_LEOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Reoltype"), nullptr, COLHDR_REOL_TYPE, COLDESC_REOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Unpacker"), nullptr, COLHDR_UNPACKER, COLDESC_UNPACKER, &ColPluginPipelineGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
@@ -2214,7 +2243,10 @@ static DirColInfo f_cols3[] =
 	{ _T("Rencoding"), nullptr, COLHDR_RENCODING, COLDESC_RENCODING, &ColEncodingGet, &ColEncodingSort, FIELD_OFFSET(DIFFITEM, diffFileInfo[2]), -1, true, DirColInfo::ALIGN_LEFT, 2 },
 	{ _T("Snsdiffs"), nullptr, COLHDR_NSDIFFS, COLDESC_NSDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nsdiffs), -1, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Snidiffs"), nullptr, COLHDR_NIDIFFS, COLDESC_NIDIFFS, ColDiffsGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
-	{ _T("Sexcluded"), nullptr, COLHDR_EXCLUDED, COLDESC_EXCLUDED, ColExcludedGet, ColDiffsSort, FIELD_OFFSET(DIFFITEM, nidiffs), -1, false, DirColInfo::ALIGN_RIGHT },
+	// Merge20 (S0-F1): true excluded-line count column, 3-way table.
+	// Same note as in f_cols above; default order is 12 here because
+	// the summary column is 11 in the 3-way table.
+	{ _T("Sexcluded"), nullptr, COLHDR_EXCLUDED, COLDESC_EXCLUDED, ColExcludedGet, ColExcludedSort, 0, 12, false, DirColInfo::ALIGN_RIGHT },
 	{ _T("Leoltype"), nullptr, COLHDR_LEOL_TYPE, COLDESC_LEOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 0 },
 	{ _T("Meoltype"), nullptr, COLHDR_MEOL_TYPE, COLDESC_MEOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 1 },
 	{ _T("Reoltype"), nullptr, COLHDR_REOL_TYPE, COLDESC_REOL_TYPE, &ColEOLTypeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT, 2 },
@@ -2584,6 +2616,18 @@ bool
 DirViewColItems::IsColOutputCheck(int col) const
 {
 	return IsColById(col, COLHDR_OUTPUT);
+}
+
+/**
+ * @brief Is specified logical column the excluded-lines column?
+ *
+ * Merge20 (S0-F1): used by CDirView for the per-side breakdown
+ * tooltip of the excluded-lines cell.
+ */
+bool
+DirViewColItems::IsColExcluded(int col) const
+{
+	return IsColById(col, COLHDR_EXCLUDED);
 }
 /**
  * @brief Return whether the column can be sorted while comparison results are being updated.
@@ -2966,12 +3010,14 @@ String DirViewColItems::SaveColumnOrders()
  *
  * LoadColumnOrders() leaves every column that is not in the saved string
  * hidden, so a layout saved before S1/S2/S4 (or by stock WinMerge) never
- * shows the five Merge20 columns (review state, output, action category,
- * risk, summary) even though they are visible by default for a fresh
- * layout. CDirView::OnInitialUpdate calls this once, right after
- * LoadColumnOrders(), when the saved layout version is older than 1.
- * Stock columns are never touched, and the two columns that are hidden
- * by default (memo, excluded diffs) are out of scope.
+ * shows the six Merge20 columns (review state, output, action category,
+ * risk, summary, excluded lines) even though they are visible by default
+ * for a fresh layout. CDirView::OnInitialUpdate calls this once, right
+ * after LoadColumnOrders(), when the saved layout version is older than 2.
+ * Stock columns are never touched, and the column that is hidden by
+ * default (memo) is out of scope. The excluded-lines column joined the
+ * default-visible set in S0-F1 (layout version 2); layouts migrated at
+ * version 1 already have the first five columns.
  * @return true if at least one column was appended.
  */
 bool DirViewColItems::MigrateMerge20Columns()
@@ -2979,7 +3025,7 @@ bool DirViewColItems::MigrateMerge20Columns()
 	if (m_dispcols < 0 || m_dispcols >= m_numcols)
 		return false;
 	static const tchar_t * const merge20Cols[] = {
-		_T("Sreview"), _T("Soutput"), _T("Saction"), _T("Srisk"), _T("Ssummary")
+		_T("Sreview"), _T("Soutput"), _T("Saction"), _T("Srisk"), _T("Ssummary"), _T("Sexcluded")
 	};
 	std::vector<std::pair<int, int>> toAppend; // (default order, logical col)
 	for (const tchar_t *name : merge20Cols)

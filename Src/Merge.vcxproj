@@ -1074,6 +1074,7 @@
     <ClInclude Include="Merge20\Merge20LearnDoc.h" />
     <ClInclude Include="Merge20\Merge20LearnDlg.h" />
     <ClInclude Include="Merge20\Merge20Measure.h" />
+    <ClInclude Include="Merge20\Merge20ExcludedLines.h" />
     <ClInclude Include="Merge20\Merge20BulkDiff.h" />
     <ClInclude Include="Merge20\Merge20MemoDlg.h" />
     <ClInclude Include="Merge20\Merge20Patrol.h" />
@@ -1445,6 +1446,11 @@
     <ClCompile Include="Merge20\Merge20LearnDoc.cpp" />
     <ClCompile Include="Merge20\Merge20LearnDlg.cpp" />
     <ClCompile Include="Merge20\Merge20Measure.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20ExcludedLines.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>

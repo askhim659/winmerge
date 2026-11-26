@@ -5361,3 +5361,89 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - 実機確認待ち（§45.6 の全項目）。特に項目 2（開封後のバッジ）と項目 4（後処理スキップの表示）は H-SIMPLE の主眼のため、実機での確認結果を本節へ追記すること。
 - 既知の制限（勝手に削っていない。理由は §45.3 参照）：(1) 比較エンジン自体の簡易比較への置き換えは範囲外（開封後の差分は diffutils の完全な差分）。(2) 要約文への「簡易比較」の追加は行わない（表示時バッジで代替）。(3) 開封前のモーダル通知は実装しない（一覧とパネルのバッジで代替）。(4) 巨大ファイルでは類似行の位置合わせと移動ブロック検出をスキップする（表示の簡略化と引き換えの負荷軽減）。(5) Rescan ごとに巨大ファイル判定が 2 回走る（開始時とフック時。いずれも O(行数) のフラグ走査＋頭尾の行読みで、diffutils に比べれば無視できる）。
 - 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §45.6 のチェックリストでユーザーに確認してもらうこと。
+
+## 46. S0-F1 — ⊘N 真の除外行数表示（カバレッジ行列 S0-F1・H-08・H-28）— ブランチ `merge20/s0-f1`
+
+- PR: #42（https://github.com/askhim659/winmerge/pull/42）。最終 head（コード）`67b8f07007242b6ebb4eb8ffbaf35ef974d0cac0`（24 件）。マージは本記録時点では未実施（コーディネーター判断待ち）。
+- カバレッジ行列 S0-F1・H-08・H-28、仕様書 §7、設計書 §3.12、HTML `17_v17.15.html`（`f.ex`、1415 行目・1343 行目・1356 行目・691 行目）。受け入れ条件：Sexcluded 列の値が prediffer で除外された真の行数であること（差分件数ではないこと）、内訳ツールチップが表示されること、既定表示の扱いが決まっていること（W1 の移行の扱いに沿うこと）、100〜1000 ファイル規模での比較時間への影響が記録されていること（計測方法を含む）。
+
+### 46.1 変更一覧（1 ファイル 1 コミット、24 件＋本節の記録コミット。連続コミットの間に sleep 3）
+
+| # | コミット | ファイル | 内容 |
+|---|---|---|---|
+| 1 | `2ca07271` | Src/Merge20/Merge20ExcludedLines.h | `Merge20CountExcludedLines` の宣言（純粋モジュール、ASCII のみ） |
+| 2 | `031a4fe7` | Src/Merge20/Merge20ExcludedLines.cpp | 計数実装（`#include "pch.h"` 先頭、SplitLines＋IsBlank、before 非空白＋after 空白／行なし＝除外） |
+| 3 | `ecec8123` | Testing/GoogleTest/Merge20/Merge20ExcludedLines_test.cpp | 単体テスト 12 件（18 アサーション。不変、1 行除外、2 行目バージョン、既に空白、空白化、削除行、追加行、非空白化変更、CRLF、CR のみ、複数行、末尾 EOL なし／末尾改行） |
+| 4 | `18faede8` | Src/Merge.vcxproj | Merge20ExcludedLines.h/.cpp を登録（pch.h Use ブロック付き、XML 検証済み） |
+| 5 | `10c96c59` | Src/Merge.vcxproj.filters | 同上（Filter Merge20、XML 検証済み） |
+| 6 | `1db007fc` | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | 同上（ソース素の ClCompile、テストは pch.h Use ブロック、XML 検証済み） |
+| 7 | `6dc88f6a` | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上（XML 検証済み） |
+| 8 | `297e5ddb` | Src/DiffItem.h | `int nexcluded[3]`（-1＝不明）追加、インライン `GetExcludedTotal()`（既知の最大値、不明時は -1）、ctor 初期化 `nexcluded{-1, -1, -1}` |
+| 9 | `44932b54` | Src/DiffItem.cpp | `Swap` で `nexcluded[idx1]`／`[idx2]` を交換、`GetEmptyItem` の assert に nexcluded 3 件を追加 |
+| 10 | `c1b35e82` | Src/DiffItemList.cpp | `SetDiffCounts` で `di.nexcluded[0/1/2] = -1` にリセット（理由コメント付き） |
+| 11 | `8c42e554` | Src/FileTransform.h | `PrediffingInfo::Prediffing` に `int * pExcludedLines = nullptr` を追加（ドキュメントコメント付き） |
+| 12 | `2ff20835` | Src/FileTransform.cpp | `Prediffing()` の BUFFER_PREDIFF 分岐で before スナップショット（`GetDataBufferUnicode()`＋`SysStringLen` でコピー）→ `InvokePrediffBuffer` → `ValidateNewBuffer()` 後に `GetNChanged() > 0` かつ before 非空なら `Merge20CountExcludedLines` で加算。フィルタ式分岐と FILE_PREDIFF 分岐には数えない理由のコメントを追加 |
+| 13 | `3b4889f4` | Src/DiffFileData.h | `Filepath_Transform` に `int * pExcludedLines = nullptr` を追加 |
+| 14 | `58cd2979` | Src/DiffFileData.cpp | 同パラメータを `Prediffing` へ受渡し |
+| 15 | `8e209403` | Src/DirViewColItems.h | `bool IsColExcluded(int col) const;` を宣言 |
+| 16 | `34bcfae8` | Src/DirViewColItems.cpp | COLDESC_EXCLUDED の msgid を真の行数説明に変更。`ColExcludedGet` を DIFFITEM ベースに書換え（片側のみは空欄、不明／0 は空欄、>0 は ⊘N＋`locality::NumToLocaleStr`）。新規 `ColExcludedSort`（不明は最後）。`IsColExcluded` 実装。2-way 行は offset 0・ソート ColExcludedSort・order 11、3-way 行は order 12。`MigrateMerge20Columns` に `Sexcluded` を追加 |
+| 17 | `80616943` | Src/DirView.cpp | `OnChildNotify` の LVN_GETINFOTIPW で Sexcluded セルのツールチップを埋める（他列は現状維持＝ツールチップなし）。`OnInitialUpdate` の移行バージョン `< 1`→`< 2`、保存 1→2 |
+| 18 | `963c963d` | Src/OptionsInit.cpp | `InitOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 0, 0, 1)` の最大値を 1→2 に変更 |
+| 19 | `30437bde` | Src/OptionsDef.h | バージョンキーの説明を更新（0＝移行前、1＝5 列、2＝除外行列も追加） |
+| 20 | `aa2a54c4` | BuildTranslations.cmd | 番兵リストに新規 ASCII msgid 3 件を追加（`%1`／`%2`／`%3` は `%%` にエスケープ） |
+| 21 | `7c8bd7dd` | Translations/WinMerge/Japanese.po | 新規 3 件の訳を追加、旧 COLDESC_EXCLUDED の項目を削除（W1 の規則：文字列を削除したら .po の項目も同じ変更で消すこと）。msgid 2167 → 2169 件、【Wiz】132 件で変化なし |
+| 22 | `53c476d6` | Src/FileTransform.cpp | 修正：`Prediffing` の定義側シグネチャに `int * pExcludedLines` を追加（コミット #12 の漏れ。宣言側のみで定義側が旧 4 引数のままになっており、自己レビューで発見。未コンパイルのままでは C2065 になるところだった） |
+| 23 | `3b906ae1` | Src/CompareEngines/FullQuickCompare.cpp | `int nExcluded[3] = { 0, 0, 0 }` を宣言、prediff ループで `&nExcluded[nIndex]` を渡し、末尾で `di.nexcluded[i]` へ格納。比較が途中で失敗したとき（`m_ndiffs == DIFFS_UNKNOWN`）は -1（不明）にする。クイック比較（`DIFFS_UNKNOWN_QUICKCOMPARE`）では prediffer は走っているため計数を残す |
+| 24 | `67b8f070` | Src/DirView.cpp | `#include "locality.h"` を追加（コミット #17 のツールチップで使う `locality::NumToLocaleStr` が未宣言だった。CI 初回実行のコンパイルエラー 2 件を受けての修正。§46.4 参照） |
+
+- 注記（到達不能コミット 2 件。PR には含まれない）：(a) `99dea40d` — FileTransform.cpp の編集スクリプトが `if (bWithFile)` の old テキストの複数一致で assert 失敗し、ファイル未変更のまま打たれた空コミット。直後に `commit_on_parent.py`（parent `8c42e554`、force PATCH）で正しい内容の #12 を作り置き換えた。教訓：複数箇所に一致しうる old テキストは周辺の一意な文脈まで含めて指定すること。(b) `19adb64b` — FullQuickCompare.cpp の修正コミット時に、編集対象ファイルを誤って master 版で上書きし、#15 相当の配線（`580d2cd2`）を巻き戻してしまった。直後に `commit_on_parent.py`（parent `53c476d6`、force PATCH）で配線＋ガード付きの正しい内容の #23 を作り置き換えた。教訓：編集前の取得元（ブランチ版か master 版か）を毎回確認すること。`fetch.py` は既定で master を取る。
+
+### 46.2 設計判断（判断理由付き）
+
+1. **⊘N＝側ごとの prediffer 空行化行数の最大値。** 対称 prediffer（通常）では HTML の行数と一致。合計にしない（対称ペアを二重計上するため）。非対称時のずれは NOTES に明記し、ツールチップで側別内訳を示す。
+2. **計数：純粋関数 `Merge20CountExcludedLines(std::wstring_view before, std::wstring_view after)`。** before 非空白＋after 空白（または after に行がない）＝除外。行分割は CRLF/LF/CR。空白のみ行は before でも除外に数えない。after が増えた行は数えない。末尾の改行は phantom 行を作らない。
+3. **計数場所：`Prediffing()` の BUFFER_PREDIFF 分岐のみ。** FILE_PREDIFF（temp ファイル。stock／Merge20 に該当プラグインなし）とフィルタ式分岐（任意 TransformLine で blanking の契約なし）は数えない（制限として記録）。
+4. **既定表示：表示にする（order 11／12）。** 2026-11-26 実機で列自体が見つからなかった一因が既定非表示のため。W1 の扱いに沿い、移行リストに Sexcluded を追加しバージョン 1→2（InitOption max も 2 へ、DirView の `<1`→`<2`・保存 1→2）。バージョン 1 で移行済みのレイアウトは 5 列が表示済みのため、バージョン 2 では Sexcluded だけを追加する（`MigrateMerge20Columns` は表示済みの列を跳ばす）。
+5. **ツールチップ：2-way「Excluded lines: old %1, new %2」、3-way「Excluded lines: left %1, middle %2, right %3」。** 不明側は "?"。合計>0 のときのみ。msgstr には【Wiz】を付けない（数値表示のため。S4 要約値の前例。列見出しには既に【Wiz】がある）。`OnChildNotify` は LVN_GETINFOTIP を従来無記入で TRUE 返していた（＝ツールチップなし）が、Sexcluded セルだけを埋める。他列は現状維持＝ツールチップなし。`pInfo->pszText` へのコピーは既存の前例（`FileFiltersDlg::OnInfoTip`）と同じ `_tcsncpy_s(..., _TRUNCATE)`。
+6. **ソート：新規 `ColExcludedSort`（不明は最後）。** 表示：片側のみ／不明は空欄、0 は空欄（現状と同じ）、>0 は ⊘N。
+7. **`DiffItemList::SetDiffCounts`（ファイル比較からの更新経路）は nexcluded を不明へリセット（再計算しないため）。** `DirActions::SetDiffCounts(di,0,0)`（コピー後）は触らない（コピーは内容を変えず、空行化行数は変わらないため）。
+8. **比較が途中で失敗したときは nexcluded を -1（不明）にする。** `exitPrepAndCompare` のエピローグは全経路で走るため、unpack／prediff／OpenFiles の失敗時に側 0 だけ計数済みの部分値を書き込むと、失敗した比較に ⊘N が付いて誤解を招く。`m_ndiffs == DIFFS_UNKNOWN` のとき -1 にする。クイック比較は `DIFFS_UNKNOWN_QUICKCOMPARE`（≠ `DIFFS_UNKNOWN`）で prediffer は走っているため計数を残す。片側のみのファイルも `DIFFS_UNKNOWN` になるが、列の表示側で片側のみは空欄にするため影響はない。
+9. **要約文への追加は行わない。** S4 の `Merge20FormatSummary` は既に「除外:N行」を含むが、それは OP_TRIVIAL 行数という別数量であり、prediffer 計数を同じ「除外」で二重表示すると混乱するため。統一にはファイル比較ロード経路への計数引渡しが必要→残課題として §46.6 に記録する。列の ⊘N（prediffer 空行化）と要約文の「除外」（trivial 差分行）は別数量である旨をここに明記する。
+10. **性能：計数はメモリ内 BSTR に対する O(n) 走査＋1 回のバッファコピー（prediffer 実行時のみ）。** 追加 I/O・追加 diff パスなし。実測は実機チェックリスト（§46.5 項目 6。Merge20Measure のログ行で base ビルドと比較）。
+11. **新規 msgid は 3 件（説明文＋ツールチップ 2 件）。** 説明文の msgstr にも【Wiz】は付けない（S8 メモ説明文の前例）。`.pot` は触らない（CI が .js で再生成し自己修復。English.pot に H-LIST の msgid「Old/Changed/New」がないことから、最近のスライスは .pot を更新していない）。
+12. **自己レビューで見つけた不具合 2 件（§46.1 の #22・#23 の注記参照）を修正済み。** いずれも CI に投げる前に発見した。FileTransform.cpp の定義側シグネチャ漏れは、宣言と定義の両方を同じ変更で確認する習慣がなかったことが原因。FullQuickCompare.cpp の巻戻しは、編集対象ファイルの取得元（master／ブランチ）の確認漏れが原因。
+
+### 46.3 カバレッジ行列の照合表（H-08・H-28・S0-F1 を 1 件ずつ確認）
+
+| 条項 | HTML 版の機能 | フォークでの対応 | 判定 |
+|---|---|---|---|
+| H-08 | ⊘N 除外行数表示（`f.ex`）。一覧に `⊘N`、カーソルを乗せると内訳を表示（`data-tip`）。要約文にも「除外:N行」 | 一覧の ⊘N は prediffer 空行化行数（最大値）に。カーソルを乗せると側別内訳のツールチップを表示。要約文の「除外:N行」は S4 で既に存在するが、OP_TRIVIAL 行数という別数量であり、prediffer 計数との統一は未実施（§46.2 項目 9）。FILE_PREDIFF／フィルタ式は計数対象外、非対称 prediffer では最大値と HTML 行数がずれる | 満たす（コード、一部食い違いあり）＋未検証（実機。§46.5 項目 1〜5） |
+| H-28 | 一覧の `⊘N`・`[簡易]` バッジ表示（H-08・H-05 と同じものの「一覧での見え方」） | ⊘N は本スライスで真の行数になり、既定表示＋移行で見つけやすくなった。`[簡易]` は H-SIMPLE の範囲 | 満たす（コード、`⊘N` の部分）＋未検証（実機。§46.5 項目 1〜5） |
+| S0-F1 | ⊘N の真の除外行数表示。prediffer 前後バッファ比較による。接続点は `MERGE20_NOTES.md` §8.2 に記録済み、regName `Sexcluded` は流用可 | BUFFER_PREDIFF 分岐で前後バッファ比較（`PrediffingInfo::Prediffing` に out-param を追加し、`FullQuickCompare` から `DIFFITEM::nexcluded` へ引渡し）。内訳ツールチップあり。既定表示（移行 v2）。性能は O(n) 走査＋1 回コピー、実測は実機チェックリスト | 満たす（コード）＋未検証（実機。§46.5 項目 1〜7） |
+
+### 46.4 検証レポート
+
+- CI（PR #42、コード head `67b8f070`）：実行 45885296396（2026-11-26 19:39:45Z 作成、19:52:35Z 更新）：**結論 success**。ジョブ 140134393924（`build`）：completed／success。GoogleTest：`[  PASSED  ] 754 tests.`（master ベースライン 742 件＋新規 12 件。`[ FAILED ]` 行なし。`Merge20ExcludedLines` の 12 件はすべて `[  OK  ]`）。コンパイルエラー 0 件（`: error` 0 件、`error C` 0 件、`error LNK` 0 件、`Build succeeded` 1 件）。成果物：`WinMerge-x64.zip`（26,461,396 バイト、ID 15149342736、失効 2027-02-24T19:39:45Z）、`WinMerge-x64-Setup-x64.exe`（39,907,678 バイト、ID 15149811620、失効 2027-02-24T19:39:45Z）。全文ログは `~/workspace/s0f1-work/s0f1_ci_log2.txt` に保存（47,706 行）。ジョブログで MergeLang ステップ（`Creating POT file from Merge.rc...`、`All PO files updated`）と番兵チェック（`Checking bundled Japanese.po for Merge20 strings...`／`Merge20 strings present in the bundled Japanese.po.`）の通過を確認。なお、初回実行 45884284882（head `3b906ae1`）は **failure** だった：`Src\DirView.cpp(3497)` で `locality::NumToLocaleStr` 未宣言のコンパイルエラー 2 件（`error C2653`／`error C3861`）。`locality.h` の include 漏れ（`DirViewColItems.cpp` の 17 行目と取り違えて「DirView.cpp で include 済み」と誤認していた）。`67b8f070` で include を追加し、再実行で成功した。全文ログは `~/workspace/s0f1-work/s0f1_ci_log.txt` に保存（38,370 行）。
+- 成果物 ZIP 内の `Japanese.po` の直接確認：成果物 `WinMerge-x64.zip`（ID 15149342736）をダウンロードし、内側の `wizmerge-2.16.60-ad78371-x64-exe.zip`（670 エントリ、`WinMergeU.exe` あり）から `WizMerge/Languages/Japanese.po` を取り出して監査。新規 msgid 3 件がすべて存在し、msgstr が期待値と完全一致（説明文「prediffer が空行化した行数（除外行）です。最も多い側の行数を表示します。セルにカーソルを乗せると側ごとの内訳が表示されます。」、2-way「除外行数：旧 %1行／新 %2行」、3-way「除外行数：左 %1行／中央 %2行／右 %3行」）。旧 msgid は存在しない。継続行を展開する簡易パーサで確認（長い msgid は出荷時に複数行に折り返されるため、単一行の正規表現では検出できない）。出荷 .po の msgid 件数は 2192 件（ブランチ版 2169 件に対し +23 件。差分は `.pot` 再生成で追加された stock 文字列（`%s`、`Abort`、`Redo` など）で、ブランチ版にあって出荷版にない msgid は 0 件。W1 のマージ方式が意図どおり動いている）。【Wiz】132 件で変化なし。
+
+- .po 監査：ブランチ版は msgid 2169 件・【Wiz】132 件。master 版は msgid 2167 件・【Wiz】132 件。増分は +2 msgid（ツールチップ 2 件。説明文は 1 件置換のため差し引き 0）で、新規文字列と一致。重複 msgid なし。新規 3 件の msgid はコードのリテラルと完全一致し、msgstr（「prediffer が空行化した行数（除外行）です。最も多い側の行数を表示します。セルにカーソルを乗せると側ごとの内訳が表示されます。」「除外行数：旧 %1行／新 %2行」「除外行数：左 %1行／中央 %2行／右 %3行」）がすべて設定されていることを API から取得したブランチ版で確認。`msgfmt` は本 VM に未導入のため、Python による構文・重複チェックで代替した（CI の MergeLang ステップも .po を読むため、CI の成功が追加の裏付けになる）。
+- ローカル検証：`Merge20CountExcludedLines` を g++ スタブハーネスで検証し、20 アサーション全パス（GoogleTest の 12 件（18 アサーション）に対応する 18 件＋追加 2 件。ブランチ版の `Merge20ExcludedLines.cpp` を API から取得し、スタブ `pch.h` でコンパイル。`~/workspace/s0f1-work/harness/`）。ハーネス実行中に不具合は見つからなかった。
+- 静的整合性チェック（作業用スクリプト。CI ではなくローカルで実行）：(1) `Prediffing`・`Filepath_Transform` の宣言と定義のシグネチャが一致すること（#22 の漏れを受けて再確認）。(2) 新規 `_()`／`N_()` リテラル 3 件がすべて .po に存在すること（上記監査）。(3) 新規リソース ID なし（`.rc`／`resource.h` の変更なし）。(4) `DirViewColItems` の getfnc／sortfnc は `offset`（0）で DIFFITEM 全体を受け取ること（`ColGetTextToDisplay`・ソート経路で確認）。(5) ツールチップの `lParam`→DIFFITEM の導出が `ReflectGetdispinfo` と同一であること。(6) 全変更ファイルの括弧バランスが master と同一であること（FileTransform.cpp の `}` の +1 は master 原本と同じく既存のもので、自分の差分はバランスしている。新規 .cpp／.h は追加ファイルのため対象外）。すべて合格。
+- 未検証（Windows 実機でのみ確認できる挙動）：§46.5 のチェックリスト。実機で確認するまで「できた」とは言わない。
+
+### 46.5 実機確認チェックリスト（手順付き。未検証）
+
+1. **⊘N の表示**：除外ワードを含むファイルを含むフォルダでフォルダ比較を実行し、該当ファイルの「無視差分」列に ⊘N（N＝除外ワードに一致した行数）が表示されること。除外ワードを含まないファイルは空欄であること。片側のみのファイルは空欄であること。
+2. **⊘N の値の正しさ**：旧・新で除外行数が違うファイル（旧 3 行・新 5 行など）で、⊘5（最大値）が表示されること。同じフォルダを HTML 版（マージ支援20号）で開いたときの ⊘N と一致すること（対称 prediffer の場合）。
+3. **内訳ツールチップ**：⊘N のセルにカーソルを乗せると「除外行数：旧 3行／新 5行」のように側別内訳が表示されること。⊘N がないセルにはツールチップが出ないこと。他の列のセルにはツールチップが出ないこと（従来どおり）。
+4. **既定表示・移行**：既存の保存済みレイアウト（バージョン 1 のもの）で開いたとき、「無視差分」列が末尾付近に表示されること。列の表示ダイアログで「無視差分」の説明文が「prediffer が空行化した行数（除外行）です。最も多い側の行数を表示します。セルにカーソルを乗せると側ごとの内訳が表示されます。」になっていること（英語の旧文言でないこと）。
+5. **ソート**：列ヘッダをクリックして ⊘N でソートできること。不明（空欄）の行が最後に並ぶこと。
+6. **比較時間（100〜1000 ファイル規模）**：同じフォルダ・同じ条件で、base ビルド（master）と本ビルドのフォルダ比較時間を比べ、大きな悪化がないこと。手順：(a) Merge20Exclude prediffer が有効な状態で、100〜1000 ファイルを含むフォルダを用意する。(b) base ビルドと本ビルドでそれぞれフォルダ比較を 3 回実行し、Merge20Measure のログ行の比較時間を記録して平均を取る。(c) 本ビルドの平均が base ビルドの平均と大きく変わらないこと（計数はメモリ内 O(n) 走査＋1 回コピーであり、追加 I/O・追加 diff パスはないため、悪化は小さいはず。実測値が大きく悪化する場合はコーディネーターへ報告すること）。
+7. **回帰なし**：フォルダ比較・ファイル比較・一括分類・列の表示ダイアログ・セッション保存／復元が従来どおり動くこと。ファイルをファイル比較ウィンドウで編集してフォルダ比較に戻ったとき、そのファイルの ⊘N が空欄（不明）になること。
+
+### 46.6 次への移行
+
+- S0-F1 は完了（コード）。残る Wave 4 は H-DOC。
+- 実機確認待ち（§46.5 の全項目）。特に項目 2（HTML 版との ⊘N の一致）と項目 6（比較時間）は S0-F1 の主眼のため、実機での確認結果を本節へ追記すること。
+- 既知の制限（勝手に削っていない。理由は §46.2 参照）：(1) FILE_PREDIFF プラグインとフィルタ式分岐は計数対象外。(2) prediffer が空白化ではなく置換で正規化する場合は計数されない。(3) 複数の prediffer が同じ行を空白化するとステップごとに加算され二重計上になりうる。(4) 要約文の「除外:N行」（S4、OP_TRIVIAL 行数）と列の ⊘N（prediffer 空行化行数）は別数量のまま。統一にはファイル比較ロード経路への計数引渡しが必要（フォローアップ）。(5) 比較が途中で失敗した場合は計数を不明（-1）にする（部分計数を表示しない）。(6) IsBlank は半角空白とタブのみを空白とみなす（その他の空白文字を含む行は非空白として扱う。prediffer が空行化する行は "" になるため、通常は影響しない）。
+- 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §46.5 のチェックリストでユーザーに確認してもらうこと。

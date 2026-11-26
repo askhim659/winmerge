@@ -179,6 +179,12 @@ void DiffItemList::SetDiffCounts(DIFFITEM *diffpos, unsigned diffs, unsigned ign
 	DIFFITEM &di = GetDiffRefAt(diffpos);
 	di.nidiffs = ignored; // see StoreDiffResult() in DirScan.cpp
 	di.nsdiffs = diffs;
+	// Merge20 (S0-F1): this path (CDirDoc::UpdateChangedItem, after a
+	// file was edited in the file compare window) recomputes the diff
+	// counts from the merge doc, which never ran the folder-compare
+	// prediffer counting, so the excluded-line counts become unknown
+	// until the next rescan.
+	di.nexcluded[0] = di.nexcluded[1] = di.nexcluded[2] = -1;
 }
 
 /**

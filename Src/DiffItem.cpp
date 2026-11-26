@@ -105,6 +105,7 @@ void DIFFITEM::Swap(int idx1, int idx2)
 {
 	std::swap(diffFileInfo[idx1], diffFileInfo[idx2]);
 	diffcode.swap(idx1, idx2);
+	std::swap(nexcluded[idx1], nexcluded[idx2]);
 	if (HasChildren())
 	{
 		for (DIFFITEM *p = children; p != nullptr; p = p->Flink)
@@ -138,6 +139,9 @@ DIFFITEM *DIFFITEM::GetEmptyItem()
 	assert(emptyitem.children == nullptr);
 	assert(emptyitem.nidiffs == -1);
 	assert(emptyitem.nsdiffs == -1);
+	assert(emptyitem.nexcluded[0] == -1);
+	assert(emptyitem.nexcluded[1] == -1);
+	assert(emptyitem.nexcluded[2] == -1);
 	assert(emptyitem.customFlags == ViewCustomFlags::INVALID_CODE);
 	assert(emptyitem.diffcode.diffcode == 0);
 

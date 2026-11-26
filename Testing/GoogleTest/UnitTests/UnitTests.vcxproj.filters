@@ -156,6 +156,9 @@
     <ClCompile Include="..\Merge20\Merge20Measure_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20ExcludedLines_test.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\Merge20\Merge20BulkDiff_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
@@ -388,6 +391,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Measure.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20ExcludedLines.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20BulkDiff.cpp">
@@ -642,6 +648,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Measure.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20ExcludedLines.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20BulkDiff.h">

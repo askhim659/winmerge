@@ -17,6 +17,7 @@
 #include "Clipboard.h"
 #include "DirActions.h"
 #include "DirViewColItems.h"
+#include "locality.h" // Merge20 (S0-F1): NumToLocaleStr for the excluded-lines tooltip
 #include "DirFrame.h"  // StatePane
 #include "DirDoc.h"
 #include "IMergeDoc.h"
@@ -504,19 +505,23 @@ void CDirView::OnInitialUpdate()
 	m_pColItems->LoadColumnOrders(
 		GetOptionsMgr()->GetString(pDoc->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_ORDERS : OPT_DIRVIEW3_COLUMN_ORDERS));
 
-	// Merge20 (W1, D1.5): a layout saved before the Merge20 columns
-	// existed hides them. Append the five default-visible Merge20
-	// columns (review state, output, action category, risk, summary)
-	// at the end, once, and remember the migration. The version is
-	// a single global key, so whichever layout (2-way or 3-way) is
-	// opened first after the upgrade gets migrated; a pre-existing
-	// layout of the other kind is then skipped.
-	if (GetOptionsMgr()->GetInt(OPT_MERGE20_COLUMN_LAYOUT_VERSION) < 1)
+	// Merge20 (W1, D1.5; S0-F1 adds the sixth column): a layout saved
+	// before the Merge20 columns existed hides them. Append the six
+	// default-visible Merge20 columns (review state, output, action
+	// category, risk, summary, excluded lines) at the end, once, and
+	// remember the migration. The version is a single global key, so
+	// whichever layout (2-way or 3-way) is opened first after the
+	// upgrade gets migrated; a pre-existing layout of the other kind
+	// is then skipped. Layouts migrated at version 1 already have
+	// the first five columns; version 2 only appends the excluded
+	// lines column (MigrateMerge20Columns skips columns that are
+	// already displayed).
+	if (GetOptionsMgr()->GetInt(OPT_MERGE20_COLUMN_LAYOUT_VERSION) < 2)
 	{
 		const String ordersKey = pDoc->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_ORDERS : OPT_DIRVIEW3_COLUMN_ORDERS;
 		if (m_pColItems->MigrateMerge20Columns())
 			GetOptionsMgr()->SaveOption(ordersKey, m_pColItems->SaveColumnOrders());
-		GetOptionsMgr()->SaveOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 1);
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 2);
 	}
 
 	// Display column headers (in appropriate order)
@@ -3469,6 +3474,46 @@ BOOL CDirView::OnChildNotify(UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT* p
 			ReflectGetdispinfo((NMLVDISPINFO *)lParam);
 			return TRUE;
 		case LVN_GETINFOTIPW:
+		{
+			// Merge20 (S0-F1): per-side breakdown tooltip for the
+			// excluded-lines cell. The list view asks for a tip for
+			// every subitem, but only this cell gets one; other
+			// subitems keep today's behaviour (no tip: return TRUE
+			// with empty text, as before).
+			NMLVGETINFOTIP *pInfo = reinterpret_cast<NMLVGETINFOTIP*>(lParam);
+			const int nIdx = pInfo->iItem;
+			if (nIdx >= 0 && nIdx < static_cast<int>(m_listViewItems.size()) &&
+				pInfo->iSubItem >= 0 && pInfo->iSubItem < m_pColItems->GetDispColCount() &&
+				m_pColItems->IsColExcluded(m_pColItems->ColPhysToLog(pInfo->iSubItem)))
+			{
+				DIFFITEM *key = reinterpret_cast<DIFFITEM*>(m_listViewItems[nIdx].lParam);
+				if (!IsDiffItemSpecial(key) && GetDocument()->HasDiffs())
+				{
+					const CDiffContext &ctxt = GetDiffContext();
+					const DIFFITEM &di = ctxt.GetDiffAt(key);
+					if (di.GetExcludedTotal() > 0 && pInfo->pszText != nullptr && pInfo->cchTextMax > 0)
+					{
+						auto sideText = [](int n) -> String
+						{
+							return n < 0 ? String(_T("?")) : locality::NumToLocaleStr(n);
+						};
+						String s;
+						if (GetDocument()->m_nDirs < 3)
+						{
+							s = strutils::format_string2(_("Excluded lines: old %1, new %2"),
+								sideText(di.nexcluded[0]), sideText(di.nexcluded[1]));
+						}
+						else
+						{
+							s = strutils::format_string3(_("Excluded lines: left %1, middle %2, right %3"),
+								sideText(di.nexcluded[0]), sideText(di.nexcluded[1]), sideText(di.nexcluded[2]));
+						}
+						_tcsncpy_s(pInfo->pszText, pInfo->cchTextMax, s.c_str(), _TRUNCATE);
+					}
+				}
+			}
+			return TRUE;
+		}
 		case LVN_GETINFOTIPA:
 			return TRUE;
 		}
