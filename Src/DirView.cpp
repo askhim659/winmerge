@@ -492,6 +492,21 @@ void CDirView::OnInitialUpdate()
 	m_pColItems->LoadColumnOrders(
 		GetOptionsMgr()->GetString(pDoc->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_ORDERS : OPT_DIRVIEW3_COLUMN_ORDERS));
 
+	// Merge20 (W1, D1.5): a layout saved before the Merge20 columns
+	// existed hides them. Append the five default-visible Merge20
+	// columns (review state, output, action category, risk, summary)
+	// at the end, once, and remember the migration. The version is
+	// a single global key, so whichever layout (2-way or 3-way) is
+	// opened first after the upgrade gets migrated; a pre-existing
+	// layout of the other kind is then skipped.
+	if (GetOptionsMgr()->GetInt(OPT_MERGE20_COLUMN_LAYOUT_VERSION) < 1)
+	{
+		const String ordersKey = pDoc->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_ORDERS : OPT_DIRVIEW3_COLUMN_ORDERS;
+		if (m_pColItems->MigrateMerge20Columns())
+			GetOptionsMgr()->SaveOption(ordersKey, m_pColItems->SaveColumnOrders());
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 1);
+	}
+
 	// Display column headers (in appropriate order)
 	ReloadColumns();
 
