@@ -30,11 +30,11 @@ IMPLEMENT_DYNAMIC(CMerge20FileListBar, CSizingControlBarCF);
 namespace
 {
 	/** @brief Initial panel width: wide enough for file names. */
-	constexpr int Merge20FileListDefaultWidth = 280;
+	constexpr LONG Merge20FileListDefaultWidth = 280;
 	/** @brief Narrowest usable width (file names stay readable). */
-	constexpr int Merge20FileListMinWidth = 160;
+	constexpr LONG Merge20FileListMinWidth = 160;
 	/** @brief Widest allowed width (the file panes keep their area). */
-	constexpr int Merge20FileListMaxWidth = 600;
+	constexpr LONG Merge20FileListMaxWidth = 600;
 } // namespace
 
 BEGIN_MESSAGE_MAP(CMerge20FileListBar, CSizingControlBarCF)
