@@ -318,6 +318,14 @@ void CMerge20DedBar::SetReviewState(ReviewState state)
 		m_btnReview[i].SetCheck(i == static_cast<int>(state) ? BST_CHECKED : BST_UNCHECKED);
 }
 
+void CMerge20DedBar::SetReviewEnabled(bool bEnable)
+{
+	if (m_btnReview[0].GetSafeHwnd() == nullptr)
+		return;
+	for (int i = 0; i < 5; ++i)
+		m_btnReview[i].EnableWindow(bEnable);
+}
+
 void CMerge20DedBar::SetPrevNextEnabled(bool bPrev, bool bNext)
 {
 	if (m_btnPrev.GetSafeHwnd() == nullptr)
