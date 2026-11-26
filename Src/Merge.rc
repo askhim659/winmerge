@@ -3110,6 +3110,18 @@ FONT 8, FONTNAME, 0, 0, 0x1
 BEGIN
 END
 
+// Merge20 (Phase 4 D8): master management dialog. The dialog has no
+// controls in the template: the select combo, list, editor and buttons
+// are created in code by CMerge20MasterDlg::OnInitDialog (like the
+// Grep dialog), and the dialog is laid out at runtime, so the template
+// size is a placeholder.
+IDD_MERGE20_MASTER DIALOGEX 0, 0, 640, 460
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Master Management"
+FONT 8, FONTNAME, 0, 0, 0x1
+BEGIN
+END
+
 IDD_PROPPAGE_CODEPAGE DIALOGEX 0, 0, 325, 294
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION
 CAPTION "Codepage"
