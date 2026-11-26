@@ -651,6 +651,12 @@
     <ClCompile Include="Merge20\Merge20FileListFilter.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20FilterDeck.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FilterDeckBar.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20FileStates.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1533,6 +1539,12 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FileListFilter.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20FilterDeck.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20FilterDeckBar.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FileStates.h">
