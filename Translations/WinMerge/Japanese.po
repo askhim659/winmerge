@@ -11274,3 +11274,48 @@ msgstr "差分が選択されていません"
 #: Src/Merge20/Merge20FocusDock.cpp
 msgid "(No lines)"
 msgstr "（行なし）"
+#. Merge20 (D6): sniper overlay title (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "Auto Sniper"
+msgstr "【Wiz】オートスナイパー"
+
+#. Merge20 (D6): sniper previous-diff button (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "Previous Diff"
+msgstr "【Wiz】前差分"
+
+#. Merge20 (D6): sniper next-diff button (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "Next Diff"
+msgstr "【Wiz】次差分"
+
+#. Merge20 (D6): sniper close button (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "Close Sniper"
+msgstr "【Wiz】スナイパーを閉じる"
+
+#. Merge20 (D6): sniper layout button, switch to 3 columns (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "3 Columns"
+msgstr "【Wiz】3列表示"
+
+#. Merge20 (D6): sniper layout button, switch to 3 rows (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "3 Rows"
+msgstr "【Wiz】3段表示"
+
+#. Merge20 (D6): sniper OLD panel label (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "Old"
+msgstr "【Wiz】旧"
+
+#. Merge20 (D6): sniper NEW panel label (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "New side"
+msgstr "【Wiz】新"
+
+#. Merge20 (D6): sniper MERGED panel label (CMerge20SniperDlg)
+#: Src/Merge20/Merge20SniperDlg.cpp
+msgid "Merged result"
+msgstr "【Wiz】マージ後"
+
