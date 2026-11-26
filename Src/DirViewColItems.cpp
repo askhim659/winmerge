@@ -961,6 +961,40 @@ String Merge20CsvGetSummaryText(const CDiffContext* pCtxt, const DIFFITEM& di)
 	return ColSummaryGet(pCtxt, &di, 0);
 }
 
+// Merge20 (Panel P1, design section 12.3 P-R1): the output checkbox
+// column of the file-list panel shows the same ballot-box glyph as
+// the folder compare list (S2 option (b): a state image cannot draw
+// a checkbox inside a subitem column of this owner-data list, and
+// the first-column state image is not used here either, so the text
+// glyph is reused verbatim).
+String Merge20CsvGetOutputText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColOutputCheckGet(pCtxt, &di, 0);
+}
+
+// Merge20 (Panel P1, design section 12.3 P-R1): provisional single
+// column for the old/changed/new counts, until H-LIST adds the three
+// separate columns (coverage matrix section 4). The counts are the
+// same fields (nMissing / nModified / nAdded) and the same format
+// msgid ("Missing: %1 lines / Changed: %2 lines / Added: %3 lines")
+// as the prefix of the summary text (Merge20FormatSummary), so the
+// values agree with the folder compare list's Summary column.
+// Directory rows show nothing and never-opened files show
+// "Not calculated", exactly like the other S4 columns.
+String Merge20CsvGetOldChangedNewText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	return strutils::format_string3(
+		_("Missing: %1 lines / Changed: %2 lines / Added: %3 lines"),
+		locality::NumToLocaleStr(st.nMissing),
+		locality::NumToLocaleStr(st.nModified),
+		locality::NumToLocaleStr(st.nAdded));
+}
+
 /**
  * @brief Format Newer/Older column data.
  * @param [in] p Pointer to DIFFITEM.

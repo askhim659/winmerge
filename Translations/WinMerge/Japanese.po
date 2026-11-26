@@ -7318,6 +7318,11 @@ msgstr "【Wiz】リスク"
 msgid "Summary"
 msgstr "【Wiz】要約"
 
+#. Merge20 (Panel P1): provisional old/changed/new counts column header (design section 12.3 P-R1; H-LIST will replace it with three columns)
+#: Src/Merge20/Merge20FileListCtrl.cpp
+msgid "Old/Changed/New"
+msgstr "【Wiz】旧／変／新"
+
 #. Merge20 (S4): folder compare column descriptions (column dialog)
 #: Src/DirViewColItems.cpp
 msgid "Action category of the file, derived from the existence category and the diff breakdown (missing / changed / added lines). Shown only after the file has been opened; unopened files show Not calculated."

@@ -88,10 +88,66 @@ ReviewState CDiffContext::GetMerge20ReviewState(const String& relPath) const
  * refresh. The frame's callback posts MSG_MERGE20_FILELIST_REFRESH
  * to itself (no polling). A no-op when no frame is registered.
  */
+/**
+ * @brief Merge20 (Panel P1, design section 12.5): register one more
+ * frame for the notification, keyed by its window handle. Registering
+ * twice with the same key replaces that frame's callback, so a frame
+ * that registers again (recreated, for example) is never notified
+ * twice. Entries of closed frames stay in the list; their callback
+ * only posts to a destroyed HWND, which is a harmless no-op.
+ */
+void CDiffContext::AddMerge20FileListNotifyCallback(std::uintptr_t key, Merge20FileListNotifyCallback callback)
+{
+	for (auto& entry : m_merge20FileListNotifyExtra)
+	{
+		if (entry.first == key)
+		{
+			entry.second = std::move(callback);
+			return;
+		}
+	}
+	m_merge20FileListNotifyExtra.emplace_back(key, std::move(callback));
+}
+
+/**
+ * @brief Merge20 (Panel P1, design section 12.5): suspend the
+ * notification while a bulk update runs. Nested suspends nest.
+ */
+void CDiffContext::SuspendMerge20FileListNotify() const
+{
+	++m_nMerge20FileListNotifySuspend;
+}
+
+/**
+ * @brief Merge20 (Panel P1, design section 12.5): end one suspend.
+ * When the outermost suspend ends and a change happened while
+ * suspended, notify once with the final state.
+ */
+void CDiffContext::ResumeMerge20FileListNotify() const
+{
+	if (m_nMerge20FileListNotifySuspend > 0)
+		--m_nMerge20FileListNotifySuspend;
+	if (m_nMerge20FileListNotifySuspend == 0 && m_bMerge20FileListNotifyPending)
+	{
+		m_bMerge20FileListNotifyPending = false;
+		NotifyMerge20FileListChanged();
+	}
+}
+
 void CDiffContext::NotifyMerge20FileListChanged() const
 {
+	if (m_nMerge20FileListNotifySuspend > 0)
+	{
+		m_bMerge20FileListNotifyPending = true;
+		return;
+	}
 	if (m_merge20FileListNotify)
 		m_merge20FileListNotify();
+	for (const auto& entry : m_merge20FileListNotifyExtra)
+	{
+		if (entry.second)
+			entry.second();
+	}
 }
 
 /**

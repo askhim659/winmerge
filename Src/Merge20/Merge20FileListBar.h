@@ -4,12 +4,13 @@
  *
  * @brief Declaration of CMerge20FileListBar class
  *
- * Merge20 (Panel P0, design section 12.4/12.7): the persistent
+ * Merge20 (Panel P0/P1, design section 12.4/12.7): the persistent
  * file-list panel, docked at the left of the file compare frame.
  * It follows the CDiffViewBar / Merge20DedBar precedent
- * (CSizingControlBarCF). The bar owns two children: the virtual
- * list (CMerge20FileListCtrl) and the empty-state label shown when
- * the file compare was not opened from a folder compare
+ * (CSizingControlBarCF). The bar owns three children: the count
+ * line (P1, design section 12.3 P-R6), the virtual list
+ * (CMerge20FileListCtrl) and the empty-state label shown when the
+ * file compare was not opened from a folder compare
  * ("No folder comparison", design section 12.5).
  *
  * The bar owns no folder state: the frame hands it the CDirDoc
@@ -21,9 +22,10 @@
  * explicitly (D1 lesson: an empty sizing bar must not take its size
  * from layout defaults).
  *
- * P0 scope: one file-name column, no row operations. Columns,
- * search, hierarchy, batch check and the panel <-> compare
- * navigation are P1-P3.
+ * P0 scope: one file-name column, no row operations. P1 adds the
+ * six columns, the row colours and the count line. Search,
+ * hierarchy, batch check and the panel <-> compare navigation
+ * are P2-P3.
  */
 #pragma once
 
@@ -71,6 +73,7 @@ private:
 
 	HWND m_hwndFrame; //*< Frame window handle */
 	CDirDoc* m_pDirDoc; /**< Folder document (owned by the folder compare, not by this bar) */
+	CStatic m_stCount; /**< Count line (P1, P-R6): "N displayed, M checked, K unreviewed" */
 	CMerge20FileListCtrl m_wndList; /**< Virtual file list */
 	CStatic m_stEmpty; /**< Empty state: "No folder comparison" */
 };

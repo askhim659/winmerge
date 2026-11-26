@@ -11,8 +11,9 @@
  * differences from the precedents, both deliberate:
  * - SCBS_SIZECHILD is NOT set: it sizes only the first child
  *   (sizecbar.cpp: "automatic child resizing - only one child is
- *   allowed"), and this bar has two children (list + empty label).
- *   Both children are laid out manually in LayoutChildren().
+ *   allowed"), and this bar has three children (count line, list,
+ *   empty label). All children are laid out manually in
+ *   LayoutChildren().
  * - The width is clamped (LoadState / CalcFixedLayout, D2 lesson),
  *   and the initial width is set explicitly (D1 lesson).
  */
@@ -29,12 +30,15 @@ IMPLEMENT_DYNAMIC(CMerge20FileListBar, CSizingControlBarCF);
 
 namespace
 {
-	/** @brief Initial panel width: wide enough for file names. */
-	constexpr LONG Merge20FileListDefaultWidth = 280;
+	/** @brief Initial panel width: wide enough for the six P1
+	 * columns (P0: 280px for the single file-name column). */
+	constexpr LONG Merge20FileListDefaultWidth = 480;
 	/** @brief Narrowest usable width (file names stay readable). */
 	constexpr LONG Merge20FileListMinWidth = 160;
 	/** @brief Widest allowed width (the file panes keep their area). */
 	constexpr LONG Merge20FileListMaxWidth = 600;
+	/** @brief Height of the count line at the top of the bar (P1). */
+	constexpr LONG Merge20FileListCountHeight = 22;
 } // namespace
 
 BEGIN_MESSAGE_MAP(CMerge20FileListBar, CSizingControlBarCF)
@@ -86,6 +90,16 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	CFont* pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
 	CRect rc(0, 0, 0, 0);
+	// Count line (P1, P-R6): "N displayed, M checked, K unreviewed"
+	// (S3 definition). Shown with the list; hidden with it when
+	// there is no folder document.
+	if (!m_stCount.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP,
+		rc, this, IDC_MERGE20_FILELIST_COUNT))
+	{
+		TRACE0("Failed to create Merge20FileListBar count label\n");
+		return -1;
+	}
+	m_stCount.SetFont(pFont);
 	if (!m_wndList.Create(WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_SHOWSELALWAYS | LVS_SINGLESEL,
 		rc, this, IDC_MERGE20_FILELIST_LIST))
 	{
@@ -93,9 +107,10 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_wndList.SetFont(pFont);
-	// P0 has one column only (file name, the same header text as the
-	// folder compare's Name column). The remaining columns are P1.
-	m_wndList.InsertColumn(0, _("Filename").c_str(), LVCFMT_LEFT, Merge20FileListDefaultWidth - 40);
+	// P1 has six columns (selection, file name, action category,
+	// risk, old/changed/new counts, review state); the control
+	// owns their creation and header texts.
+	m_wndList.SetupColumns();
 	// The empty label starts hidden; Refresh() shows it when there
 	// is no folder document (single-file compare, design section 12.5).
 	if (!m_stEmpty.Create(_("No folder comparison").c_str(), WS_CHILD | SS_LEFT,
@@ -171,11 +186,12 @@ void CMerge20FileListBar::OnWindowPosChanged(WINDOWPOS* lpwndpos)
 /**
  * @brief Rebuild the list from the folder document.
  *
- * With a folder document the list is shown and the empty label is
- * hidden; without one (single-file compare, design section 12.5)
- * the list is hidden and disabled and the empty label shows the one
- * line "No folder comparison". No-op while the bar itself is hidden:
- * the frame calls Refresh() again when the bar is shown (OnBarCheck)
+ * With a folder document the count line and the list are shown
+ * and the empty label is hidden; without one (single-file
+ * compare, design section 12.5) the count line and the list are
+ * hidden and disabled and the empty label shows the one line "No
+ * folder comparison". No-op while the bar itself is hidden: the
+ * frame calls Refresh() again when the bar is shown (OnBarCheck)
  * or activated (OnMDIActivate).
  */
 void CMerge20FileListBar::Refresh()
@@ -183,6 +199,7 @@ void CMerge20FileListBar::Refresh()
 	if (m_wndList.GetSafeHwnd() == nullptr || !IsWindowVisible())
 		return;
 	const bool bHasDirDoc = (m_pDirDoc != nullptr);
+	m_stCount.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_wndList.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_stEmpty.ShowWindow(bHasDirDoc ? SW_HIDE : SW_SHOW);
 	m_wndList.EnableWindow(bHasDirDoc);
@@ -191,21 +208,35 @@ void CMerge20FileListBar::Refresh()
 	else
 		m_wndList.SetDiffContext(nullptr);
 	m_wndList.Refresh();
+	if (bHasDirDoc)
+		m_stCount.SetWindowText(m_wndList.GetCountText().c_str());
 	LayoutChildren();
 }
 
 /**
- * @brief Lay the list and the empty label out over the client area.
+ * @brief Lay the count line, the list and the empty label out.
  *
- * Only one of them is visible at a time (see Refresh()), so both
- * simply fill the bar; the empty label gets an 8px margin.
+ * The count line takes a strip at the top and the list fills the
+ * rest; only one of the list and the empty label is visible at a
+ * time (see Refresh()), and the empty label fills the whole bar
+ * when it shows.
  */
 void CMerge20FileListBar::LayoutChildren()
 {
 	CRect rcClient;
 	GetClientRect(&rcClient);
+	if (m_stCount.GetSafeHwnd() != nullptr)
+	{
+		CRect rcCount = rcClient;
+		rcCount.bottom = rcCount.top + Merge20FileListCountHeight;
+		m_stCount.MoveWindow(&rcCount);
+	}
 	if (m_wndList.GetSafeHwnd() != nullptr)
-		m_wndList.MoveWindow(&rcClient);
+	{
+		CRect rcList = rcClient;
+		rcList.top += Merge20FileListCountHeight;
+		m_wndList.MoveWindow(&rcList);
+	}
 	if (m_stEmpty.GetSafeHwnd() != nullptr)
 	{
 		CRect rcText = rcClient;
@@ -236,12 +267,14 @@ void CMerge20FileListBar::UpdateResources()
 	}
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
-		// Re-apply the column header text (same msgid as the folder
-		// compare's Name column, so no new string is needed).
-		LVCOLUMN col = {};
-		col.mask = LVCF_TEXT;
-		String sHeader = _("Filename");
-		col.pszText = const_cast<LPTSTR>(sHeader.c_str());
-		m_wndList.SetColumn(0, &col);
+		// Re-apply the column header texts (same msgids as the
+		// folder compare list, so no new string is needed except
+		// the provisional old/changed/new column).
+		m_wndList.UpdateColumnHeaders();
+		// The count line text comes from the S3 msgid through
+		// GetCountText(); re-apply it so a language change shows
+		// at once instead of waiting for the next Refresh().
+		if (m_pDirDoc != nullptr && m_stCount.GetSafeHwnd() != nullptr)
+			m_stCount.SetWindowText(m_wndList.GetCountText().c_str());
 	}
 }
