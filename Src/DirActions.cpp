@@ -719,6 +719,30 @@ bool IsItemExistAll(const CDiffContext& ctxt, const DIFFITEM &di)
 	return di.diffcode.existAll();
 }
 
+// Merge20 (Phase 4 D11): true when the review-state filter shows
+// this state (DirViewFilterSettings::show_review, indexed by
+// static_cast<int>(ReviewState)). An out-of-range state is shown:
+// the filter must never hide a file it cannot classify.
+static bool IsReviewShown(const DirViewFilterSettings& filter, ReviewState review)
+{
+	const int index = static_cast<int>(review);
+	if (index < 0 || index >= 5)
+		return true;
+	return filter.show_review[index];
+}
+
+// Merge20 (Phase 4 D11): true when the review-state filter hides at
+// least one state, so a folder child scan is worth doing at all.
+static bool IsReviewFilterActive(const DirViewFilterSettings& filter)
+{
+	for (int i = 0; i < 5; ++i)
+	{
+		if (!filter.show_review[i])
+			return true;
+	}
+	return false;
+}
+
 
 /**
  * @brief Determines if the user wants to see given item.
@@ -865,6 +889,29 @@ bool IsShowable(const CDiffContext& ctxt, const DIFFITEM &di, const DirViewFilte
 					}
 					return false;
 				}
+				// Merge20 (Phase 4 D11): the folder passes the result
+				// filters, but the review filter may still hide every
+				// child. Hide the folder then, so tree mode never
+				// shows a folder with no visible file in it. The scan
+				// runs only while the review filter hides at least one
+				// state, so the default (all states shown) costs
+				// nothing here.
+				if (IsReviewFilterActive(filter))
+				{
+					DIFFITEM *diffpos = ctxt.GetFirstChildDiffPosition(&di);
+					bool bAnyChildShowable = false;
+					while (diffpos != nullptr)
+					{
+						const DIFFITEM &dic = ctxt.GetNextSiblingDiffPosition(diffpos);
+						if (IsShowable(ctxt, dic, filter))
+						{
+							bAnyChildShowable = true;
+							break;
+						}
+					}
+					if (!bAnyChildShowable)
+						return false;
+				}
 			}
 			else
 			{
@@ -944,6 +991,12 @@ bool IsShowable(const CDiffContext& ctxt, const DIFFITEM &di, const DirViewFilte
 				return false;
 		}
 		if (!filter.displayFilterHelper.IsEmpty() && !filter.displayFilterHelper.includeFile(di))
+			return false;
+		// Merge20 (Phase 4 D11): review-state filter. The state comes
+		// from the CDiffContext sidecar map (TODO when the file has
+		// no entry yet); directories are not filtered themselves (see
+		// the tree-mode folder scan above).
+		if (!IsReviewShown(filter, ctxt.GetMerge20FileStates().GetReviewState(di.getItemRelativePath())))
 			return false;
 	}
 	return true;
