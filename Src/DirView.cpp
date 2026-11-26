@@ -3794,7 +3794,7 @@ void CDirView::Merge20OpenFileAtLine(const Merge20GrepHit& hit)
 	// apparent (ghost-included) lines; GotoLine takes the real
 	// file line when bRealLine is true.
 	const int nLines = pDoc->m_ptBuf[hit.pane]->GetLineCount();
-	const int nRealLine = std::min(hit.line, std::max(0, nLines - 1));
+	const int nRealLine = (std::min)(hit.line, (std::max)(0, nLines - 1));
 	const int nApparent = pDoc->m_ptBuf[hit.pane]->ComputeApparentLine(nRealLine);
 	const int nDiff = pDoc->m_diffList.LineToDiff(nApparent);
 	if (nDiff >= 0)
