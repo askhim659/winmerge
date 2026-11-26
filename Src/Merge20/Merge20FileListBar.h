@@ -23,9 +23,13 @@
  * from layout defaults).
  *
  * P0 scope: one file-name column, no row operations. P1 adds the
- * six columns, the row colours and the count line. Search,
- * hierarchy, batch check and the panel <-> compare navigation
- * are P2-P3.
+ * six columns, the row colours and the count line. P2 adds the
+ * operations (design section 12.7): the search box, the
+ * action-category filter tabs, the batch-check / expand-all /
+ * collapse-all buttons, and the directory-row context menu
+ * (fold/unfold, check/uncheck everything below the folder).
+ * Search, hierarchy, batch check and the panel <-> compare
+ * navigation are P2-P3.
  */
 #pragma once
 
@@ -65,14 +69,40 @@ public:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnWindowPosChanged(WINDOWPOS* lpwndpos);
+	afx_msg void OnSearchChanged();
+	afx_msg void OnFilterTabChanged(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnMerge20BatchCheck();
+	afx_msg void OnExpandAll();
+	afx_msg void OnCollapseAll();
+	afx_msg LRESULT OnRowRClick(WPARAM wParam, LPARAM lParam);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 private:
 	void LayoutChildren();
+	/** @brief (Re-)insert the eight filter-tab labels (P2, P-R10):
+	 * "all" plus the seven action categories, in ActionCategory
+	 * enum order. Literal _() calls (see SetupColumns): the .pot
+	 * generator only scans literal arguments. */
+	void SetupFilterTabs();
+	/** @brief Show the context menu for a displayed directory row
+	 * (P2, P-R5): fold/unfold and check/uncheck everything below
+	 * the folder. File rows get no menu. */
+	void ShowRowContextMenu(int row);
+	/** @brief Set the output flag of every file below one directory
+	 * row, recursively (P2, P-R5): the S3 DIFFITEM tree walk, so
+	 * files in collapsed subfolders are included too. */
+	void SetOutputForDirectory(const DIFFITEM& dir, bool include);
 
 	HWND m_hwndFrame; //*< Frame window handle */
 	CDirDoc* m_pDirDoc; /**< Folder document (owned by the folder compare, not by this bar) */
+	CStatic m_stSearchLabel; /**< P2 search label: "Search file name or folder:" */
+	CEdit m_wndSearch; /**< P2 search box (P-R4): filters the panel by file/folder name */
+	CTabCtrl m_wndFilterTabs; /**< P2 filter tabs (P-R10): "all" plus the seven action categories */
+	CButton m_btnBatch; /**< P2 "Batch check..." button (P-R3): opens the S3 dialog for the displayed rows */
+	CButton m_btnExpandAll; /**< P2 "Expand all" button (P-R5) */
+	CButton m_btnCollapseAll; /**< P2 "Collapse all" button (P-R5) */
+	int m_nSelectedTab = 0; /**< P2: selected filter tab (0 = all categories) */
 	CStatic m_stCount; /**< Count line (P1, P-R6): "N displayed, M checked, K unreviewed" */
 	CMerge20FileListCtrl m_wndList; /**< Virtual file list */
 	CStatic m_stEmpty; /**< Empty state: "No folder comparison" */
