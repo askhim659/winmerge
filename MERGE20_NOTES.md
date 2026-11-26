@@ -2947,3 +2947,47 @@ D0 は基盤のため、実機で確認できる動作は計測ログとオプ�
   （logs エンドポイントの blob が 404）、原因は特定できていない。
   失敗ジョブの再実行を API で要求したが（201）、9 分以上 queued のまま
   ジョブが始まらなかったため、本追記コミットで CI を再トリガーする。
+- 実行 45729174990（head 200fab0a、本コミット）：**success**。
+  ジョブ 139606608770 success。GoogleTest **608 passed / 0 failed**
+  （D2 で新規テストはなく、D1 と同じ件数）。
+  コンパイルエラーなし。警告は既存のもののみ（poco・xutility 等 846 件。
+  D2 変更ファイル由来の警告は 0 件）。
+  `Merge20DedBar.cpp` / `MergeEditFrm.cpp` / `MergeEditView.cpp` /
+  `DirDoc.cpp` の .obj 生成をログで確認。
+  成果物（2027-02-24 失効）:
+  - `WinMerge-x64.zip` — 26,200,926 バイト、artifact ID 15076436961
+  - `WinMerge-x64-Setup-x64.exe` — 39,691,272 バイト、artifact ID 15076447026
+  （いずれも `WinMerge-x64.zip` / `WinMerge-x64-Setup-x64.exe` の
+  2 成果物として API で存在確認済み）。
+
+### 24.5 出荷 .po に D2 の訳文が含まれない件（CI は成功だが要対応）
+
+実行 45729174990 の `WinMerge-x64.zip` をダウンロードして中身を検証した
+結果、**D2 の日本語訳 11 件はすべて出荷された `WinMerge/Languages/Japanese.po`
+に含まれていない**。ボタンは日本語 UI でも英語表示になる。
+これは D2 の不具合ではなく、既知の S1〜S4 等と同じ systemic な問題で、
+今回その原因を最後まで特定できた：
+
+- repo の `Translations/WinMerge/Japanese.po`（head 200fab0a、296,054 バイト、
+  2,053 msgid）には D2 の 11 件を含む全訳文がある。
+- 出荷 .po は 166,451 バイト・1,811 msgid。repo との差分は
+  **削除 122 件・追加 4 件**。削除された 122 件はすべて Merge20 の
+  C++ 側 `_()` 文字列（S1/S2/S3/S4/S6/S8/L/D1/D2 の全文字列）。
+  追加の 4 件は `%1` が `0` に置き換わった stock 文字列
+  （例：`0 files will be checked`）。
+- 原因：ビルド中の "Updating PO files from POT file..." ステップが
+  `Strings.rc` から生成した POT だけを元に全 .po を書き直す
+  （`msgmerge` 相当）。POT に無い msgid は .po から落とされる。
+  Stock WinMerge は UI 文字列をすべて .rc に置く設計のため問題にならないが、
+  Merge20 の各フェーズは C++ 側の `_()` 呼び出しに文字列を置いたため、
+  ビルド時に全て消される。`.rc` に置いた "Dedicated Compare Mode"
+  だけが生き残っていることがこの説明と一致する。
+
+対応は D2 の範囲外（全フェーズ共通の修正が必要）。コーディネーター判断の
+ための候補：(a) Merge20 の全 UI 文字列を `Strings.rc` の文字列テーブルへ
+移す（上流の設計に沿うが全フェーズ分の遡及変更になる）、(b) POT 生成に
+C++ 側 `_()` の走査を加える（ビルド側 1 か所の修正で全フェーズ分が直る）、
+(c) CI で .po の再生成をやめ repo の .po をそのまま出荷する
+（.rc との乖離管理が別途必要）。
+本 PR のマージ判断にあたっては、**D2 の日本語ラベルはこのビルドでは英語表示
+になる**ことを前提にすること。
