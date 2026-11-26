@@ -145,6 +145,12 @@ public:
 	// IDirDoc::GetMerge20FilePosition). False when the item is not a
 	// displayed file row.
 	bool Merge20GetFilePosition(const DIFFITEM& di, int& nPos, int& nTotal, bool bTodoOnly) const;
+	// Merge20 (Panel P3, design section 12.7): open one folder item
+	// in a file compare (P-R7). The panel's row click goes through
+	// CDirDoc::Merge20MoveToFile, which closes the current file
+	// compare first; this is the selection step, mirroring
+	// Merge20OpenFileAtLine (Grep jump).
+	void Merge20OpenFile(const DIFFITEM& di);
 	// Merge20 (Phase 4 D7): Grep file list for the dialog, and the
 	// jump from a Grep hit to its file and diff.
 	std::vector<Merge20GrepFile> Merge20BuildGrepFiles();
@@ -201,6 +207,13 @@ public:
 		static int CALLBACK CompareFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 	} friend;
 	void UpdateDiffItemStatus(UINT nIdx);
+	// Merge20 (Panel P3): the folder status-bar count is written by
+	// CDirDoc::Merge20UpdateDirViewItem / Merge20UpdateDirViewStatus
+	// after panel-initiated state changes (P-R8), so the count
+	// follows panel changes at once (the P2 known limitation).
+	// Public like UpdateDiffItemStatus above; the text itself stays
+	// private (GetMerge20StatusCountText).
+	void UpdateMerge20StatusCount();
 private:
 	void InitiateSort();
 	void NameColumn(const DirColInfo *col, int subitem);
@@ -519,7 +532,6 @@ private:
 	void HeaderContextMenu(CPoint point, int i);
 	void ListContextMenu(CPoint point, int i);
 	// Merge20 (S3): batch check, per-directory check/uncheck, status count
-	void UpdateMerge20StatusCount();
 	String GetMerge20StatusCountText();
 	void Merge20CountDisplayedByReviewState(int counts[5]);
 	// Merge20 (Phase 4 D3): patrol targets over the displayed rows
