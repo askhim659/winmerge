@@ -83,6 +83,18 @@ ReviewState CDiffContext::GetMerge20ReviewState(const String& relPath) const
 }
 
 /**
+ * @brief Merge20 (Panel P0, design section 12.5): tell the registered
+ * frame that a per-file state changed, so its file-list panel can
+ * refresh. The frame's callback posts MSG_MERGE20_FILELIST_REFRESH
+ * to itself (no polling). A no-op when no frame is registered.
+ */
+void CDiffContext::NotifyMerge20FileListChanged() const
+{
+	if (m_merge20FileListNotify)
+		m_merge20FileListNotify();
+}
+
+/**
  * @brief Merge20 (S1): set the review state of one file in the sidecar map.
  * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
  * @param [in] state New review state.
@@ -90,6 +102,7 @@ ReviewState CDiffContext::GetMerge20ReviewState(const String& relPath) const
 void CDiffContext::SetMerge20ReviewState(const String& relPath, ReviewState state)
 {
 	m_merge20FileStates.SetReviewState(relPath, state);
+	NotifyMerge20FileListChanged();
 }
 
 /**
@@ -121,6 +134,7 @@ void CDiffContext::SetMerge20ReviewState(const DIFFITEM& di, ReviewState state)
 	if (!m_merge20FileStates.HasState(relPath))
 		m_merge20FileStates.GetOrCreateState(relPath).includeInOutput = IsMerge20InitialIncludeInOutput(*this, di);
 	m_merge20FileStates.SetReviewState(relPath, state);
+	NotifyMerge20FileListChanged();
 }
 
 /**
@@ -145,6 +159,7 @@ bool CDiffContext::GetMerge20IncludeInOutput(const DIFFITEM& di) const
 void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
 {
 	m_merge20FileStates.SetIncludeInOutput(di.getItemRelativePath(), include);
+	NotifyMerge20FileListChanged();
 }
 
 /**
@@ -173,6 +188,9 @@ void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state
 	default:
 		break;
 	}
+	// The output flag above changed after SetMerge20ReviewState
+	// already notified, so notify once more with the final state.
+	NotifyMerge20FileListChanged();
 }
 
 /**
@@ -199,6 +217,7 @@ void CDiffContext::SetMerge20Classification(const String& relPath, const Merge20
 	st.leftEncoding = state.leftEncoding;
 	st.rightEncoding = state.rightEncoding;
 	st.simpleCompare = state.simpleCompare;
+	NotifyMerge20FileListChanged();
 }
 
 /**
@@ -219,6 +238,7 @@ String CDiffContext::GetMerge20Memo(const String& relPath) const
 void CDiffContext::SetMerge20Memo(const String& relPath, const String& memo)
 {
 	m_merge20FileStates.SetMemo(relPath, memo);
+	NotifyMerge20FileListChanged();
 }
 
 /**
