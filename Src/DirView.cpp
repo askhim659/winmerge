@@ -4021,7 +4021,7 @@ std::vector<Merge20BulkClassifyFile> CDirView::Merge20BuildBulkClassifyFiles()
 		DIFFITEM& di = ctxt.GetNextDiffRefPosition(pos);
 		if (di.diffcode.isDirectory())
 			continue;
-		if (!di.isResultDiff() && !di.diffcode.isSideFirstOnly() && !di.diffcode.isSideSecondOnly())
+		if (!di.diffcode.isResultDiff() && !di.diffcode.isSideFirstOnly() && !di.diffcode.isSideSecondOnly())
 			continue;
 		const String relPath = di.getItemRelativePath();
 		if (states.GetState(relPath).classified)
