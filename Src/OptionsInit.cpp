@@ -260,6 +260,9 @@ void Init(COptionsMgr *pOptions)
 	pOptions->InitOption(OPT_MERGE20_SNIPER_LAYOUT, 0, 0, 1);
 	pOptions->InitOption(OPT_MERGE20_SLIM, false);
 	pOptions->InitOption(OPT_MERGE20_DOCK_HIDDEN, false);
+	// Merge20 (Panel P0): the file-list panel starts shown when
+	// there is a folder compare to list (frame OnCreate decides).
+	pOptions->InitOption(OPT_MERGE20_FILELIST_VISIBLE, true);
 	pOptions->InitOption(OPT_MERGE20_FOCUS_DOCK_HEIGHT, 0);
 	pOptions->InitOption(OPT_MERGE20_GREP_HISTORY, _T(""));
 	pOptions->InitOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 0, 0, 1);
