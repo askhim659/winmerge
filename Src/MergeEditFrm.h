@@ -51,6 +51,7 @@ public:
 	void ShowMergeResultPane(bool bVisible = true);
 	void SetDedicatedMode(bool bEnable);
 	bool IsDedicatedMode() const { return m_bDedicatedMode; }
+	void FlashDedBar();
 
 // Attributes
 protected:
@@ -69,6 +70,9 @@ protected:
 	bool m_bDedDetailBarVisible;
 	bool m_bDedResultBarVisible;
 	bool m_bDedStatusBarVisible;
+	int m_nDedPrevZoom; /**< OPT_VIEW_ZOOM before entering dedicated mode (D2: restored on exit) */
+	ULONGLONG m_ullDedBarFlashUntil; /**< Tick until which the bar stays shown (D2 flash, 1.6s) */
+	ULONGLONG m_ullDedBarLastMouseOver; /**< Last tick the cursor was over the bar (D2 auto-hide) */
 	CMergeStatusBar m_wndStatusBar;
 	CLocationBar m_wndLocationBar;
 	std::unique_ptr<CLineFilterBar> m_pFilterBar;
@@ -86,6 +90,7 @@ public:
 	virtual BOOL OnBarCheck(UINT nID);
 	virtual void ActivateFrame(int nCmdShow = -1);
 	virtual BOOL DestroyWindow();
+	virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 	virtual void OnSetPreviewMode(BOOL bPreview, CPrintPreviewState* pState) override;
 	protected:
 	//}}AFX_VIRTUAL
@@ -95,6 +100,7 @@ private:
 	void SavePosition();
 	void EnterDedicatedMode();
 	void ExitDedicatedMode();
+	void UpdateDedBar();
 	void SaveActivePane();
 	virtual ~CMergeEditFrame();
 	CSplitterWndEx& GetMergeEditSplitterWnd(int iRow)
@@ -117,6 +123,14 @@ private:
 	afx_msg void OnUpdateViewMergeResultBar(CCmdUI* pCmdUI);
 	afx_msg void OnViewMerge20DedicatedMode();
 	afx_msg void OnUpdateViewMerge20DedicatedMode(CCmdUI* pCmdUI);
+	afx_msg void OnMerge20DedExit();
+	afx_msg void OnMerge20DedPrevFile();
+	afx_msg void OnMerge20DedNextFile();
+	afx_msg void OnMerge20DedReview(UINT nID);
+	afx_msg void OnMerge20DedPin();
+	afx_msg void OnMerge20DedTodoOnly();
+	afx_msg void OnMerge20DedSniper();
+	afx_msg void OnMerge20DedZoomReset();
 	afx_msg LRESULT OnStorePaneSizes(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnIdleUpdateCmdUI();
