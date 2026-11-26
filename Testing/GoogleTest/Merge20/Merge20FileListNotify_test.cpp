@@ -2,9 +2,10 @@
 /**
  * @file Merge20FileListNotify_test.cpp
  *
- * @brief Merge20 (Panel P0/P1) unit tests for the folder-compare
+ * @brief Merge20 (Panel P0/P1/P3) unit tests for the folder-compare
  * state-change notification (CDiffContext::SetMerge20FileList-
  * NotifyCallback / AddMerge20FileListNotifyCallback /
+ * RemoveMerge20FileListNotifyCallback /
  * SuspendMerge20FileListNotify / ResumeMerge20FileListNotify /
  * NotifyMerge20FileListChanged, design section 12.5). The callback
  * is what lets the file-list panel refresh without polling: the
@@ -171,5 +172,50 @@ TEST(Merge20FileListNotify, ResumeWithoutSuspendIsNoop)
 	ctxt.ResumeMerge20FileListNotify();
 	EXPECT_EQ(nCalls, 0);
 	ctxt.SetMerge20ReviewState(_T("j.txt"), ReviewState::DONE);
+	EXPECT_EQ(nCalls, 1);
+}
+
+// Merge20 (Panel P3): removing one frame's registration stops its
+// callback, while the other registered frames keep firing.
+TEST(Merge20FileListNotify, RemoveUnregistersOne)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nFirst = 0;
+	int nSecond = 0;
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nFirst]() { ++nFirst; });
+	ctxt.AddMerge20FileListNotifyCallback(2, [&nSecond]() { ++nSecond; });
+	ctxt.RemoveMerge20FileListNotifyCallback(1);
+	ctxt.SetMerge20ReviewState(_T("k.txt"), ReviewState::DONE);
+	EXPECT_EQ(nFirst, 0);
+	EXPECT_EQ(nSecond, 1);
+}
+
+// Merge20 (Panel P3): removing an unknown key is a no-op (no crash,
+// registered callbacks unaffected), so a frame destroyed without
+// registering, or removed twice, is safe.
+TEST(Merge20FileListNotify, RemoveUnknownKeyIsNoop)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nCalls = 0;
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nCalls]() { ++nCalls; });
+	ctxt.RemoveMerge20FileListNotifyCallback(99);
+	ctxt.RemoveMerge20FileListNotifyCallback(1);
+	ctxt.RemoveMerge20FileListNotifyCallback(1);
+	ctxt.SetMerge20ReviewState(_T("l.txt"), ReviewState::DONE);
+	EXPECT_EQ(nCalls, 0);
+}
+
+// Merge20 (Panel P3): a removed key can be registered again (a frame
+// recreated with the same window handle is notified again).
+TEST(Merge20FileListNotify, RemoveThenReaddFires)
+{
+	CDiffContext ctxt(PathContext(), CMP_CONTENT);
+	int nCalls = 0;
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nCalls]() { ++nCalls; });
+	ctxt.RemoveMerge20FileListNotifyCallback(1);
+	ctxt.SetMerge20ReviewState(_T("m.txt"), ReviewState::DONE);
+	EXPECT_EQ(nCalls, 0);
+	ctxt.AddMerge20FileListNotifyCallback(1, [&nCalls]() { ++nCalls; });
+	ctxt.SetMerge20ReviewState(_T("m.txt"), ReviewState::HOLD);
 	EXPECT_EQ(nCalls, 1);
 }

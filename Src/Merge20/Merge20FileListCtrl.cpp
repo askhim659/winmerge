@@ -60,6 +60,7 @@ BEGIN_MESSAGE_MAP(CMerge20FileListCtrl, CListCtrl)
 	ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
 	ON_NOTIFY_REFLECT(NM_RCLICK, OnRClick)
 	ON_NOTIFY_REFLECT(NM_DBLCLK, OnDblclk)
+	ON_NOTIFY_REFLECT(NM_CLICK, OnClick)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -330,6 +331,44 @@ const CMerge20FileListCtrl::Row* CMerge20FileListCtrl::GetDisplayedRow(int index
 }
 
 /**
+ * @brief Select the displayed row with this relative path and scroll
+ * it into view (Panel P3, P-R7).
+ *
+ * Called by the bar after every Refresh(), so the panel selection
+ * always mirrors the file the compare window shows, even when a
+ * rescan moved the row. When the row is not displayed (hidden by
+ * the search, the filter tab or a collapsed folder, or gone after a
+ * rescan), the selection is cleared instead of leaving a stale row
+ * selected: the index a stale selection points at may be another
+ * file after the rebuild.
+ */
+void CMerge20FileListCtrl::SelectRowByRelPath(const String& relPath)
+{
+	if (relPath.empty())
+		return;
+	for (int i = 0; i < static_cast<int>(m_rows.size()); ++i)
+	{
+		if (m_rows[static_cast<size_t>(i)].relPath == relPath)
+		{
+			SetItemState(i, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+			EnsureVisible(i, FALSE);
+			return;
+		}
+	}
+	// Not displayed: clear the selection (nItem -1 applies to all
+	// items in CListCtrl::SetItemState).
+	SetItemState(-1, 0, LVIS_SELECTED | LVIS_FOCUSED);
+}
+
+/**
+ * @brief Selected displayed row, or -1 when none is selected.
+ */
+int CMerge20FileListCtrl::GetSelectedRow() const
+{
+	return GetNextItem(-1, LVNI_SELECTED);
+}
+
+/**
  * @brief Count line for the panel header, same definition as
  * CDirView::GetMerge20StatusCountText (S3, design section 12.3
  * P-R6): displayed files, checked files, unreviewed files.
@@ -495,4 +534,30 @@ void CMerge20FileListCtrl::OnDblclk(NMHDR* pNMHDR, LRESULT* pResult)
 	if (!row.isDirectory || !row.hasChildren)
 		return;
 	SetCollapsed(row.relPath, m_collapsed.count(row.relPath) == 0);
+}
+
+/**
+ * @brief Single click on a row (P3, P-R7/P-R8): report the row and
+ * the clicked column to the bar, which dispatches by column (output
+ * column toggles the flag, review column cycles the state, other
+ * columns open the file). The row is already selected by the list
+ * itself (selection happens on mouse-down, NM_CLICK on mouse-up).
+ * Clicks on empty area (iItem -1) are ignored. The bar only posts
+ * the open request to the frame (async), so this synchronous send
+ * returns while the control still exists, even though opening a
+ * file closes this frame once the posted message is pumped.
+ */
+void CMerge20FileListCtrl::OnClick(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	*pResult = 0;
+	LPNMITEMACTIVATE pNM = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	const int iItem = pNM->iItem;
+	const int iSubItem = pNM->iSubItem;
+	if (iItem < 0 || iItem >= static_cast<int>(m_rows.size()))
+		return;
+	if (iSubItem < 0 || iSubItem >= COL_COUNT)
+		return;
+	CWnd* pParent = GetParent();
+	if (pParent != nullptr && pParent->GetSafeHwnd() != nullptr)
+		pParent->SendMessage(WM_MERGE20_FILELIST_ROW_CLICK, static_cast<WPARAM>(iItem), static_cast<LPARAM>(iSubItem));
 }

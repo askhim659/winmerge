@@ -93,8 +93,9 @@ ReviewState CDiffContext::GetMerge20ReviewState(const String& relPath) const
  * frame for the notification, keyed by its window handle. Registering
  * twice with the same key replaces that frame's callback, so a frame
  * that registers again (recreated, for example) is never notified
- * twice. Entries of closed frames stay in the list; their callback
- * only posts to a destroyed HWND, which is a harmless no-op.
+ * twice. Entries of closed frames are removed by
+ * RemoveMerge20FileListNotifyCallback (Panel P3); until then their
+ * callback only posts to a destroyed HWND, which is a harmless no-op.
  */
 void CDiffContext::AddMerge20FileListNotifyCallback(std::uintptr_t key, Merge20FileListNotifyCallback callback)
 {
@@ -107,6 +108,24 @@ void CDiffContext::AddMerge20FileListNotifyCallback(std::uintptr_t key, Merge20F
 		}
 	}
 	m_merge20FileListNotifyExtra.emplace_back(key, std::move(callback));
+}
+
+/**
+ * @brief Merge20 (Panel P3, design section 12.5): unregister one
+ * frame's notification. Erases every entry with the key (there is
+ * at most one: Add replaces same-key entries); an unknown key is
+ * a no-op, so a frame destroyed without registering, or registered
+ * twice, is safe to remove.
+ */
+void CDiffContext::RemoveMerge20FileListNotifyCallback(std::uintptr_t key)
+{
+	for (auto it = m_merge20FileListNotifyExtra.begin(); it != m_merge20FileListNotifyExtra.end();)
+	{
+		if (it->first == key)
+			it = m_merge20FileListNotifyExtra.erase(it);
+		else
+			++it;
+	}
 }
 
 /**

@@ -115,6 +115,31 @@ public:
 	// Merge20 (Phase 4 D3, IDirDoc): position of the merge doc's file
 	// in the folder-compare list (dedicated bar's file name + (n/m)).
 	bool GetMerge20FilePosition(const PathContext& paths, int& nPos, int& nTotal, bool bTodoOnly) const override;
+	// Merge20 (Panel P3, design section 12.7): open one folder item
+	// in a file compare, from the file-list panel (P-R7). When the
+	// file is already the current merge doc's file, nothing happens;
+	// when it is open in another merge doc of this folder compare,
+	// that frame is activated instead of opening a duplicate;
+	// otherwise the current merge doc is closed first (like
+	// MoveToNextFile) and the file is opened. A cancelled close
+	// (unsaved changes) leaves the current file open.
+	void Merge20MoveToFile(IMergeDoc* pMergeDoc, const DIFFITEM& di);
+	// Merge20 (Panel P3): relative path of the file a merge doc
+	// shows, for the panel's selection follow (P-R7). False when
+	// the paths belong to no item.
+	bool Merge20FindRelPath(const PathContext& paths, String& relPath) const;
+	// Merge20 (Panel P3): folder item by relative path (the panel's
+	// stable row key), or nullptr when there is no such item.
+	const DIFFITEM* Merge20FindItemByRelPath(const String& relPath) const;
+	// Merge20 (Panel P3, design section 12.7): folder-compare view
+	// sync for panel-initiated state changes (P-R8). The sidecar
+	// setters notify the panels, but the folder list repaints only
+	// on its own refresh and its status-bar count only on
+	// UpdateMerge20StatusCount (S3): without this, a panel change
+	// leaves the folder row and the count stale until the next
+	// folder refresh (the P2 known limitation).
+	void Merge20UpdateDirViewItem(const DIFFITEM& di);
+	void Merge20UpdateDirViewStatus();
 	// Merge20 (S4, IDirDoc): store the classification computed by a
 	// merge doc after a rescan (see IDirDoc::SetMerge20Classification).
 	void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) override;

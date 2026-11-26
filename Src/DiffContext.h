@@ -250,10 +250,19 @@ public:
 	// named here). Every registered frame is notified, so the
 	// P0 "last registered frame wins" limit is gone. Registering
 	// twice with the same key replaces that frame's callback.
-	// Entries of closed frames stay in the list: their callback
-	// only posts to a destroyed HWND, which is a harmless no-op
-	// (P0 note), so no unregister is needed.
+	// Entries of closed frames are removed by
+	// RemoveMerge20FileListNotifyCallback (Panel P3); until then
+	// their callback only posts to a destroyed HWND, which is a
+	// harmless no-op.
 	void AddMerge20FileListNotifyCallback(std::uintptr_t key, Merge20FileListNotifyCallback callback);
+	// Merge20 (Panel P3, design section 12.5): unregister one
+	// frame's notification. P1 left entries of closed frames in
+	// the list (the post to a dead HWND was a harmless no-op, but
+	// the list grew with every file compare opened from the same
+	// folder compare). The frame calls this from DestroyWindow
+	// with the same key it registered with; removing an unknown
+	// key is a no-op.
+	void RemoveMerge20FileListNotifyCallback(std::uintptr_t key);
 	// Merge20 (Panel P1, design section 12.5): suspend the
 	// notification while a bulk update runs (session restore,
 	// bulk classify), so a 1000-file run posts one refresh instead

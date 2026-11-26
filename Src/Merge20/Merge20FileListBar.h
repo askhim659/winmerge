@@ -30,6 +30,16 @@
  * (fold/unfold, check/uncheck everything below the folder).
  * Search, hierarchy, batch check and the panel <-> compare
  * navigation are P2-P3.
+ *
+ * P3 adds the linkage (design section 12.7): a single click on a
+ * row opens the file (or activates its frame when already open),
+ * the output column toggles the flag, the review column cycles the
+ * state, keys 1-5 / Space and the file-row context menu set the
+ * review state, and the panel selection follows the file the
+ * compare window shows (SetCurrentFileRelPath, called by the frame
+ * after every Refresh()). Panel-initiated changes are also pushed
+ * to the folder view (row repaint + status-bar count) through the
+ * CDirDoc forwarders, closing the P2 known limitation.
  */
 #pragma once
 
@@ -58,6 +68,28 @@ public:
 	/** @brief Rebuild the list from the folder document. No-op while hidden. */
 	void Refresh();
 	void UpdateResources();
+	/** @brief Relative path of the file the compare window shows
+	 * (Panel P3, P-R7). The frame sets it before every Refresh();
+	 * Refresh() re-selects that row, so the panel selection follows
+	 * file moves in the compare window. Empty when the file belongs
+	 * to no folder item (single-file compare, or a path switched
+	 * outside the compare). */
+	void SetCurrentFileRelPath(const String& relPath) { m_sCurrentRelPath = relPath; }
+	/** @brief Take the pending open request (Panel P3, P-R7): the
+	 * relative path stashed by OpenRowFile, cleared on take. The
+	 * frame reads it when MSG_MERGE20_FILELIST_OPEN_FILE arrives.
+	 * Empty when nothing is pending. */
+	String TakePendingOpenRelPath()
+	{
+		String relPath = m_sPendingOpenRelPath;
+		m_sPendingOpenRelPath.clear();
+		return relPath;
+	}
+	/** @brief Handle a bare 1-5 / Space key while the panel list has
+	 * the focus (Panel P3, P-R8). Called from the frame's
+	 * PreTranslateMessage (the list itself cannot swallow keys).
+	 * Returns true when the key was handled. */
+	bool HandleListKey(UINT nVKey);
 
 	// Merge20 (Panel P0, D2 lesson): clamp the persisted width so a
 	// saved abnormal value can never come back and steal client area.
@@ -76,6 +108,7 @@ public:
 	afx_msg void OnExpandAll();
 	afx_msg void OnCollapseAll();
 	afx_msg LRESULT OnRowRClick(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnRowClick(WPARAM wParam, LPARAM lParam);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -90,10 +123,37 @@ private:
 	 * (P2, P-R5): fold/unfold and check/uncheck everything below
 	 * the folder. File rows get no menu. */
 	void ShowRowContextMenu(int row);
+	/** @brief Show the context menu for a displayed file row
+	 * (P3, P-R8): the five review states (checked = current) and
+	 * the output-flag toggle (checked = included). */
+	void ShowFileRowContextMenu(int row);
 	/** @brief Set the output flag of every file below one directory
 	 * row, recursively (P2, P-R5): the S3 DIFFITEM tree walk, so
 	 * files in collapsed subfolders are included too. */
 	void SetOutputForDirectory(const DIFFITEM& dir, bool include);
+	/** @brief Folder item for a displayed row (P3), or nullptr for
+	 * a directory row or a row whose item is gone (rescan). The
+	 * pointer is valid only for the synchronous call that uses it:
+	 * a rescan rebuilds the items. */
+	const DIFFITEM* FindRowItem(int row) const;
+	/** @brief Apply a review state to one displayed file row (P3,
+	 * P-R8): the S2 output-flag linkage, the folder-view sync, and
+	 * a panel refresh. No-op for directory rows and unknown rows. */
+	void ApplyRowReview(int row, ReviewState state);
+	/** @brief Cycle the review state of one displayed file row
+	 * (P3, P-R8): TODO -> DONE -> HOLD -> SPECIAL -> KEEP -> TODO,
+	 * the same order as Space in the folder compare list (S2). */
+	void CycleRowReview(int row);
+	/** @brief Toggle the output flag of one displayed file row
+	 * (P3, P-R8), with the folder-view sync and a panel refresh. */
+	void ToggleRowOutput(int row);
+	/** @brief Open the file of one displayed file row (P3, P-R7):
+	 * stash its relative path and post MSG_MERGE20_FILELIST_OPEN_FILE
+	 * to the frame. The frame resolves the item and moves to it;
+	 * posting (not calling) keeps this bar alive: opening the file
+	 * closes this frame. No-op for directory rows, for the file
+	 * already shown, and without a frame window. */
+	void OpenRowFile(int row);
 
 	HWND m_hwndFrame; //*< Frame window handle */
 	CDirDoc* m_pDirDoc; /**< Folder document (owned by the folder compare, not by this bar) */
@@ -107,4 +167,6 @@ private:
 	CStatic m_stCount; /**< Count line (P1, P-R6): "N displayed, M checked, K unreviewed" */
 	CMerge20FileListCtrl m_wndList; /**< Virtual file list */
 	CStatic m_stEmpty; /**< Empty state: "No folder comparison" */
+	String m_sCurrentRelPath; /**< P3: relative path of the file the compare window shows (panel selection follows it) */
+	String m_sPendingOpenRelPath; /**< P3: relative path stashed by OpenRowFile for the frame's open message */
 };

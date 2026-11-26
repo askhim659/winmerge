@@ -109,6 +109,11 @@ private:
 	void ExitDedicatedMode();
 	void UpdateDedBar();
 	void SaveActivePane();
+	/** @brief Refresh the file-list panel and re-select the file this
+	 * frame shows (Merge20 Panel P3, P-R7). The relative path is
+	 * resolved fresh from the merge doc's file paths on every call,
+	 * so a file switched in place (ChangeFile) is followed too. */
+	void RefreshFileListPanel();
 	virtual ~CMergeEditFrame();
 	CSplitterWndEx& GetMergeEditSplitterWnd(int iRow)
 	{ return static_cast<CMergeEditSplitterView *>(m_wndSplitter.GetPane(iRow, 0))->m_wndSplitter; }
@@ -141,6 +146,7 @@ private:
 	afx_msg void OnMerge20DedZoomReset();
 	afx_msg LRESULT OnStorePaneSizes(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnMerge20FileListRefresh(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMerge20FileListOpenFile(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnIdleUpdateCmdUI();
 	afx_msg void OnViewDisplayFilterBar();

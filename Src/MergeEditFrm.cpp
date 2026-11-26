@@ -53,6 +53,9 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	// Merge20 (Panel P0, design section 12.5): folder-compare
 	// state-change notification (posted by CDiffContext).
 	ON_MESSAGE(MSG_MERGE20_FILELIST_REFRESH, OnMerge20FileListRefresh)
+	// Merge20 (Panel P3, design section 12.7): the panel posts this
+	// when a row is clicked; the frame moves to that file.
+	ON_MESSAGE(MSG_MERGE20_FILELIST_OPEN_FILE, OnMerge20FileListOpenFile)
 	// [View] menu
 	ON_UPDATE_COMMAND_UI(ID_VIEW_DETAIL_BAR, OnUpdateControlBarMenu)
 	ON_COMMAND_EX(ID_VIEW_DETAIL_BAR, OnBarCheck)
@@ -280,6 +283,9 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 			// Only add to MRU if description is empty (i.e., not from clipboard history)
 			if (sDescription.empty())
 				MruHelper::addToMru(pane, sFilepath);
+			// Merge20 (Panel P3, P-R7): the file was switched in
+			// place, so the panel selection follows the new file.
+			RefreshFileListPanel();
 		}
 	});
 	m_wndFilePathBar.SetOnFileSaveCallback([&](int pane) {
@@ -436,7 +442,7 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	const bool bShowFileList = GetOptionsMgr()->GetBool(OPT_MERGE20_FILELIST_VISIBLE) &&
 		m_pMergeDoc != nullptr && m_pMergeDoc->GetDirDoc() != nullptr;
 	ShowControlBar(&m_wndFileListBar, bShowFileList, FALSE);
-	m_wndFileListBar.Refresh();
+	RefreshFileListPanel();
 
 	// Merge20 (Phase 4 D1): if the previous session left dedicated mode
 	// on (OPT_MERGE20_DED_MODE), enter it again for this frame. Posted
@@ -488,7 +494,7 @@ BOOL CMergeEditFrame::OnBarCheck(UINT nID)
 	if (nID == ID_VIEW_MERGE20_FILELIST_PANEL)
 	{
 		GetOptionsMgr()->SaveOption(OPT_MERGE20_FILELIST_VISIBLE, !!m_wndFileListBar.IsWindowVisible());
-		m_wndFileListBar.Refresh();
+		RefreshFileListPanel();
 	}
 	return result;
 }
@@ -918,6 +924,16 @@ BOOL CMergeEditFrame::PreTranslateMessage(MSG* pMsg)
 			return TRUE;
 		}
 	}
+	// Merge20 (Panel P3, P-R8): bare 1-5 / Space keys in the
+	// file-list panel set/cycle the review state of the selected
+	// row. The panel list is a child control, so its keys arrive
+	// here (the frame's PreTranslateMessage); the bar checks the
+	// focus itself, so typing in the editor views or the search
+	// box is untouched.
+	if (pMsg->message == WM_KEYDOWN &&
+		m_wndFileListBar.HandleListKey(static_cast<UINT>(pMsg->wParam)))
+		return TRUE;
+
 	return __super::PreTranslateMessage(pMsg);
 }
 
@@ -957,6 +973,18 @@ void CMergeEditFrame::ActivateFrame(int nCmdShow)
 
 BOOL CMergeEditFrame::DestroyWindow() 
 {
+	// Merge20 (Panel P3): unregister this frame's panel notification
+	// (P1 left the entry behind; the list grew with every file
+	// compare opened from the same folder compare). The callback
+	// key is this frame's window handle, the same key used to
+	// register in OnCreateClient. Safe when nothing was registered
+	// (removing an unknown key is a no-op).
+	if (m_pMergeDoc != nullptr)
+	{
+		if (CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc()))
+			pDirDoc->GetDiffContext().RemoveMerge20FileListNotifyCallback(
+				reinterpret_cast<std::uintptr_t>(GetSafeHwnd()));
+	}
 	// Merge20 (Phase 4 D1): restore the normal-mode layout first, so the
 	// dock state saved below is the normal one. ExitDedicatedMode (not
 	// SetDedicatedMode) is used so OPT_MERGE20_DED_MODE keeps the
@@ -1278,11 +1306,12 @@ void CMergeEditFrame::OnMDIActivate(BOOL bActivate, CWnd* pActivateWnd, CWnd* pD
 	CMergeDoc *pDoc = GetMergeDoc();
 	if (bActivate && pDoc != nullptr)
 		this->GetParentFrame()->PostMessage(WM_USER+1);
-	// Merge20 (Panel P0): refresh the panel on activation. The
-	// folder-compare notification reaches only the last registered
-	// frame, so activation is what keeps the other frames fresh.
+	// Merge20 (Panel P0/P3): refresh the panel on activation and
+	// re-select the file this frame shows. The notification reaches
+	// every registered frame (P1 multicast), but activation is what
+	// re-selects after a rescan moved the rows.
 	if (bActivate)
-		m_wndFileListBar.Refresh();
+		RefreshFileListPanel();
 	return;
 }
 
@@ -1334,7 +1363,61 @@ void CMergeEditFrame::UpdateResources()
  */
 LRESULT CMergeEditFrame::OnMerge20FileListRefresh(WPARAM /*wParam*/, LPARAM /*lParam*/)
 {
+	RefreshFileListPanel();
+	return 0;
+}
+
+/**
+ * @brief Refresh the file-list panel and re-select the file this
+ * frame shows (Merge20 Panel P3, P-R7).
+ *
+ * The relative path is resolved fresh from the merge doc's file
+ * paths on every call (CDirDoc::Merge20FindRelPath, with the
+ * one-sided-file fallback), so the selection follows the file even
+ * when it was switched in place (ChangeFile) or when a rescan
+ * rebuilt the list. Without a folder compare the path stays empty
+ * and no row is selected.
+ */
+void CMergeEditFrame::RefreshFileListPanel()
+{
+	String sRelPath;
+	if (m_pMergeDoc != nullptr)
+	{
+		if (CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc()))
+			pDirDoc->Merge20FindRelPath(m_pMergeDoc->m_filePaths, sRelPath);
+	}
+	m_wndFileListBar.SetCurrentFileRelPath(sRelPath);
 	m_wndFileListBar.Refresh();
+}
+
+/**
+ * @brief Open the file the panel row click asked for (Merge20 Panel
+ * P3, P-R7).
+ *
+ * The bar stashed the clicked row's relative path and posted this
+ * message (MSG_MERGE20_FILELIST_OPEN_FILE); the item is resolved
+ * here, at handling time, so a rescan between the click and the
+ * pump cannot open the wrong row. The move itself is delegated to
+ * CDirDoc::Merge20MoveToFile: the file already shown is a no-op,
+ * a file open in another frame is activated instead, otherwise
+ * this frame's doc is closed first and the file is opened. That
+ * close destroys this frame synchronously (CloseNow), so nothing
+ * of this frame may be touched after the call: it is the last
+ * statement of this handler (the dedicated bar's Prev/Next
+ * buttons follow the same rule by posting to the main frame).
+ */
+LRESULT CMergeEditFrame::OnMerge20FileListOpenFile(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+	const String relPath = m_wndFileListBar.TakePendingOpenRelPath();
+	if (relPath.empty() || m_pMergeDoc == nullptr)
+		return 0;
+	CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc());
+	if (pDirDoc == nullptr)
+		return 0;
+	const DIFFITEM* pItem = pDirDoc->Merge20FindItemByRelPath(relPath);
+	if (pItem == nullptr)
+		return 0;
+	pDirDoc->Merge20MoveToFile(m_pMergeDoc, *pItem);
 	return 0;
 }
 
