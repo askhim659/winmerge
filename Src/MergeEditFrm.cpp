@@ -227,19 +227,22 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 	});
 	m_pMergeDoc->SetLocationView(pLocationView);
 
-	// Merge20 (Panel P0, design section 12.5): register this frame
-	// for the folder-compare state-change notification, and hand the
-	// panel its folder document. The context posts
+	// Merge20 (Panel P0/P1, design section 12.5): register this
+	// frame for the folder-compare state-change notification, and
+	// hand the panel its folder document. The context posts
 	// MSG_MERGE20_FILELIST_REFRESH to the frame through the callback
 	// (no polling). The context is shared by every file compare
-	// opened from the same folder compare, so the last registered
-	// frame wins (see MERGE20_NOTES.md section 38); the other
-	// frames still refresh on activation. The panel reads the file
-	// list through CDirDoc, never touching CDiffContext internals.
+	// opened from the same folder compare, so every open frame
+	// registers (P1 multicast: Add, keyed by window handle) and
+	// every open panel refreshes; P0 registered with Set, so only
+	// the last registered frame was notified. The panel reads the
+	// file list through CDirDoc, never touching CDiffContext
+	// internals.
 	if (CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc()))
 	{
 		HWND hwndFrame = GetSafeHwnd();
-		pDirDoc->GetDiffContext().SetMerge20FileListNotifyCallback(
+		pDirDoc->GetDiffContext().AddMerge20FileListNotifyCallback(
+			reinterpret_cast<std::uintptr_t>(hwndFrame),
 			[hwndFrame]() { ::PostMessage(hwndFrame, MSG_MERGE20_FILELIST_REFRESH, 0, 0); });
 		m_wndFileListBar.SetDirDoc(pDirDoc);
 	}
