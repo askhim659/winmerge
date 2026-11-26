@@ -445,7 +445,7 @@ void CMerge20GrepDlg::DrainPendingHits()
 		m_hits.push_back(hit);
 		m_list.InsertItem(nRow, hit.relPath.c_str());
 		m_list.SetItemText(nRow, 1, PaneLabel(hit.pane, m_nPanes).c_str());
-		m_list.SetItemText(nRow, 2, std::to_wstring(hit.line + 1).c_str());
+		m_list.SetItemText(nRow, 2, strutils::to_str(hit.line + 1).c_str());
 		m_list.SetItemText(nRow, 3, hit.excerpt.c_str());
 	}
 }
@@ -456,9 +456,9 @@ void CMerge20GrepDlg::UpdateStatus()
 	{
 		m_stStatus.SetWindowText(strutils::format_string3(
 			_("Searching... %1 hits (%2 of %3 files)"),
-			std::to_wstring(GetHitCount()),
-			std::to_wstring(GetFilesScanned()),
-			std::to_wstring(GetFilesTotal())).c_str());
+			strutils::to_str(GetHitCount()),
+			strutils::to_str(GetFilesScanned()),
+			strutils::to_str(GetFilesTotal())).c_str());
 		return;
 	}
 	if (Merge20GrepReachedLimit(GetHitCount()))
@@ -477,7 +477,7 @@ void CMerge20GrepDlg::UpdateStatus()
 		return;
 	}
 	m_stStatus.SetWindowText(strutils::format_string1(
-		_("%1 hits"), std::to_wstring(GetHitCount())).c_str());
+		_("%1 hits"), strutils::to_str(GetHitCount())).c_str());
 }
 
 String CMerge20GrepDlg::PaneLabel(int pane, int nPanes) const
