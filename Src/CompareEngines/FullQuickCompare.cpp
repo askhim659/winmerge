@@ -49,6 +49,10 @@ void FullQuickCompare::CompareFiles(DIFFITEM& di) const
 	}
 	int m_ndiffs = CDiffContext::DIFFS_UNKNOWN;
 	int m_ntrivialdiffs = CDiffContext::DIFFS_UNKNOWN;
+	// Merge20 (S0-F1): per-side counts of lines the prediffer blanked.
+	// Zero when no prediffer ran for a side; the caller of
+	// Filepath_Transform accumulates into these, starting from zero.
+	int nExcluded[3] = { 0, 0, 0 };
 
 	PathContext tFiles;
 	m_pCtxt->GetComparePaths(di, tFiles);
@@ -109,7 +113,7 @@ void FullQuickCompare::CompareFiles(DIFFITEM& di) const
 	for (nIndex = 0; nIndex < nDirs; nIndex++)
 	{
 	// Invoke prediff'ing plugins
-		if (infoPrediffer && !m_diffFileData.Filepath_Transform(nIndex, bForceUTF8, encoding[nIndex], filepathUnpacked[nIndex], filepathTransformed[nIndex], filteredFilenames, *infoPrediffer))
+		if (infoPrediffer && !m_diffFileData.Filepath_Transform(nIndex, bForceUTF8, encoding[nIndex], filepathUnpacked[nIndex], filepathTransformed[nIndex], filteredFilenames, *infoPrediffer, &nExcluded[nIndex]))
 			goto exitPrepAndCompare;
 	}
 
@@ -364,6 +368,8 @@ exitPrepAndCompare:
 	di.diffcode.diffcode |= code;
 	di.nsdiffs = m_ndiffs;
 	di.nidiffs = m_ntrivialdiffs;
+	for (int i = 0; i < nDirs; ++i)
+		di.nexcluded[i] = nExcluded[i];
 
 	errno = errnoSaved;
 }
