@@ -5,14 +5,15 @@
  * @brief Implementation file for CMerge20FileListCtrl
  *
  * Merge20 (Panel P0/P1, design section 12.4/12.7): virtual list of
- * the folder compare's files. P1 shows six columns (selection,
- * file name, action category, risk, old/changed/new counts,
- * review state). Every display value comes from the S6 wrappers
- * (Merge20CsvGet*Text in DirViewColItems.h), which forward to the
- * same static getters the folder compare list uses, so the panel
- * shows exactly what the list shows. The old/changed/new column
- * is the P-R1 provisional form (one column with the counts part
- * of the summary text) until H-LIST adds the three columns.
+ * the folder compare's files. P1 shows eight columns (selection,
+ * file name, action category, risk, missing / changed / added
+ * counts, review state). Every display value comes from the S6
+ * wrappers (Merge20CsvGet*Text in DirViewColItems.h), which forward
+ * to the same static getters the folder compare list uses, so the
+ * panel shows exactly what the list shows. The three count columns
+ * are the H-LIST columns (one locale-formatted number each); they
+ * replaced the P1 provisional single column, which showed the
+ * counts part of the summary text in one column.
  *
  * Rows are cached by value in Refresh(), so LVN_GETDISPINFO only
  * hands out pointers to strings that live until the next Refresh()
@@ -40,15 +41,19 @@ namespace
 {
 	/** @brief Column widths (px), in display order. The panel is
 	 * 480px wide by default, so the list scrolls horizontally
-	 * until the user widens it; the file name and the counts
-	 * column get the most room. */
-	const int Merge20FileListColWidths[6] =
+	 * until the user widens it; the file name gets the most room,
+	 * the three count columns are narrow numbers. The eight
+	 * columns (714px) are slightly narrower than the six P1
+	 * columns were (742px), so the panel does not get wider. */
+	const int Merge20FileListColWidths[COL_COUNT] =
 	{
 		48, // selection (checkbox glyph, centred)
 		160, // file name
 		140, // action category
 		64, // risk (centred)
-		220, // old/changed/new counts (provisional)
+		64, // missing lines (H-LIST)
+		64, // changed lines (H-LIST)
+		64, // added lines (H-LIST)
 		110, // review state
 	};
 	/** @brief High-risk emphasis (P-R2): red text in the Risk cell.
@@ -76,15 +81,16 @@ CMerge20FileListCtrl::~CMerge20FileListCtrl()
 }
 
 /**
- * @brief Insert the six P1 columns (call once, after Create).
+ * @brief Insert the eight P1 columns (call once, after Create).
  *
  * Header texts reuse the folder compare list's msgids
  * ("Include in Output", "Filename", "Action Category", "Risk",
- * "Review State"), so the headers match the list exactly,
- * including the [Wiz] mark W1 put on the Merge20 headers. The
- * old/changed/new column is the exception: it has no folder-list
- * counterpart yet (H-LIST), so it uses the new msgid
- * "Old/Changed/New" ([Wiz] old/changed/new in Japanese).
+ * "Missing lines", "Changed lines", "Added lines", "Review
+ * State"), so the headers match the list exactly, including the
+ * [Wiz] mark W1 put on the Merge20 headers. The three count
+ * columns reuse the CSV header msgids, so they carry no [Wiz]
+ * mark (see DirViewColItems.cpp: the same msgids render the CSV
+ * header line).
  */
 void CMerge20FileListCtrl::SetupColumns()
 {
@@ -99,7 +105,9 @@ void CMerge20FileListCtrl::SetupColumns()
 		LVCFMT_LEFT,
 		LVCFMT_LEFT,
 		LVCFMT_CENTER,
-		LVCFMT_LEFT,
+		LVCFMT_RIGHT,
+		LVCFMT_RIGHT,
+		LVCFMT_RIGHT,
 		LVCFMT_LEFT,
 	};
 	const String headers[COL_COUNT] =
@@ -108,7 +116,9 @@ void CMerge20FileListCtrl::SetupColumns()
 		_("Filename"),
 		_("Action Category"),
 		_("Risk"),
-		_("Old/Changed/New"),
+		_("Missing lines"),
+		_("Changed lines"),
+		_("Added lines"),
 		_("Review State"),
 	};
 	for (int col = 0; col < COL_COUNT; ++col)
@@ -131,7 +141,9 @@ void CMerge20FileListCtrl::UpdateColumnHeaders()
 		_("Filename"),
 		_("Action Category"),
 		_("Risk"),
-		_("Old/Changed/New"),
+		_("Missing lines"),
+		_("Changed lines"),
+		_("Added lines"),
 		_("Review State"),
 	};
 	for (int col = 0; col < COL_COUNT; ++col)
@@ -170,7 +182,9 @@ void CMerge20FileListCtrl::Refresh()
 			row.fileName = Merge20CsvGetFileNameText(m_pCtxt, di);
 			row.action = Merge20CsvGetActionText(m_pCtxt, di);
 			row.risk = Merge20CsvGetRiskText(m_pCtxt, di);
-			row.oldChangedNew = Merge20CsvGetOldChangedNewText(m_pCtxt, di);
+			row.missing = Merge20CsvGetMissingText(m_pCtxt, di);
+		row.modified = Merge20CsvGetModifiedText(m_pCtxt, di);
+		row.added = Merge20CsvGetAddedText(m_pCtxt, di);
 			row.review = Merge20CsvGetReviewText(m_pCtxt, di);
 			const String relPath = di.getItemRelativePath();
 			row.reviewState = m_pCtxt->GetMerge20ReviewState(relPath);
@@ -505,8 +519,14 @@ void CMerge20FileListCtrl::OnGetdispinfo(NMHDR* pNMHDR, LRESULT* pResult)
 	case COL_RISK:
 		pText = &row.risk;
 		break;
-	case COL_OLD_CHANGED_NEW:
-		pText = &row.oldChangedNew;
+	case COL_MISSING:
+		pText = &row.missing;
+		break;
+	case COL_MODIFIED:
+		pText = &row.modified;
+		break;
+	case COL_ADDED:
+		pText = &row.added;
 		break;
 	case COL_REVIEW:
 		pText = &row.review;
