@@ -64,6 +64,13 @@ const UINT MSG_STORE_PANESIZES = WM_USER + 2;
 const UINT MSG_GENERATE_FLIE_COMPARE_REPORT = WM_USER + 3;
 /// File-list panel refresh request from the folder compare (Merge20 Panel P0, design section 12.5)
 const UINT MSG_MERGE20_FILELIST_REFRESH = WM_USER + 4;
+/// File-list panel open request (Merge20 Panel P3, design section 12.7):
+/// the panel posts this to its file compare frame when a row is clicked.
+/// The target relative path travels in the bar (TakePendingOpenRelPath),
+/// not in the message, so a frame closed before the message is pumped
+/// leaks nothing. The handler may close this frame (CloseNow), so it
+/// must not touch the frame after the move.
+const UINT MSG_MERGE20_FILELIST_OPEN_FILE = WM_USER + 5;
 /* @} */
 
 /// Seconds ignored in filetime differences if option enabled
