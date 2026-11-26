@@ -36,8 +36,8 @@ msgstr "ShellExtension"
 
 #: ShellExtension.rc:112
 #, c-format
-msgid "Win&Merge"
-msgstr "Win&Merge"
+msgid "Wiz&Merge"
+msgstr "Wiz&Merge"
 
 #: ShellExtension.rc:113
 #, c-format
