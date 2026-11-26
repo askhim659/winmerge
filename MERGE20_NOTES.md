@@ -4366,3 +4366,107 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 - D11：スリムフラグ自体のセッション永続化（D9 では `OPT_MERGE20_SLIM` によるフラグ永続化と `OnInitialUpdate` での再適用まで。セッション JSON への保存は D11 の範囲）。
 - D8 からの残課題（D9 の範囲外）：比較ビューでのハイライト表示、リスク重要語変更時の再分類リフレッシュ、HTML 既定除外ワードの未シード、ルール数縮小時の陳腐オプションキー。
 - 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §35.6 のチェックリストでユーザーに確認してもらうこと。
+
+## 36. Phase 4 D10（速度改善）— ブランチ `merge20/phase4-d10`
+
+- PR: #32（https://github.com/askhim659/winmerge/pull/32）。最終 head（コード）`31eb380da02356d850335e8c2d68b0de545866fc`（修正 3 件込み）。マージは本記録時点では未実施（コーディネーター判断待ち）。
+- 設計書 §5.2 D10、§3.11、§3.12、§4、§8.3、仕様書 §3（2/4）・§7。受け入れ条件：1000 ファイル規模で一括計算が UI を固めないこと（バックグラウンドで進捗が表示されること）。巨大ファイルで簡易比較へ自動切替し [簡易] バッジが表示されること。100／500／1000 ファイルでの計測結果が記録されていること（§8.3）。
+
+### 36.1 変更一覧（1 ファイル 1 コミット、28 件＋本節の記録コミット）
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| cf7aeb86 | Src/Merge20/Merge20BulkDiff.h | 純粋モジュールヘッダ（HTML diffFast/lcs 移植。Merge20BulkRange／Options／Result、既定閾値 2200000） |
+| 23fcc680 | Src/Merge20/Merge20BulkDiff.cpp | LCS DP＋位置合わせフォールバック、空白・大文字小文字・空行の trivial 扱い |
+| 2212ce41 | Testing/GoogleTest/Merge20/Merge20BulkDiff_test.cpp | 単体テスト 12 件 |
+| a206ebcf | Src/Merge.vcxproj | Merge20BulkDiff.cpp／.h 登録（pch.h グループ） |
+| b1b68596 | Src/Merge.vcxproj.filters | 同上 |
+| 07026fed | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Merge20BulkDiff.cpp＋テスト登録 |
+| 83ec4e04 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上 |
+| 423d3849 | Src/OptionsDef.h | OPT_MERGE20_SIMPLE_THRESHOLD 追加 |
+| 716a4cf7 | Src/OptionsInit.cpp | 同キーを 2200000、範囲 0〜10000000 で初期化 |
+| e8abeafc | Src/Merge20/Merge20ClassifyDoc.h | Merge20ClassifyFromRanges 宣言追加 |
+| 3022afa9 | Src/Merge20/Merge20ClassifyDoc.cpp | 範囲→行ビルダを共用化（LineAccessor による抽象化。Merge20ClassifyFromMergeDoc は DIFFRANGE→Merge20BulkRange 変換後に共用ビルダへ委譲。動作は S4 と同一） |
+| bedcbd05 | Src/DiffContext.cpp | SetMerge20Classification で simpleCompare をコピー |
+| bf42d926 | Src/DirViewColItems.cpp | ColSummaryGet で simpleCompare 時に "[Simple] " プレフィックス（表示時のみ。保存される summary は汚さない） |
+| ba70d3b1 | Src/Merge20/Merge20Session.h | Merge20SessionFile に simpleCompare フィールド追加 |
+| ae1b9b52 | Src/Merge20/Merge20Session.cpp | SessionFileToJson／ParseSessionFile に simpleCompare 追加（欠落時は false のまま） |
+| 201642e8 | Src/Merge20/Merge20SessionDoc.cpp | BuildFromDoc／ApplyToDoc で simpleCompare をコピー |
+| ec052325 | Src/resource.h | IDD_MERGE20_BULK_CLASSIFY 300、IDC_MERGE20_BULK_PROGRESS 1806／STATUS 1807／STOP 1808／CLOSE 1809、ID_MERGE20_BULK_CLASSIFY 38960。_APS_NEXT_* を 301／1810／38961 へ |
+| ceb6c8ab | Src/Merge.rc | IDD_MERGE20_BULK_CLASSIFY DIALOGEX 0,0,640,200、空テンプレート（IDD_MERGE20_MASTER の END の後） |
+| a5bc4d72 | Src/Merge20/Merge20BulkClassifyDlg.h | 一括分類ダイアログヘッダ（モーダルレス、Grep 方式。WM_MERGE20_BULK_PROGRESS = WM_USER + 101） |
+| d660b049 | Src/Merge20/Merge20BulkClassifyDlg.cpp | ダイアログ本体＋ワーカー（単一バックグラウンドワーカー、進捗・停止・完了ログ行） |
+| 04cb7d9d | Src/Merge.vcxproj | Merge20BulkClassifyDlg.cpp／.h 登録（StdAfx.h グループの既定エントリ） |
+| df22d3b1 | Src/Merge.vcxproj.filters | 同上 |
+| 51975d5b | Src/DirView.h | ダイアログメンバ m_wndBulkClassify、OnMerge20BulkClassify、Merge20BuildBulkClassifyFiles 宣言 |
+| 644171cb | Src/DirView.cpp | コンテキストメニュー項目、メッセージマップ、OnDestroy での CloseBulkClassify、ファイル一覧ビルダ |
+| e1003fc8 | Translations/WinMerge/Japanese.po | 新規文字列 8 件の日本語訳（§36.5 の監査参照） |
+| 82b0ded1 | Src/Merge20/Merge20ClassifyDoc.h | CI 修正：Merge20BulkDiff.h を include（C2065 Merge20BulkRange 未宣言。Merge20ClassifyFromRanges の宣言で使う） |
+| 555aabd1 | Src/DirView.h | CI 修正：Merge20BulkClassifyDlg.h を include（C2065 Merge20BulkClassifyFile／m_wndBulkClassify 未宣言） |
+| 31eb380d | Src/DirView.cpp | CI 修正：`di.isResultDiff()` → `di.diffcode.isResultDiff()`（isResultDiff は DIFFCODE のメンバ。C2039） |
+
+### 36.2 設計判断（判断理由付き）
+
+- **一括分類は HTML の differ（diffFast/lcs）を純粋モジュールに移植して使う**。CDiffWrapper／diffutils はワーカースレッドで使わない（スレッド安全性が未検証のため）。ワーカーは D7 と同じ単一スレッド（Poco ThreadPool(1,1)）で、結果の順序を保つ。分類本体は Merge20ClassifyDoc.cpp の行ペアリング＋関数名走査（最大 500 行）を流用する（Merge20ClassifyFromRanges として共用化）。開封時の Rescan フック（S4）と一括分類で同じビルダを使うため、両者の分類は一致する。
+- **閾値は HTML と同じ n*m > 2,200,000**。トリミング後の中央部（共通 prefix/suffix 除去後）に適用する（HTML と同一）。新規オプションキー OPT_MERGE20_SIMPLE_THRESHOLD（Merge20/SimpleThreshold、既定 2200000、範囲 0〜10000000。0＝フォールバック無効。範囲上限は LCS 表を 10M セル≒40MB に抑えるため）。
+- **simpleCompare は一括分類パスでのみ立てる**（＝分類が位置合わせによるもの）。開封時（Rescan フック）では立てない。理由：開封済みファイルの差分は diffutils の完全な差分であり、簡易比較に切り替える対象がない。開封すると Rescan フックが完全な差分で再分類し、simpleCompare は false に戻る（状態は作り直しのため）。これは仕様書 §7 からの食い違いとして明記する（WinMerge の差分エンジンを位置合わせに置き換えることは D10 の範囲外）。
+- **[簡易] バッジは要約列（ColSummaryGet）での表示時プレフィックスとする**。msgstr は「簡易」、msgid は設計書 §6 どおり "Simple"。バッジ自体には【Wiz】を付けない（仕様書 §7 と HTML のリテラル "[簡易]" との一致を優先）。ダイアログ題名・メニュー項目・ステータス文言には【Wiz】を付ける。バッジは表示時に付け、保存される summary は汚さない。CSV は ColSummaryGet を流用するためバッジが CSV にも出る（監査証跡として望ましい）。
+- **一括分類の対象：未分類の差分ファイル（両側存在の DIFF）＋片側のみファイル**（行数カウントのみで分類。CDirDoc::SetMerge20Classification の存在区分オーバーライドが対応区分・要約を整える）。同一ファイルは対象外（S4 段階 1 と同じ。Rescan フックは HasDiffs() を要求する）。3-way は対象外（メッセージ表示）。バイナリはワーカーが NUL 検査でスキップ（D7 と同じ）。unpacker/prediffer は適用されない（D7 と同じ既知の偏差。オンディスクテキストで分類する）。空白・大文字小文字・空行無視オプションのみ反映し、他の無視オプションは未対応（制限として記録）。
+- **範囲の空き側は DIFFRANGE 慣習（end = begin - 1、行数 0）を使う**。-1/-1 は行数が 1 と数えられてしまうため使わない。
+- **一括分類は手動トリガのみ**（フォルダ一覧のコンテキストメニュー）。比較完了後の自動実行はしない（比較コストが約 2 倍になることをユーザーに黙って行わないため）。
+- **再実行時は未分類ファイルだけが対象**（分類済みはスキップ）。内容が変わったファイルの一括再分類はしない（開封時の Rescan フックで更新される）。制限として記録。
+- **セッション JSON に simpleCompare を任意フィールドとして追加**（GetBoolField は欠落時に true を返して既存値を残すため、D10 以前のファイルでは false のまま。後方互換あり）。
+- **進捗表示は Grep と同じモーダルレスダイアログ方式**（プログレスバー＋ステータス＋現在ファイル＋停止／閉じる）。D7 の Merge20GrepDlg を雛形とする。ワーカーは CoInitializeEx を先に呼ぶ（MLang 検出のため）。結果は PostMessage（WM_MERGE20_BULK_PROGRESS = WM_USER + 101）で UI スレッドへ draining し、CDirDoc::SetMerge20Classification(PathContext(result.paths), state) で格納＋行再描画。完了時に RootLogger::Info で `Merge20 bulk classify: N files classified (M simple), K skipped, T ms` を 1 行出力。
+- **100／500／1000 ファイルの計測値はこの VM では作れない**（実機が必要）。数値を捏造せず、手順と記録様式（空の結果表）を §36.6 に残す。
+
+### 36.3 仕様・設計条項チェック
+
+| 条項 | 判定 | 備考 |
+|---|---|---|
+| 設計書 §5.2 D10 受け入れ条件 1：1000 ファイル規模で一括計算が UI を固めない（バックグラウンドで進捗表示） | 未検証（実機） | 実装は単一バックグラウンドワーカー＋モーダルレス進捗ダイアログ。実機確認は §36.6 項目 1・2 |
+| 設計書 §5.2 D10 受け入れ条件 2：巨大ファイルで簡易比較へ自動切替し [簡易] バッジが表示される | 未検証（実機） | 実装は閾値 2200000 での自動切替＋要約列プレフィックス。実機確認は §36.6 項目 3 |
+| 設計書 §5.2 D10 受け入れ条件 3：100／500／1000 ファイルでの計測結果が記録されている（§8.3） | 未検証（実機） | 手順と空の結果表を §36.6 に記録。数値は実機計測後に追記する |
+| 設計書 §3.11 一括計算（S4 段階 2） | 満たす（コード） | Merge20BulkClassifyDlg＋ワーカー。DirScan のスレッドプールにならったバックグラウンド計算 |
+| 設計書 §3.12 簡易比較 | 満たす（コード） | Merge20BulkDiff のフォールバック＋OPT_MERGE20_SIMPLE_THRESHOLD＋[簡易] バッジ |
+| 設計書 §4（計測フック D0） | 満たす | D0 の計測フックは既存（§22）。ログ確認手順の訂正版を §36.4 に記録 |
+| 設計書 §8.3 計測記録様式 | 満たす（様式のみ） | 記録様式と空の結果表を §36.6 に記録。数値は実機待ち |
+| 仕様書 §3（2/4）S4 段階 2（未開封ファイルの事前分類） | 満たす（コード） | 手動トリガの一括分類で実現。自動実行はしない（§36.2 の判断参照） |
+| 仕様書 §7 簡易比較（n*m > 2,200,000、カバレッジ行列 H-SIMPLE） | 満たす（コード、一部食い違いあり） | 閾値・フォールバックは HTML と同一。ただし simpleCompare は一括分類パスでのみ立ち、開封時の差分エンジンは diffutils のまま（§36.2 の判断参照）。仕様書 §7 の「比較エンジン自体を簡易比較に切り替える」読みとは異なる |
+| カバレッジ行列 H-SIMPLE | 満たす | 閾値 2200000 を既定とする OPT_MERGE20_SIMPLE_THRESHOLD を新設 |
+
+### 36.4 計測ログの確認手順（D0 §22.4 の訂正版）
+
+- D0 §22.4 の「表示＞ログ（View＞Log）」は不正確。RootLogger::Info → Logger::Log → m_func（CMainFrame::OnCreate で設定、MainFrm.cpp:485）→ CMainFrame::OutputLog → m_logBuffer → 100ms タイマ IDT_FLUSHLOG → ProcessLog → Output ペインの文書へ追加（m_pOutputDoc->AppendLineWithAutoTrim）。表示は View メニュー「&Output Pane」（ID_VIEW_OUTPUT_BAR 32822、IDS_OUTPUTBAR_CAPTION "Output Pane"）。INFO 行はペインを自動表示しない（show=true は ERR のみ）。**計測行を見るときは Output ペインを手動で表示すること**。
+- ログファイルは %TEMP%\WinMerge.log（ProcessLog が Poco SimpleFileChannel で作成）。ただし OPT_LOGGING（Settings/Logging、既定 0）が 0 のときファイルは作られない。1＝全レベル、2＝WARN/ERR のみ。**INFO の計測行がファイルに残るのは Logging=1 のときだけ**。計測前に Tools＞Options＞System＞Logging を 1 にすること。
+- 見るべき行：フォルダ比較の計測行 `Merge20 measure: folder compare N ms (scan S ms, list L ms), M items`（D0）。一括分類の計測行 `Merge20 bulk classify: N files classified (M simple), K skipped, T ms`（D10）。
+
+### 36.5 検証レポート
+
+- CI 実行 45799955548（head `dfc560d5`、PR #32）：結論 failure。原因はコンパイルエラー 3 件（いずれも include／メンバ所属の見落とし。全文ログ 38,718 行を確認し、エラーはこの 3 ファイルのみであることを確認。Merge20BulkClassifyDlg.cpp 自体・UnitTests 側の新規テストに独立したエラーはなし）：(1) Merge20ClassifyDoc.h が Merge20BulkRange を使うのに Merge20BulkDiff.h を include していなかった（C2065）。(2) DirView.h が Merge20BulkClassifyDlg.h を include していなかった（C2065、m_wndBulkClassify／Merge20BulkClassifyFile 未宣言）。(3) Merge20BuildBulkClassifyFiles が `di.isResultDiff()` と書いていたが isResultDiff は DIFFCODE のメンバ（C2039、正しくは `di.diffcode.isResultDiff()`）。修正コミット 82b0ded1／555aabd1／31eb380d。
+- CI 実行 45802864745（head `a4855d0c`、修正 3 件＋本記録コミット込み）：結論 success。GoogleTest 693 テスト全パス（56 スイート、FAILED 0 件。新規 Merge20BulkDiff 12 テスト含む）。コンパイルエラー 0 件。成果物：WinMerge-x64.zip 26,414,474 バイト（ID 15108428662、失効 2027-02-24T10:36:12Z）、WinMerge-x64-Setup-x64.exe 39,864,254 バイト（ID 15109061008、失効 2027-02-24T10:36:12Z）。全文ログは `~/workspace/.coord/d10_final_log.txt` に保存。本記録（成功結果の追記）コミット後の CI 実行も別途確認すること。
+- .po 監査：ブランチ版 msgid 2144 件 vs master 版 2136 件（＋8。新規 8 件）。【Wiz】116 件 vs master 版 109 件（＋7）。＋8 と ＋7 の差 1 件は "Simple" → 「簡易」（バッジ用で意図的に【Wiz】なし。§36.2 参照）。"Stop"・"Close" は既存の stock 文字列を流用（新規追加なし）。ブランチ版を API から取得して確認。
+- ローカル検証：Merge20BulkDiff 純粋モジュールを g++ スタブ pch ハーネスで検証し、38 アサーション全パス（gtest 12 テストと同内容）。Node 相互検証：HTML 本体から isExcl／isL2Ver／normL／diffFast／lcs／alignHunks を抽出して実行し、8 ケース（identical／onechange／addmissing／moved／emptyold／interleave／multihunk／trailing）の範囲が C++ 出力と完全一致。vcxproj 4 ファイルは XML 整形式をパーサで確認済み。
+- 未検証（Windows 実機でのみ確認できる挙動）：§36.6 のチェックリスト。実機で確認するまで「できた」とは言わない。
+
+### 36.6 実機確認チェックリスト（手順付き）
+
+1. 一括分類ダイアログ（100 ファイル規模）：フォルダ比較（差分あり）→ フォルダ一覧を右クリック → 「【Wiz】未開封ファイルを一括分類…」。「【Wiz】一括分類」ダイアログが表示され、プログレスバーと「【Wiz】一括分類中… %2 件中 %1 件（分類済み %3 件）」が進むこと。完了後に「【Wiz】完了：%1 件を分類しました（簡易 %2 件）、%3 件をスキップ（T ms）」になること。分類済みファイルの確認内容列が "Not calculated" から分類結果に変わること。
+2. UI の固まり具合（1000 ファイル規模）：1000 ファイル規模のフォルダ比較で一括分類を実行中、フォルダ一覧のスクロール・列ソート・他ウィンドウへの切替ができること（UI が固まらないこと）。停止ボタンを押すと分類が止まり「【Wiz】一括分類を停止しました」になること。停止後に再度メニューから実行すると、未分類ファイルだけが対象になること。
+3. [簡易] バッジ（巨大ファイル）：行数×行数が 2,200,000 を超える差分ファイル（例：旧 2000 行・新 2000 行で中央部が大きいもの）を含むフォルダで一括分類を実行し、該当ファイルの要約列の先頭に "[簡易]" が付くこと。該当ファイルを開くと完全な差分で再分類され、"[簡易]" が消えること。
+4. 100／500／1000 ファイル計測（手順）：(a) Tools＞Options＞System＞Logging を 1 にする。(b) 100／500／1000 ファイルのフォルダを用意し、それぞれフォルダ比較を実行する。(c) View メニュー「Output Pane」を表示し、`Merge20 measure: folder compare N ms (scan S ms, list L ms), M items` の行を記録する（%TEMP%\WinMerge.log にも残る）。(d) 一括分類を実行し、`Merge20 bulk classify: N files classified (M simple), K skipped, T ms` の行を記録する。(e) 下表に数値を入れる。
+
+| フォルダ規模 | 比較開始→スキャン完了 (scan) | スキャン完了→一覧確定 (list) | フォルダ比較合計 | 一括分類時間 | 備考 |
+|---|---|---|---|---|---|
+| 100 ファイル | ms | ms | ms | ms | |
+| 500 ファイル | ms | ms | ms | ms | |
+| 1000 ファイル | ms | ms | ms | ms | |
+
+5. 3-way・同一ファイル・バイナリ：3 方向フォルダ比較でメニューを実行すると「【Wiz】一括分類は2方向フォルダ比較のみ対応しています。」が出ること。同一ファイルのみのフォルダで実行すると「【Wiz】未分類のファイルがありません。」が出ること。バイナリファイルを含むフォルダで実行すると、バイナリがスキップ件数に入ること（完了文言の %3）。
+6. 回帰：フォルダ比較・ファイル比較・セッション保存／復元が従来通り動くこと。一括分類で付けた [簡易] がセッション保存・復元後も残ること。
+
+### 36.7 D11 への引き継ぎ・残課題
+
+- D9 からの残課題（D10 の範囲外）：`OPT_MERGE20_SHOW_REVIEW_*` のフィルタ適用＋UI を一体実装する（D9 ではキーのみ）。スリムフラグ自体のセッション永続化。D8 からの残課題：比較ビューでのハイライト表示、リスク重要語変更時の再分類リフレッシュ、HTML 既定除外ワードの未シード、ルール数縮小時の陳腐オプションキー。
+- D10 からの残課題：§36.6 の実機確認結果（特に 100／500／1000 ファイル計測値）を本節へ追記すること。実機で問題が出た場合の修正は D11 以降。
+- 一括分類の既知の制限（§36.2 参照）：unpacker/prediffer 非適用、空白・大文字小文字・空行以外の無視オプション未対応、再実行は未分類のみ、自動実行なし。
+- 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §36.6 のチェックリストでユーザーに確認してもらうこと。

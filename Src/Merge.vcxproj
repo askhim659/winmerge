@@ -1063,11 +1063,13 @@
     <ClInclude Include="Merge20\Merge20FocusResultView.h" />
     <ClInclude Include="Merge20\Merge20SniperDlg.h" />
     <ClInclude Include="Merge20\Merge20GrepDlg.h" />
+    <ClInclude Include="Merge20\Merge20BulkClassifyDlg.h" />
     <ClInclude Include="Merge20\Merge20SniperView.h" />
     <ClInclude Include="Merge20\Merge20Learn.h" />
     <ClInclude Include="Merge20\Merge20LearnDoc.h" />
     <ClInclude Include="Merge20\Merge20LearnDlg.h" />
     <ClInclude Include="Merge20\Merge20Measure.h" />
+    <ClInclude Include="Merge20\Merge20BulkDiff.h" />
     <ClInclude Include="Merge20\Merge20MemoDlg.h" />
     <ClInclude Include="Merge20\Merge20Patrol.h" />
     <ClInclude Include="Merge20\Merge20Session.h" />
@@ -1415,6 +1417,7 @@
     <ClCompile Include="Merge20\Merge20FocusResultView.cpp" />
     <ClCompile Include="Merge20\Merge20SniperDlg.cpp" />
     <ClCompile Include="Merge20\Merge20GrepDlg.cpp" />
+    <ClCompile Include="Merge20\Merge20BulkClassifyDlg.cpp" />
     <ClCompile Include="Merge20\Merge20SniperView.cpp" />
     <ClCompile Include="Merge20\Merge20Learn.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -1424,6 +1427,11 @@
     <ClCompile Include="Merge20\Merge20LearnDoc.cpp" />
     <ClCompile Include="Merge20\Merge20LearnDlg.cpp" />
     <ClCompile Include="Merge20\Merge20Measure.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20BulkDiff.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>

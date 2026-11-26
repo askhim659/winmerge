@@ -178,10 +178,12 @@ void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state
 /**
  * @brief Merge20 (S4): store the classification of one file.
  * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
- * @param [in] state Classification result from Merge20ClassifyDoc.
+ * @param [in] state Classification result from Merge20ClassifyDoc (or
+ * the bulk path, D10).
  * Only the S4 fields are copied (action, risk, counts, summary,
- * encodings, classified flag); the review state, output flag and memo
- * that the user may already have set are kept.
+ * encodings, classified flag, and since D10 the simpleCompare flag);
+ * the review state, output flag and memo that the user may already
+ * have set are kept.
  */
 void CDiffContext::SetMerge20Classification(const String& relPath, const Merge20FileState& state)
 {
@@ -196,6 +198,7 @@ void CDiffContext::SetMerge20Classification(const String& relPath, const Merge20
 	st.summary = state.summary;
 	st.leftEncoding = state.leftEncoding;
 	st.rightEncoding = state.rightEncoding;
+	st.simpleCompare = state.simpleCompare;
 }
 
 /**

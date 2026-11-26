@@ -25,6 +25,7 @@
 #include "FileOpenFlags.h"
 #include "7zCommon.h"
 #include "Merge20/Merge20GrepDlg.h"
+#include "Merge20/Merge20BulkClassifyDlg.h"
 
 class FileActionScript;
 
@@ -147,6 +148,8 @@ public:
 	// Merge20 (Phase 4 D7): Grep file list for the dialog, and the
 	// jump from a Grep hit to its file and diff.
 	std::vector<Merge20GrepFile> Merge20BuildGrepFiles();
+	// Merge20 (Phase 4 D10): bulk classification file list for the dialog.
+	std::vector<Merge20BulkClassifyFile> Merge20BuildBulkClassifyFiles();
 	void Merge20OpenFileAtLine(const Merge20GrepHit& hit);
 
 	void SetActivePane(int pane);
@@ -263,6 +266,7 @@ protected:
 	std::unique_ptr<CFileFilterHelperMenu> m_pFilterMenu;
 	int m_nActivePane;
 	CMerge20GrepDlg m_wndGrep; /**< Grep dialog (Merge20 Phase 4 D7): modeless, created on first use, hidden on close */
+	CMerge20BulkClassifyDlg m_wndBulkClassify; /**< Bulk classification dialog (Merge20 Phase 4 D10): modeless, created on first use, hidden on close */
 
 	// Merge20 (Phase 4 D9): slim list state. The full (non-slim)
 	// column orders/widths are remembered while slim is on, so
@@ -394,6 +398,8 @@ protected:
 	afx_msg void OnMerge20Learn();
 	// Merge20 (Phase 4 D7): Grep cross-file search dialog
 	afx_msg void OnMerge20Grep();
+	// Merge20 (Phase 4 D10): bulk classification dialog
+	afx_msg void OnMerge20BulkClassify();
 	// Merge20 (Phase 4 D8): master management dialog
 	afx_msg void OnMerge20Master();
 	// Merge20 (Phase 4 D9): slim list toggle

@@ -681,6 +681,9 @@
     <ClCompile Include="Merge20\Merge20GrepDlg.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20BulkClassifyDlg.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20SniperView.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -694,6 +697,9 @@
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20Measure.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20BulkDiff.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20MemoDlg.cpp">
@@ -1550,6 +1556,9 @@
     <ClInclude Include="Merge20\Merge20GrepDlg.h">
       <Filter>Merge20</Filter>
     </ClInclude>
+    <ClInclude Include="Merge20\Merge20BulkClassifyDlg.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
     <ClInclude Include="Merge20\Merge20SniperView.h">
       <Filter>Merge20</Filter>
     </ClInclude>
@@ -1563,6 +1572,9 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Measure.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20BulkDiff.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20MemoDlg.h">

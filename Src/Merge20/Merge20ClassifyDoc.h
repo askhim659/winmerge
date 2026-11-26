@@ -20,6 +20,7 @@
 #include "UnicodeString.h"
 #include "Merge20Types.h"
 #include "Merge20/Merge20Classify.h"
+#include "Merge20/Merge20BulkDiff.h"
 
 class CMergeDoc;
 
@@ -33,6 +34,24 @@ class CMergeDoc;
  * are left default; the caller (CDirDoc) preserves the stored ones.
  */
 Merge20FileState Merge20ClassifyFromMergeDoc(const CMergeDoc& doc, const std::vector<String>& riskKeywords);
+
+/**
+ * @brief Classify one file from bulk-diff ranges and in-memory lines (D10).
+ * @param [in] ranges Diff ranges from Merge20BulkDiff (DIFFRANGE convention:
+ * empty sides use end = begin - 1).
+ * @param [in] oldLines Old-side lines (0-based, in file order).
+ * @param [in] newLines New-side lines (0-based, in file order).
+ * @param [in] riskKeywords Risk keywords from the
+ * OPT_MERGE20_RISK_KEYWORDS option (see Merge20ParseRiskKeywords).
+ * @return Per-file state with classified=true, action, risk, counts and
+ * summary filled in. The review state and output flag are left default;
+ * the caller (CDirDoc) preserves the stored ones. Encodings stay empty
+ * (the bulk path has no buffer encoding objects) and simpleCompare
+ * stays false (the caller sets it from the differ result).
+ */
+Merge20FileState Merge20ClassifyFromRanges(const std::vector<Merge20BulkRange>& ranges,
+	const std::vector<String>& oldLines, const std::vector<String>& newLines,
+	const std::vector<String>& riskKeywords);
 
 /**
  * @brief Compose the summary column text from a classification result.

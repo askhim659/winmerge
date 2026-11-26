@@ -175,6 +175,10 @@ struct Merge20SessionFile
 	int nModified = 0;
 	int nAdded = 0;
 	int nExcluded = 0;
+	/** @brief True when the classification came from the simple
+	 * (positional) compare of the bulk path (D10). Absent (false)
+	 * in files saved before D10. */
+	bool simpleCompare = false;
 	String summary;
 	String memo;
 	std::vector<Merge20DiffJudgment> diffs;

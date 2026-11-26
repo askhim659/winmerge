@@ -163,6 +163,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_MEMO_EDIT, OnMerge20MemoEdit)
 	ON_COMMAND(ID_MERGE20_LEARN, OnMerge20Learn)
 	ON_COMMAND(ID_MERGE20_GREP, OnMerge20Grep)
+	ON_COMMAND(ID_MERGE20_BULK_CLASSIFY, OnMerge20BulkClassify)
 	ON_COMMAND(ID_MERGE20_MASTER, OnMerge20Master)
 	ON_COMMAND(ID_MERGE20_SLIM, OnMerge20Slim)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
@@ -939,6 +940,8 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// Grep cross-file search. Always offered.
 	String sMerge20Grep = _("Cross-File Search...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_GREP, sMerge20Grep.c_str());
+	String sMerge20BulkClassify = _("Bulk classify unopened files...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_BULK_CLASSIFY, sMerge20BulkClassify.c_str());
 	// Merge20 (Phase 4 D8, design section 5.2/D8, spec section 3 (4/4)):
 	// Master management (exclude words, highlight, risk keywords). Always offered.
 	String sMerge20Master = _("Master Management...");
@@ -1469,6 +1472,8 @@ void CDirView::OnDestroy()
 	// The Grep dialog is a child window: its own OnDestroy stops
 	// the scan, but close it explicitly so no scan outlives the view.
 	m_wndGrep.CloseGrep();
+	// Same for the bulk classification dialog (Merge20 Phase 4 D10).
+	m_wndBulkClassify.CloseBulkClassify();
 	DeleteAllDisplayItems();
 
 	{
@@ -3745,6 +3750,17 @@ void CDirView::OnMerge20Grep()
 }
 
 /**
+ * @brief Merge20 (Phase 4 D10, design sections 3.11 and 5.2/D10,
+ * spec sections 3 (2/4) and 7): open the bulk classification
+ * dialog (modeless, owned by this view). The context menu lands
+ * here. The dialog rebuilds its file list on every show.
+ */
+void CDirView::OnMerge20BulkClassify()
+{
+	m_wndBulkClassify.ShowBulkClassify(this);
+}
+
+/**
  * @brief Merge20 (Phase 4 D8, design sections 4.4 and 5.2/D8, spec
  * section 3 (4/4)): open the master management dialog (modal).
  * When the dialog closes with Save and the exclude rules changed,
@@ -3975,6 +3991,52 @@ std::vector<Merge20GrepFile> CDirView::Merge20BuildGrepFiles()
 		file.paths.resize(static_cast<size_t>(nDirs));
 		for (int i = 0; i < nDirs; ++i)
 			file.paths[static_cast<size_t>(i)] = di.diffcode.exists(i) ? paths[i] : String();
+		files.push_back(std::move(file));
+	}
+	return files;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D10): unclassified files for the bulk
+ * classification run, in folder-list order (depth-first tree
+ * walk, the same order the list shows). Directories are skipped;
+ * identical files are skipped (S4 stage 1, like the Rescan
+ * hook, classifies only files with differences); already-
+ * classified files are skipped (a re-run only covers what is
+ * still unclassified). One-sided files are included: their line
+ * count is all the classification needs. Both sides' expected
+ * full paths are kept (the missing side's would-be path, not an
+ * empty string), so CDirDoc::SetMerge20Classification can find
+ * the item again (its FindItemFromPaths lookup needs the
+ * expected path, unlike the Grep scan which only reads files
+ * that exist).
+ */
+std::vector<Merge20BulkClassifyFile> CDirView::Merge20BuildBulkClassifyFiles()
+{
+	CDiffContext& ctxt = GetDiffContext();
+	const Merge20FileStates& states = ctxt.GetMerge20FileStates();
+	std::vector<Merge20BulkClassifyFile> files;
+	for (DIFFITEM* pos = ctxt.GetFirstDiffPosition(); pos != nullptr;)
+	{
+		DIFFITEM& di = ctxt.GetNextDiffRefPosition(pos);
+		if (di.diffcode.isDirectory())
+			continue;
+		if (!di.diffcode.isResultDiff() && !di.diffcode.isSideFirstOnly() && !di.diffcode.isSideSecondOnly())
+			continue;
+		const String relPath = di.getItemRelativePath();
+		if (states.GetState(relPath).classified)
+			continue;
+		Merge20BulkClassifyFile file;
+		file.relPath = relPath;
+		PathContext paths;
+		ctxt.GetComparePaths(di, paths);
+		const int nDirs = ctxt.GetCompareDirs();
+		file.paths.resize(static_cast<size_t>(nDirs));
+		for (int i = 0; i < nDirs; ++i)
+		{
+			file.paths[static_cast<size_t>(i)] = paths[i];
+			file.exists[static_cast<size_t>(i)] = di.diffcode.exists(i);
+		}
 		files.push_back(std::move(file));
 	}
 	return files;

@@ -260,6 +260,7 @@ void Init(COptionsMgr *pOptions)
 	pOptions->InitOption(OPT_MERGE20_FOCUS_DOCK_HEIGHT, 0);
 	pOptions->InitOption(OPT_MERGE20_GREP_HISTORY, _T(""));
 	pOptions->InitOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 0, 0, 1);
+	pOptions->InitOption(OPT_MERGE20_SIMPLE_THRESHOLD, 2200000, 0, 10000000);
 
 	pOptions->InitOption(OPT_PROJECTS_PATH, _T(""));
 	pOptions->InitOption(OPT_USE_SYSTEM_TEMP_PATH, true);

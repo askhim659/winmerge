@@ -370,6 +370,16 @@ inline const String OPT_MERGE20_GREP_HISTORY {_T("Merge20/GrepHistory"s)};
 // DirViewColItems::MigrateMerge20Columns).
 inline const String OPT_MERGE20_COLUMN_LAYOUT_VERSION {_T("Merge20/ColumnLayoutVersion"s)};
 
+// Merge20 (Phase 4 D10, design sections 3.11 and 5.2/D10, spec
+// section 7): simple-compare threshold for the S4 stage-2 bulk
+// classification. When the trimmed-middle n*m of a file pair
+// exceeds this, the bulk differ falls back to a positional
+// alignment (HTML `lcs`, n*m > 2200000) and the file is marked
+// simpleCompare (shown as [Simple] in the list). 0 disables the
+// fallback (the LCS table always runs). The range caps the LCS
+// table at 10M cells (about 40 MB).
+inline const String OPT_MERGE20_SIMPLE_THRESHOLD {_T("Merge20/SimpleThreshold"s)};
+
 /// Substitution Filters
 inline const String OPT_SUBSTITUTION_FILTERS_ENABLED {_T("Settings/SubstitutionFiltersEnabled"s)};
 

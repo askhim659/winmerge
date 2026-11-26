@@ -239,6 +239,7 @@ bool Merge20SessionBuildFromDoc(CDirDoc& doc, Merge20Session& session)
 		file.nModified = st.nModified;
 		file.nAdded = st.nAdded;
 		file.nExcluded = st.nExcluded;
+		file.simpleCompare = st.simpleCompare;
 		file.summary = st.summary;
 		file.memo = st.memo;
 		file.leftSize = SideSize(di, 0);
@@ -417,6 +418,7 @@ Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20
 		st.nModified = file.nModified;
 		st.nAdded = file.nAdded;
 		st.nExcluded = file.nExcluded;
+		st.simpleCompare = file.simpleCompare;
 		st.summary = file.summary;
 		st.memo = file.memo;
 		st.diffJudgments = file.diffs;

@@ -839,6 +839,8 @@ namespace
 			return false;
 		if (!GetIntField(value, L"nExcluded", nExcluded, 0, INT32_MAX))
 			return false;
+		if (!GetBoolField(value, L"simpleCompare", out.simpleCompare))
+			return false;
 		if (!GetTextField(value, L"summary", out.summary))
 			return false;
 		if (!GetTextField(value, L"memo", out.memo))
@@ -964,6 +966,7 @@ namespace
 			{ L"nModified", Merge20JsonInt(file.nModified) },
 			{ L"nAdded", Merge20JsonInt(file.nAdded) },
 			{ L"nExcluded", Merge20JsonInt(file.nExcluded) },
+			{ L"simpleCompare", Merge20JsonBool(file.simpleCompare) },
 			{ L"summary", Merge20JsonText(file.summary) },
 			{ L"memo", Merge20JsonText(file.memo) },
 			{ L"leftSize", Merge20JsonInt(file.leftSize) },
