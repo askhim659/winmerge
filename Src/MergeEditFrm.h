@@ -16,6 +16,7 @@
 #include "MergeStatusBar.h"
 #include "EditorFilepathBar.h"
 #include "DiffViewBar.h"
+#include "Merge20/Merge20FocusDock.h"
 #include "Merge20/Merge20DedBar.h"
 #include "MergeResultBar.h"
 #include "LocationBar.h"
@@ -58,6 +59,7 @@ protected:
 	CSplitterWndEx m_wndSplitter;
 	CEditorFilePathBar m_wndFilePathBar;
 	CDiffViewBar m_wndDetailBar;
+	CMerge20FocusDock m_wndFocusDock; /**< Focus dock (Merge20 Phase 4 D4): the Diff Pane's single child, holding the header strip, the detail splitter view and the result-segment view */
 	CMerge20DedBar m_wndDedBar; /**< Dedicated-mode bar (Merge20 Phase 4 D1) */
 	CMergeEditSplitterView *m_pwndDetailMergeEditSplitterView;
 	CMergeResultBar m_wndResultBar;
