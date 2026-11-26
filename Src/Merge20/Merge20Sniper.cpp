@@ -49,12 +49,14 @@ int Merge20SniperScrollLines(int nPixels, int nLineHeight)
 
 Merge20SniperDrag Merge20SniperDragAction(int nDx, int nDy)
 {
-	// A swipe is a mostly-horizontal drag of at least 50px. When the
-	// vertical movement dominates, the gesture is a scroll drag, not
-	// a move to another diff.
+	// A swipe is a mostly-horizontal drag of at least 50px (HTML
+	// `initSniper`: `Math.abs(dx) >= 50 && Math.abs(dx) >
+	// Math.abs(dy)`). When the vertical movement matches or beats
+	// the horizontal one, the gesture is a scroll drag, not a move
+	// to another diff.
 	const int nAbsDx = nDx < 0 ? -nDx : nDx;
 	const int nAbsDy = nDy < 0 ? -nDy : nDy;
-	if (nAbsDx < Merge20SniperSwipePixels || nAbsDy > nAbsDx)
+	if (nAbsDx < Merge20SniperSwipePixels || nAbsDy >= nAbsDx)
 		return Merge20SniperDrag::None;
 	// Swipe left (the page-turn direction) goes to the next diff,
 	// swipe right goes back to the previous one.
