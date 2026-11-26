@@ -20,6 +20,7 @@
 #include "MergeEditView.h"
 #include "MergeResultView.h"
 #include "IDirDoc.h"
+#include "DirDoc.h"
 #include "Merge20/Merge20Types.h"
 #include "MainFrm.h"
 #include "LocationView.h"
@@ -49,6 +50,9 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	ON_WM_SIZE()
 	ON_MESSAGE_VOID(WM_IDLEUPDATECMDUI, OnIdleUpdateCmdUI)
 	ON_MESSAGE(MSG_STORE_PANESIZES, OnStorePaneSizes)
+	// Merge20 (Panel P0, design section 12.5): folder-compare
+	// state-change notification (posted by CDiffContext).
+	ON_MESSAGE(MSG_MERGE20_FILELIST_REFRESH, OnMerge20FileListRefresh)
 	// [View] menu
 	ON_UPDATE_COMMAND_UI(ID_VIEW_DETAIL_BAR, OnUpdateControlBarMenu)
 	ON_COMMAND_EX(ID_VIEW_DETAIL_BAR, OnBarCheck)
@@ -56,6 +60,11 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	ON_COMMAND_EX(ID_VIEW_LOCATION_BAR, OnBarCheck)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE_RESULT_BAR, OnUpdateViewMergeResultBar)
 	ON_COMMAND_EX(ID_VIEW_MERGE_RESULT_BAR, OnBarCheck)
+	// Merge20 (Panel P0, design section 12.6): the file-list panel
+	// toggle. A plain control-bar toggle (OnBarCheck), independent
+	// of the dedicated-mode toggle below.
+	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_FILELIST_PANEL, OnUpdateControlBarMenu)
+	ON_COMMAND_EX(ID_VIEW_MERGE20_FILELIST_PANEL, OnBarCheck)
 	ON_COMMAND(ID_VIEW_MERGE20_DEDICATED_MODE, OnViewMerge20DedicatedMode)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_DEDICATED_MODE, OnUpdateViewMerge20DedicatedMode)
 	// Merge20 (Phase 4 D2): dedicated-bar buttons forward here.
@@ -198,12 +207,42 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 		return FALSE;
 	}
 
+	// Merge20 (Panel P0, design section 12.4): persistent file-list
+	// panel, docked at the left (design section 12.7 P0). Created
+	// here like the dedicated-mode bar; docked and shown/hidden in
+	// OnCreate. The list itself is filled by Refresh() (frame
+	// OnCreate, the View-menu toggle, MDI activation, and the
+	// MSG_MERGE20_FILELIST_REFRESH notification).
+	sCaption = _("File List Panel");
+	if (!m_wndFileListBar.Create(this, sCaption.c_str(), WS_CHILD | WS_VISIBLE, ID_VIEW_MERGE20_FILELIST_PANEL))
+	{
+		TRACE0("Failed to create Merge20FileListBar\n");
+		return FALSE;
+	}
+
 	// tell merge doc about these views
 	m_pMergeDoc = dynamic_cast<CMergeDoc *>(pContext->m_pCurrentDoc);
 	m_pMergeDoc->ForEachView([&](auto& pView) {
 		pView->SetStatusInterface(m_wndStatusBar.GetIMergeEditStatus(pView->m_nThisPane));
 	});
 	m_pMergeDoc->SetLocationView(pLocationView);
+
+	// Merge20 (Panel P0, design section 12.5): register this frame
+	// for the folder-compare state-change notification, and hand the
+	// panel its folder document. The context posts
+	// MSG_MERGE20_FILELIST_REFRESH to the frame through the callback
+	// (no polling). The context is shared by every file compare
+	// opened from the same folder compare, so the last registered
+	// frame wins (see MERGE20_NOTES.md section 38); the other
+	// frames still refresh on activation. The panel reads the file
+	// list through CDirDoc, never touching CDiffContext internals.
+	if (CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc()))
+	{
+		HWND hwndFrame = GetSafeHwnd();
+		pDirDoc->GetDiffContext().SetMerge20FileListNotifyCallback(
+			[hwndFrame]() { ::PostMessage(hwndFrame, MSG_MERGE20_FILELIST_REFRESH, 0, 0); });
+		m_wndFileListBar.SetDirDoc(pDirDoc);
+	}
 
 	// kdiff3-style merge result pane: a dockable
 	// bar at the bottom with a full-width editable result view
@@ -252,6 +291,7 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 	m_wndLocationBar.SetFrameHwnd(GetSafeHwnd());
 	m_wndDetailBar.SetFrameHwnd(GetSafeHwnd());
 	m_wndDedBar.SetFrameHwnd(GetSafeHwnd());
+	m_wndFileListBar.SetFrameHwnd(GetSafeHwnd());
 
 	// Load splitter positions
 	LoadOptions();
@@ -330,6 +370,15 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_wndDedBar.EnableDocking(CBRS_ALIGN_TOP | CBRS_ALIGN_BOTTOM);
 	DockControlBar(&m_wndDedBar, AFX_IDW_DOCKBAR_TOP, &rc);
 
+	// Merge20 (Panel P0): file-list panel, docked at the left.
+	// The explicit initial width is set in the bar's OnCreate (D1
+	// lesson); whether it starts shown is decided below, after the
+	// dock state is restored.
+	m_wndFileListBar.SetBarStyle(m_wndFileListBar.GetBarStyle() |
+		CBRS_SIZE_DYNAMIC | CBRS_ALIGN_LEFT);
+	m_wndFileListBar.EnableDocking(CBRS_ALIGN_LEFT | CBRS_ALIGN_RIGHT);
+	DockControlBar(&m_wndFileListBar, AFX_IDW_DOCKBAR_LEFT, &rc);
+
 	// Merge result pane bar, docked at the bottom
 	if (m_wndResultBar.m_hWnd != nullptr)
 	{
@@ -356,6 +405,7 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_wndLocationBar.LoadState(_T("Settings"));
 	m_wndDetailBar.LoadState(_T("Settings"));
 	m_wndDedBar.LoadState(_T("Settings"));
+	m_wndFileListBar.LoadState(_T("Settings"));
 	if (m_wndResultBar.m_hWnd != nullptr)
 	{
 		m_wndResultBar.LoadState(_T("Settings"));
@@ -369,6 +419,21 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// Merge20 (Phase 4 D1): the dedicated-mode bar is shown only while
 	// dedicated mode is active.
 	ShowControlBar(&m_wndDedBar, FALSE, FALSE);
+
+	// Merge20 (Panel P0, design sections 12.4/12.5): show the panel
+	// only when the saved toggle is on and this frame has a folder
+	// compare to list. A single-file compare starts with the panel
+	// hidden (no list content to show); the View-menu toggle can
+	// still show the empty state ("No folder comparison"). The
+	// explicit initial width (bar OnCreate) and the width clamps
+	// (LoadState / CalcFixedLayout) keep an empty bar from stealing
+	// client area (D1/D2 lessons). Dedicated mode does not touch
+	// this bar (design section 12.6): it hides the five bars only,
+	// so the panel keeps its visibility across dedicated mode.
+	const bool bShowFileList = GetOptionsMgr()->GetBool(OPT_MERGE20_FILELIST_VISIBLE) &&
+		m_pMergeDoc != nullptr && m_pMergeDoc->GetDirDoc() != nullptr;
+	ShowControlBar(&m_wndFileListBar, bShowFileList, FALSE);
+	m_wndFileListBar.Refresh();
 
 	// Merge20 (Phase 4 D1): if the previous session left dedicated mode
 	// on (OPT_MERGE20_DED_MODE), enter it again for this frame. Posted
@@ -411,6 +476,17 @@ BOOL CMergeEditFrame::OnBarCheck(UINT nID)
 	// hide never leaks into the saved state.
 	if (nID == ID_VIEW_DETAIL_BAR)
 		GetOptionsMgr()->SaveOption(OPT_MERGE20_DOCK_HIDDEN, !m_wndDetailBar.IsWindowVisible());
+	// Merge20 (Panel P0): persist the file-list panel toggle in its
+	// own key. OPT_MERGE20_DOCK_HIDDEN already stores the Diff Pane
+	// visibility and must not be reused here (see MERGE20_NOTES.md
+	// section 38). Showing the panel needs its content: it may have
+	// been hidden while the list changed, and Refresh() is a no-op
+	// while hidden.
+	if (nID == ID_VIEW_MERGE20_FILELIST_PANEL)
+	{
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_FILELIST_VISIBLE, !!m_wndFileListBar.IsWindowVisible());
+		m_wndFileListBar.Refresh();
+	}
 	return result;
 }
 
@@ -911,6 +987,7 @@ void CMergeEditFrame::SavePosition()
 	m_wndLocationBar.SaveState(_T("Settings"));
 	m_wndDetailBar.SaveState(_T("Settings"));
 	m_wndDedBar.SaveState(_T("Settings"));
+	m_wndFileListBar.SaveState(_T("Settings"));
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.SaveState(_T("Settings"));
 
@@ -1198,6 +1275,11 @@ void CMergeEditFrame::OnMDIActivate(BOOL bActivate, CWnd* pActivateWnd, CWnd* pD
 	CMergeDoc *pDoc = GetMergeDoc();
 	if (bActivate && pDoc != nullptr)
 		this->GetParentFrame()->PostMessage(WM_USER+1);
+	// Merge20 (Panel P0): refresh the panel on activation. The
+	// folder-compare notification reaches only the last registered
+	// frame, so activation is what keeps the other frames fresh.
+	if (bActivate)
+		m_wndFileListBar.Refresh();
 	return;
 }
 
@@ -1235,8 +1317,22 @@ void CMergeEditFrame::UpdateResources()
 	m_wndDetailBar.UpdateResources();
 	m_wndFocusDock.UpdateResources();
 	m_wndDedBar.UpdateResources();
+	m_wndFileListBar.UpdateResources();
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.UpdateResources();
+}
+
+/**
+ * @brief Refresh the file-list panel on a folder-compare state
+ * change (Merge20 Panel P0, design section 12.5). Posted by
+ * CDiffContext through the callback registered in OnCreateClient;
+ * no polling. A no-op while the panel is hidden (Refresh() guards
+ * that); showing it later refreshes again through OnBarCheck.
+ */
+LRESULT CMergeEditFrame::OnMerge20FileListRefresh(WPARAM /*wParam*/, LPARAM /*lParam*/)
+{
+	m_wndFileListBar.Refresh();
+	return 0;
 }
 
 /**
