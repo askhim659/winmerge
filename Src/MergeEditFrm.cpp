@@ -17,6 +17,8 @@
 #include "MergeDoc.h"
 #include "MergeEditView.h"
 #include "MergeResultView.h"
+#include "IDirDoc.h"
+#include "Merge20/Merge20Types.h"
 #include "MainFrm.h"
 #include "LocationView.h"
 #include "OptionsDef.h"
@@ -53,6 +55,15 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	ON_COMMAND_EX(ID_VIEW_MERGE_RESULT_BAR, OnBarCheck)
 	ON_COMMAND(ID_VIEW_MERGE20_DEDICATED_MODE, OnViewMerge20DedicatedMode)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_DEDICATED_MODE, OnUpdateViewMerge20DedicatedMode)
+	// Merge20 (Phase 4 D2): dedicated-bar buttons forward here.
+	ON_COMMAND(ID_MERGE20_DED_EXIT, OnMerge20DedExit)
+	ON_COMMAND(ID_MERGE20_DED_PREV_FILE, OnMerge20DedPrevFile)
+	ON_COMMAND(ID_MERGE20_DED_NEXT_FILE, OnMerge20DedNextFile)
+	ON_COMMAND_RANGE(ID_MERGE20_DED_REVIEW_TODO, ID_MERGE20_DED_REVIEW_KEEP, OnMerge20DedReview)
+	ON_COMMAND(ID_MERGE20_DED_PIN, OnMerge20DedPin)
+	ON_COMMAND(ID_MERGE20_DED_TODO_ONLY, OnMerge20DedTodoOnly)
+	ON_COMMAND(ID_MERGE20_DED_SNIPER, OnMerge20DedSniper)
+	ON_COMMAND(ID_MERGE20_DED_ZOOM_RESET, OnMerge20DedZoomReset)
 	ON_COMMAND(ID_VIEW_SPLITVERTICALLY, OnViewSplitVertically)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_SPLITVERTICALLY, OnUpdateViewSplitVertically)
 	// Display filter bar
@@ -68,6 +79,8 @@ END_MESSAGE_MAP()
 
 constexpr UINT_PTR IDT_SAVEPOSITION = 2;
 constexpr UINT_PTR IDT_PREVIEWMODE = 3;
+// Merge20 (Phase 4 D2): dedicated-bar auto-hide poll (500ms).
+constexpr UINT_PTR IDT_DEDHIDE = 4;
 
 /////////////////////////////////////////////////////////////////////////////
 // CMergeEditFrame construction/destruction
@@ -87,6 +100,9 @@ CMergeEditFrame::CMergeEditFrame()
 , m_bDedDetailBarVisible(false)
 , m_bDedResultBarVisible(false)
 , m_bDedStatusBarVisible(false)
+, m_nDedPrevZoom(1000)
+, m_ullDedBarFlashUntil(0)
+, m_ullDedBarLastMouseOver(0)
 {
 	m_pMergeDoc = 0;
 }
@@ -387,6 +403,23 @@ void CMergeEditFrame::EnterDedicatedMode()
 	m_bDedStatusBarVisible = !!m_wndStatusBar.IsWindowVisible();
 	m_bDedWasMaximized = !!IsZoomed();
 
+	// Merge20 (Phase 4 D2, design section 3.2): keep the pre-entry zoom
+	// to restore on exit, and apply the stored dedicated zoom (default
+	// 750 = 75%, HTML DEF_SCALE). The zoom is a global option, so
+	// applying it here is also what makes a file move keep it: the new
+	// frame reads OPT_VIEW_ZOOM on creation, and UpdateDedBar mirrors
+	// every zoom change back into OPT_MERGE20_DED_ZOOM. The position
+	// returns to the top (GotoLine), the zoom is kept.
+	m_nDedPrevZoom = GetOptionsMgr()->GetInt(OPT_VIEW_ZOOM);
+	if (m_pMergeDoc != nullptr)
+	{
+		if (CMergeEditView* pView = m_pMergeDoc->GetActiveMergeView())
+		{
+			pView->ZoomTextTo(GetOptionsMgr()->GetInt(OPT_MERGE20_DED_ZOOM));
+			pView->GotoLine(0, true, pView->m_nThisPane);
+		}
+	}
+
 	ShowControlBar(&m_wndFilePathBar, FALSE, FALSE);
 	ShowControlBar(&m_wndLocationBar, FALSE, FALSE);
 	ShowControlBar(&m_wndDetailBar, FALSE, FALSE);
@@ -394,6 +427,14 @@ void CMergeEditFrame::EnterDedicatedMode()
 		ShowControlBar(&m_wndResultBar, FALSE, FALSE);
 	ShowControlBar(&m_wndStatusBar, FALSE, FALSE);
 	ShowControlBar(&m_wndDedBar, TRUE, FALSE);
+
+	// Merge20 (Phase 4 D2): auto-hide. The bar starts shown (flash
+	// grace 1.6s, then it hides once the cursor has been away for 3s,
+	// unless pinned). The timer polls the cursor position.
+	const ULONGLONG now = ::GetTickCount64();
+	m_ullDedBarFlashUntil = now + 1600;
+	m_ullDedBarLastMouseOver = now;
+	SetTimer(IDT_DEDHIDE, 500, nullptr);
 
 	if (GetMDIFrame() != nullptr)
 		GetMDIFrame()->MDIMaximize(this);
@@ -406,6 +447,17 @@ void CMergeEditFrame::EnterDedicatedMode()
  */
 void CMergeEditFrame::ExitDedicatedMode()
 {
+	KillTimer(IDT_DEDHIDE);
+	// Merge20 (Phase 4 D2): restore the pre-entry zoom, and turn the
+	// sniper off (design section 3.1: leaving dedicated mode turns the
+	// sniper off; its toggle is refreshed on the next entry).
+	if (m_pMergeDoc != nullptr)
+	{
+		if (CMergeEditView* pView = m_pMergeDoc->GetActiveMergeView())
+			pView->ZoomTextTo(m_nDedPrevZoom);
+	}
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SNIPER_ON, false);
+
 	ShowControlBar(&m_wndDedBar, FALSE, FALSE);
 	ShowControlBar(&m_wndFilePathBar, m_bDedFilePathBarVisible, FALSE);
 	ShowControlBar(&m_wndLocationBar, m_bDedLocationBarVisible, FALSE);
@@ -434,6 +486,178 @@ void CMergeEditFrame::OnUpdateViewMerge20DedicatedMode(CCmdUI* pCmdUI)
 {
 	pCmdUI->Enable(TRUE);
 	pCmdUI->SetCheck(m_bDedicatedMode);
+}
+
+/**
+ * @brief Show the dedicated bar briefly (Merge20 Phase 4 D2, HTML
+ * flashDedBar(), 1.6s). Called on file moves (via the new frame's
+ * entry) and on review/zoom operations while the bar is hidden. A
+ * no-op when pinned (the bar never hides then) or not dedicated.
+ */
+void CMergeEditFrame::FlashDedBar()
+{
+	if (!m_bDedicatedMode || m_wndDedBar.m_hWnd == nullptr)
+		return;
+	if (!m_wndDedBar.IsWindowVisible())
+		ShowControlBar(&m_wndDedBar, TRUE, FALSE);
+	m_ullDedBarFlashUntil = ::GetTickCount64() + 1600;
+}
+
+/**
+ * @brief Refresh the dedicated bar from the current state. Called from
+ * OnIdleUpdateCmdUI while dedicated: the zoom display, the pin /
+ * unreviewed-only / sniper toggles, the Prev/Next enablement and the
+ * review-state check. Also mirrors the current zoom into
+ * OPT_MERGE20_DED_ZOOM, so the next file (a new frame entering
+ * dedicated mode) and the next session keep the dedicated zoom.
+ */
+void CMergeEditFrame::UpdateDedBar()
+{
+	if (!m_bDedicatedMode || m_wndDedBar.m_hWnd == nullptr || m_pMergeDoc == nullptr)
+		return;
+	const int nZoom = GetOptionsMgr()->GetInt(OPT_VIEW_ZOOM);
+	if (nZoom != GetOptionsMgr()->GetInt(OPT_MERGE20_DED_ZOOM))
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_ZOOM, nZoom);
+	m_wndDedBar.SetZoomText(nZoom);
+	m_wndDedBar.SetPinned(GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED));
+	m_wndDedBar.SetTodoOnly(GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY));
+	m_wndDedBar.SetSniperOn(GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON));
+	IDirDoc* pDirDoc = m_pMergeDoc->GetDirDoc();
+	const bool bHasDirDoc = (pDirDoc != nullptr);
+	m_wndDedBar.SetPrevNextEnabled(bHasDirDoc && !pDirDoc->IsFirstFile(),
+		bHasDirDoc && !pDirDoc->IsLastFile());
+	m_wndDedBar.SetReviewEnabled(bHasDirDoc);
+	m_wndDedBar.SetReviewState(bHasDirDoc ?
+		pDirDoc->GetMerge20ReviewState(m_pMergeDoc->m_filePaths) : ReviewState::TODO);
+}
+
+/**
+ * @brief Dedicated-bar exit button: back to normal mode.
+ */
+void CMergeEditFrame::OnMerge20DedExit()
+{
+	SetDedicatedMode(false);
+}
+
+/**
+ * @brief Dedicated-bar Prev button: previous file. Posted to the main
+ * frame (whose OnPrevFile does the move) instead of calling the move
+ * directly: the move closes this frame, so nothing of this frame may
+ * be touched after it.
+ */
+void CMergeEditFrame::OnMerge20DedPrevFile()
+{
+	if (CWnd* pMainWnd = AfxGetMainWnd())
+		pMainWnd->PostMessage(WM_COMMAND, ID_PREVFILE);
+}
+
+/**
+ * @brief Dedicated-bar Next button: next file (see OnMerge20DedPrevFile).
+ */
+void CMergeEditFrame::OnMerge20DedNextFile()
+{
+	if (CWnd* pMainWnd = AfxGetMainWnd())
+		pMainWnd->PostMessage(WM_COMMAND, ID_NEXTFILE);
+}
+
+/**
+ * @brief Dedicated-bar review-state button: apply the state to this
+ * file. Exactly the S2 key behaviour (CDirDoc::ApplyMerge20ReviewState
+ * with the output-flag linkage); the bar button only replaces the
+ * 1-5 keys, which are text input in the file editor.
+ */
+void CMergeEditFrame::OnMerge20DedReview(UINT nID)
+{
+	if (m_pMergeDoc == nullptr)
+		return;
+	IDirDoc* pDirDoc = m_pMergeDoc->GetDirDoc();
+	if (pDirDoc == nullptr)
+		return;
+	const ReviewState state = static_cast<ReviewState>(nID - ID_MERGE20_DED_REVIEW_TODO);
+	pDirDoc->ApplyMerge20ReviewState(m_pMergeDoc->m_filePaths, state);
+	FlashDedBar();
+}
+
+/**
+ * @brief Dedicated-bar pin button: toggle auto-hide (OPT_MERGE20_DED_PINNED).
+ * Pinning on shows the bar (FlashDedBar); pinning off lets the timer
+ * hide it again once the cursor leaves.
+ */
+void CMergeEditFrame::OnMerge20DedPin()
+{
+	const bool bPinned = !GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, bPinned);
+	if (bPinned)
+		FlashDedBar();
+}
+
+/**
+ * @brief Dedicated-bar unreviewed-only toggle (display + state only;
+ * the patrol behaviour is D3). The state is kept in OPT_MERGE20_TODO_ONLY.
+ */
+void CMergeEditFrame::OnMerge20DedTodoOnly()
+{
+	const bool bTodoOnly = !GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_TODO_ONLY, bTodoOnly);
+	FlashDedBar();
+}
+
+/**
+ * @brief Dedicated-bar sniper toggle (display + state only; the sniper
+ * itself is D6). The state is kept in OPT_MERGE20_SNIPER_ON.
+ */
+void CMergeEditFrame::OnMerge20DedSniper()
+{
+	const bool bSniperOn = !GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_SNIPER_ON, bSniperOn);
+	FlashDedBar();
+}
+
+/**
+ * @brief Dedicated-bar zoom display button, and the R key: back to 75%
+ * (the D0 default of OPT_MERGE20_DED_ZOOM, HTML DEF_SCALE). Not
+ * ZoomText(0): that resets to the original font size (100%).
+ */
+void CMergeEditFrame::OnMerge20DedZoomReset()
+{
+	if (!m_bDedicatedMode)
+		return;
+	if (m_pMergeDoc != nullptr)
+	{
+		if (CMergeEditView* pView = m_pMergeDoc->GetActiveMergeView())
+			pView->ZoomTextTo(750);
+	}
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_ZOOM, 750);
+	FlashDedBar();
+}
+
+/**
+ * @brief Bare R key in dedicated mode: reset the zoom to 75%.
+ *
+ * Merge20 (Phase 4 D2, spec section 4(g)): R is a dedicated-mode-only
+ * key, handled here (T-4-6). Only when the focus is on the frame or
+ * the dedicated bar: in an editable compare view (or the file-path
+ * bar) 'r' is text input, so the key is left alone there. This is the
+ * same rule as the S2 keys 1-5, which only work in the folder list;
+ * the zoom button on the bar is the mouse path to the same reset.
+ */
+BOOL CMergeEditFrame::PreTranslateMessage(MSG* pMsg)
+{
+	if (m_bDedicatedMode && pMsg->message == WM_KEYDOWN &&
+		pMsg->wParam == 'R' &&
+		(GetKeyState(VK_CONTROL) & 0x8000) == 0 &&
+		(GetKeyState(VK_MENU) & 0x8000) == 0 &&
+		(GetKeyState(VK_SHIFT) & 0x8000) == 0)
+	{
+		HWND hFocus = ::GetFocus();
+		if (hFocus == GetSafeHwnd() || hFocus == m_wndDedBar.GetSafeHwnd() ||
+			(m_wndDedBar.GetSafeHwnd() != nullptr && ::IsChild(m_wndDedBar.GetSafeHwnd(), hFocus)))
+		{
+			PostMessage(WM_COMMAND, ID_MERGE20_DED_ZOOM_RESET);
+			return TRUE;
+		}
+	}
+	return __super::PreTranslateMessage(pMsg);
 }
 
 /**
@@ -641,6 +865,10 @@ void CMergeEditFrame::SaveOptions()
 void CMergeEditFrame::OnIdleUpdateCmdUI()
 {
 	UpdateHeaderSizes();
+	// Merge20 (Phase 4 D2): refresh the dedicated bar (zoom display,
+	// toggles, Prev/Next enablement, review-state check).
+	if (m_bDedicatedMode)
+		UpdateDedBar();
 	// Follow the merge result bar however it was shown or hidden (View menu,
 	// its close button, docking state), so that closing it always gives the
 	// compared files back their normal editable state
@@ -705,6 +933,56 @@ void CMergeEditFrame::OnTimer(UINT_PTR nIDEvent)
 			HWND hPreviewBar = pPreviewBar->GetSafeHwnd();
 			if (hPreviewBar != nullptr)
 				DarkMode::setChildCtrlsSubclassAndThemeEx(hPreviewBar, true, true);
+		}
+	}
+	else if (nIDEvent == IDT_DEDHIDE)
+	{
+		// Merge20 (Phase 4 D2): auto-hide the dedicated bar (HTML
+		// dedPinned / #dedHover). Polls the cursor every 500ms: while
+		// the bar is shown and not pinned, it hides once the flash
+		// grace is over and the cursor has been away for 3s; while
+		// hidden, moving the cursor to the top 8px strip (the hover
+		// strip) shows it again for 1.6s.
+		if (!m_bDedicatedMode || m_wndDedBar.m_hWnd == nullptr)
+		{
+			KillTimer(IDT_DEDHIDE);
+		}
+		else
+		{
+			const ULONGLONG now = ::GetTickCount64();
+			CPoint ptCursor;
+			::GetCursorPos(&ptCursor);
+			ScreenToClient(&ptCursor);
+			CRect rcBar;
+			m_wndDedBar.GetWindowRect(&rcBar);
+			ScreenToClient(&rcBar);
+			if (m_wndDedBar.IsWindowVisible())
+			{
+				CRect rcHover = rcBar;
+				rcHover.InflateRect(0, 4);
+				if (rcHover.PtInRect(ptCursor))
+				{
+					m_ullDedBarLastMouseOver = now;
+				}
+				else if (!GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED) &&
+					now > m_ullDedBarFlashUntil &&
+					now > m_ullDedBarLastMouseOver + 3000)
+				{
+					ShowControlBar(&m_wndDedBar, FALSE, FALSE);
+				}
+			}
+			else
+			{
+				CRect rcClient;
+				GetClientRect(&rcClient);
+				if (ptCursor.y >= rcClient.top && ptCursor.y <= rcClient.top + 8 &&
+					ptCursor.x >= rcClient.left && ptCursor.x <= rcClient.right)
+				{
+					ShowControlBar(&m_wndDedBar, TRUE, FALSE);
+					m_ullDedBarFlashUntil = now + 1600;
+					m_ullDedBarLastMouseOver = now;
+				}
+			}
 		}
 	}
 	else
