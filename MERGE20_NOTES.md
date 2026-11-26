@@ -5189,7 +5189,8 @@ P0 §38.5・P1 §39.5・P2 §40.5・P3 §41.5 の全項目に P4 の保存・復
 - .po 監査：master 版は msgid 2159 件・【Wiz】 127 件。ブランチ版は msgid 2165 件・【Wiz】 133 件。増分は +6 件ずつで、新規文字列 6 件（Filter Deck、Existence:、Action category:、Review state:、Only files needing action、Show all）と一致する。チェックボックスの表示名は既存 msgid（S0 の存在区分名、S4 の対応区分名、D11 の確認内容名）を再利用しており、追加はない。新規 6 件の msgstr に空欄はない。
 - リソース ID 監査：`resource.h` の全 define を値でソートし、コントロール 1819–1836・コマンド 38968 が空きであることを確認してから割り当てた（`_APS_NEXT_*` の指す番地と一致）。`_APS_NEXT_CONTROL_VALUE` は 1837、`_APS_NEXT_COMMAND_VALUE` は 38969 に更新した。
 - プロジェクト登録監査：新規 2 ファイルを `Merge.vcxproj`（純粋モジュールは pch.h グループ、バーは StdAfx.h グループの既定エントリ）と `UnitTests.vcxproj`（純粋モジュール＋テスト）の両方に登録し、`.filters` も更新した。4 ファイルとも XML として構文検証済み。
-- コンパイル：この Linux VM では MFC アプリはコンパイルできないため、C++ の変更は未コンパイルのまま CI に投げる。CI の結果（実行 ID・結論・GoogleTest のテスト数・成果物）は PR の CI 実行で確認し、本節に追記する（PR 作成後に更新するコミットで記録する）。
+- CI（PR #39、最終コード head `3ae16229`）：実行 45864682922、completed/success。コンパイルエラー 0 件、Build succeeded。GoogleTest は `[  PASSED  ] 733 tests.`（P4 時点 723 件＋新規 10 件）、`[  FAILED  ]` 行なし。新規 `Merge20FilterDeck_*` 10 件とセッション往復・後方互換テストはすべて OK。成果物は API で存在確認済み：`WinMerge-x64.zip`（26,453,029 バイト、artifact ID 15140882013）、`WinMerge-x64-Setup-x64.exe`（39,898,524 バイト、artifact ID 15140642266）、有効期限はどちらも 2027-02-24T17:05:30Z。
+- CI 1 回目（実行 45863017438、head `b5743c1`）は failure：`Merge20FilterDeckBar.cpp(488)` で error C2248（`CDirView::Merge20RefreshFilterDeck` が protected のためバーから呼べない）。宣言を public へ移す修正（`3ae16229`）で解決し、2 回目で success になった。
 - 作業メモ：作業中に VM のサービス再起動で `/tmp` が消去され、未コミットのセッションテスト編集 1 件を失った（GitHub のコミット済み分は無事で、再取得して編集し直した）。以後、作業ファイルは永続領域（`~/workspace/h-filter-work/`）に置くこと。
 
 ### 43.5 実機確認チェックリスト（手順付き。未検証）
