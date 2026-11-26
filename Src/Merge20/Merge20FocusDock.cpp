@@ -261,11 +261,20 @@ void CMerge20FocusDock::OnButtonClicked(UINT nID)
 	if (idx >= std::size(Merge20FocusActions) || m_pDoc == nullptr)
 		return;
 	const Merge20FocusAction action = Merge20FocusActions[idx];
-	if (action == Merge20FocusAction::Split || action == Merge20FocusAction::Regroup)
+	if (action == Merge20FocusAction::Split)
 	{
-		// Merge20 (Phase 4 D4): display only; D5 wires the
-		// split/regroup body. The buttons are disabled until then,
-		// so this is unreachable in normal use.
+		// Merge20 (Phase 4 D5): split the current diff group into
+		// per-row hunks (the body lives in CMergeDoc).
+		if (m_nCurrentDiff >= 0)
+			m_pDoc->Merge20SplitDiff(m_nCurrentDiff);
+		return;
+	}
+	if (action == Merge20FocusAction::Regroup)
+	{
+		// Merge20 (Phase 4 D5): regroup the split group containing
+		// the current diff (the body lives in CMergeDoc).
+		if (m_nCurrentDiff >= 0)
+			m_pDoc->Merge20RegroupDiff(m_nCurrentDiff);
 		return;
 	}
 	if (m_nCurrentDiff < 0)
@@ -363,10 +372,15 @@ void CMerge20FocusDock::UpdateHeader()
 	{
 		const bool bVisible = Merge20FocusActionVisible(Merge20FocusActions[i], m_nCurrentOp, m_nBuffers);
 		pButtons[i]->ShowWindow(bVisible ? SW_SHOW : SW_HIDE);
-		const bool bSplitRegroup = Merge20FocusActions[i] == Merge20FocusAction::Split ||
-			Merge20FocusActions[i] == Merge20FocusAction::Regroup;
-		// Split/Regroup are display only in D4 (D5 wires the body).
-		pButtons[i]->EnableWindow(bVisible && bJudge && !bSplitRegroup);
+		// Split/Regroup are enabled only when the current diff
+		// supports them (D5): a splittable group for Split, a row of
+		// a split group for Regroup.
+		bool bEnabled = bVisible && bJudge;
+		if (Merge20FocusActions[i] == Merge20FocusAction::Split)
+			bEnabled = bEnabled && m_pDoc != nullptr && m_pDoc->Merge20CanSplitDiff(m_nCurrentDiff);
+		else if (Merge20FocusActions[i] == Merge20FocusAction::Regroup)
+			bEnabled = bEnabled && m_pDoc != nullptr && m_pDoc->Merge20CanRegroupDiff(m_nCurrentDiff);
+		pButtons[i]->EnableWindow(bEnabled);
 	}
 	LayoutHeader();
 }
