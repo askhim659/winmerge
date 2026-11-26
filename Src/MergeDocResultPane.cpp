@@ -31,6 +31,7 @@
 #include "OptionsDiffOptions.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "Merge20/Merge20LearnDoc.h"
+#include "Merge20/Merge20Split.h"
 #include "resource.h"
 #include <algorithm>
 
@@ -1375,6 +1376,279 @@ void CMergeDoc::Merge20FocusApplyJudgment(int nDiff, const std::vector<int>& src
 			ShowMessageBox(errStr, MB_OK | MB_ICONWARNING);
 		Merge20LearnRefreshAllOpenDocs();
 	}
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Merge20 (Phase 4 D5, design sections 3.8 and 4.2): per-row split /
+// regroup of a diff group. Splitting replaces one DIFFRANGE with its
+// per-row ranges (Merge20SplitRange), rebuilds the significant chain
+// and the merge result, and carries the parent judgment to every
+// row; regrouping restores the stored original range and carries the
+// first row's judgment to it (HTML regroupHunk). Rescan() never runs
+// while a merge session is active (RESCAN_SUPPRESSED), so the split
+// diff list lives for the whole session; the sidecar is cleared
+// where Rescan rebuilds the list.
+
+bool CMergeDoc::HasEditedResultSegment() const
+{
+	for (const MergeResultSegment& seg : m_resultSegments)
+	{
+		if (seg.state == ResultSegmentState::Edited)
+			return true;
+	}
+	return false;
+}
+
+bool CMergeDoc::FindSplitGroupFirstIndex(int nDiff, int& nFirst, size_t& nGroup) const
+{
+	nFirst = -1;
+	nGroup = 0;
+	if (nDiff < 0 || nDiff >= m_diffList.GetSize())
+		return false;
+	for (size_t g = 0; g < m_merge20SplitGroups.size(); ++g)
+	{
+		const Merge20SplitGroup& group = m_merge20SplitGroups[g];
+		// Locate the group's first row by its identity (real-line
+		// starts + apparent start); indices shift when another
+		// group is split or regrouped, so no index is stored.
+		for (int i = 0; i + group.rows <= m_diffList.GetSize(); ++i)
+		{
+			const DIFFRANGE* pFirst = m_diffList.DiffRangeAt(i);
+			if (pFirst == nullptr || !Merge20SplitGroupMatchesFirstRow(group, *pFirst))
+				continue;
+			if (nDiff >= i && nDiff < i + group.rows)
+			{
+				nFirst = i;
+				nGroup = g;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+bool CMergeDoc::Merge20CanSplitDiff(int nDiff) const
+{
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize())
+		return false;
+	if (!m_diffList.IsDiffSignificant(nDiff))
+		return false;
+	const DIFFRANGE* pRange = m_diffList.DiffRangeAt(nDiff);
+	return pRange != nullptr && Merge20SplitIsSplittable(*pRange, m_nBuffers);
+}
+
+bool CMergeDoc::Merge20CanRegroupDiff(int nDiff) const
+{
+	if (!m_bResultBuilt)
+		return false;
+	int nFirst = -1;
+	size_t nGroup = 0;
+	return FindSplitGroupFirstIndex(nDiff, nFirst, nGroup);
+}
+
+bool CMergeDoc::Merge20SplitDiff(int nDiff)
+{
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize())
+		return false;
+	if (!m_diffList.IsDiffSignificant(nDiff))
+		return false;
+	const DIFFRANGE* pParent = m_diffList.DiffRangeAt(nDiff);
+	if (pParent == nullptr)
+		return false;
+	std::vector<DIFFRANGE> rows;
+	if (!Merge20SplitRange(*pParent, m_nBuffers, rows))
+		return false;
+	if (HasEditedResultSegment())
+	{
+		// BuildMergeResult() regenerates the whole result buffer, so
+		// a split would discard hand edits anywhere in the file.
+		// Refuse rather than lose them silently.
+		ShowMessageBox(_("The merge result contains hand-edited lines. Splitting or regrouping would discard those edits, so the operation was cancelled.").c_str(), MB_OK | MB_ICONWARNING);
+		return false;
+	}
+	// Copy the parent judgment before the rebuild (the segment table
+	// is cleared by BuildMergeResult()).
+	const MergeResultSegment* pSegment = GetResultSegmentByDiff(nDiff);
+	const ResultSegmentState parentState = pSegment != nullptr ?
+		pSegment->state : ResultSegmentState::Unresolved;
+	const std::vector<int> parentSrcPanes = pSegment != nullptr ?
+		pSegment->srcPanes : std::vector<int>{};
+	const DIFFRANGE parentRange = *pParent;
+	m_merge20SplitGroups.push_back(Merge20SplitGroupFromRange(parentRange,
+		static_cast<int>(rows.size())));
+	m_diffList.EraseDiffs(nDiff, 1);
+	for (size_t i = 0; i < rows.size(); ++i)
+		m_diffList.InsertDiff(nDiff + static_cast<int>(i), rows[i]);
+	m_diffList.ConstructSignificantChain();
+	BuildMergeResult();
+	// Design section 4.2 default: the parent judgment is carried to
+	// every row. An unresolved parent stays unresolved row by row.
+	// The split itself is NOT recorded for learning (a split is not
+	// an explicit judgment); the per-row judgments are recorded only
+	// when the person judges a row afterwards.
+	if (parentState == ResultSegmentState::Chosen || parentState == ResultSegmentState::Auto)
+	{
+		for (size_t i = 0; i < rows.size(); ++i)
+		{
+			const int nRow = nDiff + static_cast<int>(i);
+			ResultChooseSources(nRow, parentSrcPanes);
+			if (parentState == ResultSegmentState::Auto)
+				Merge20SetResultSegmentState(nRow, ResultSegmentState::Auto);
+		}
+	}
+	// The diff indices changed, so the diffIdx-based candidates are
+	// recomputed; a dismissal of the parent range no longer matches
+	// a row's identity, so a dismissed parent's rows may gain a
+	// candidate again (the dismissal was for the pre-split diff).
+	Merge20LearnRefreshCandidates(*this);
+	SetCurrentDiff(nDiff);
+	UpdateAllViews(nullptr);
+	return true;
+}
+
+bool CMergeDoc::Merge20RegroupDiff(int nDiff)
+{
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize())
+		return false;
+	int nFirst = -1;
+	size_t nGroup = 0;
+	if (!FindSplitGroupFirstIndex(nDiff, nFirst, nGroup))
+		return false;
+	const Merge20SplitGroup group = m_merge20SplitGroups[nGroup];
+	// The run must still be intact: one apparent row per hunk, in order.
+	if (nFirst + group.rows > m_diffList.GetSize())
+		return false;
+	for (int i = 0; i < group.rows; ++i)
+	{
+		const DIFFRANGE* pRow = m_diffList.DiffRangeAt(nFirst + i);
+		if (pRow == nullptr || pRow->dbegin != group.dbegin + i || pRow->dend != group.dbegin + i)
+			return false;
+	}
+	if (HasEditedResultSegment())
+	{
+		ShowMessageBox(_("The merge result contains hand-edited lines. Splitting or regrouping would discard those edits, so the operation was cancelled.").c_str(), MB_OK | MB_ICONWARNING);
+		return false;
+	}
+	// The first row's judgment is carried to the regrouped diff
+	// (HTML regroupHunk); copy it before the rebuild.
+	const MergeResultSegment* pFirstSegment = GetResultSegmentByDiff(nFirst);
+	const ResultSegmentState firstState = pFirstSegment != nullptr ?
+		pFirstSegment->state : ResultSegmentState::Unresolved;
+	const std::vector<int> firstSrcPanes = pFirstSegment != nullptr ?
+		pFirstSegment->srcPanes : std::vector<int>{};
+	m_merge20SplitGroups.erase(m_merge20SplitGroups.begin() + nGroup);
+	m_diffList.EraseDiffs(nFirst, group.rows);
+	m_diffList.InsertDiff(nFirst, Merge20SplitGroupToRange(group));
+	m_diffList.ConstructSignificantChain();
+	BuildMergeResult();
+	if (firstState == ResultSegmentState::Chosen || firstState == ResultSegmentState::Auto)
+	{
+		ResultChooseSources(nFirst, firstSrcPanes);
+		if (firstState == ResultSegmentState::Auto)
+			Merge20SetResultSegmentState(nFirst, ResultSegmentState::Auto);
+	}
+	Merge20LearnRefreshCandidates(*this);
+	SetCurrentDiff(nFirst);
+	UpdateAllViews(nullptr);
+	return true;
+}
+
+int CMergeDoc::Merge20ReapplySplitGroups(const std::vector<Merge20SplitGroup>& groups)
+{
+	if (!m_bResultBuilt)
+		return 0;
+	int nApplied = 0;
+	for (const Merge20SplitGroup& group : groups)
+	{
+		// Locate the parent by its range identity: indices may have
+		// shifted while earlier groups were re-applied.
+		int nFound = -1;
+		for (int i = 0; i < m_diffList.GetSize(); ++i)
+		{
+			const DIFFRANGE* pRange = m_diffList.DiffRangeAt(i);
+			if (pRange == nullptr || static_cast<int>(pRange->op) != group.op ||
+				pRange->dbegin != group.dbegin || pRange->dend != group.dend)
+				continue;
+			bool same = true;
+			for (int pane = 0; pane < 3; ++pane)
+			{
+				if (pRange->begin[pane] != group.begin[pane] || pRange->end[pane] != group.end[pane])
+					same = false;
+			}
+			if (same)
+			{
+				nFound = i;
+				break;
+			}
+		}
+		if (nFound < 0)
+			continue;
+		if (Merge20SplitDiff(nFound))
+			++nApplied;
+	}
+	return nApplied;
+}
+
+// Split / regroup act on the same target rule as the learning
+// commands: the current diff when nothing is selected, else the
+// selected diffs. Several diffs are handled from the last to the
+// first, so a split's index shift cannot move the next target.
+void CMergeDoc::OnMerge20SplitDiff()
+{
+	int firstDiff = -1, lastDiff = -1;
+	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		return;
+	for (int nDiff = lastDiff; nDiff >= firstDiff; --nDiff)
+		Merge20SplitDiff(nDiff);
+}
+
+void CMergeDoc::OnUpdateMerge20SplitDiff(CCmdUI* pCmdUI)
+{
+	int firstDiff = -1, lastDiff = -1;
+	bool bEnabled = GetMerge20LearnTargetDiffs(firstDiff, lastDiff);
+	if (bEnabled)
+	{
+		bEnabled = false;
+		for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+		{
+			if (Merge20CanSplitDiff(nDiff))
+			{
+				bEnabled = true;
+				break;
+			}
+		}
+	}
+	pCmdUI->Enable(bEnabled);
+	pCmdUI->SetCheck(FALSE);
+}
+
+void CMergeDoc::OnMerge20RegroupDiff()
+{
+	int firstDiff = -1, lastDiff = -1;
+	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		return;
+	for (int nDiff = lastDiff; nDiff >= firstDiff; --nDiff)
+		Merge20RegroupDiff(nDiff);
+}
+
+void CMergeDoc::OnUpdateMerge20RegroupDiff(CCmdUI* pCmdUI)
+{
+	int firstDiff = -1, lastDiff = -1;
+	bool bEnabled = GetMerge20LearnTargetDiffs(firstDiff, lastDiff);
+	if (bEnabled)
+	{
+		bEnabled = false;
+		for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+		{
+			if (Merge20CanRegroupDiff(nDiff))
+			{
+				bEnabled = true;
+				break;
+			}
+		}
+	}
+	pCmdUI->Enable(bEnabled);
+	pCmdUI->SetCheck(FALSE);
 }
 
 /**
