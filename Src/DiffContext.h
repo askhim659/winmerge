@@ -7,8 +7,11 @@
 
 #define POCO_NO_UNWINDOWS 1
 #include <Poco/Mutex.h>
+#include <cstdint>
 #include <functional>
 #include <memory>
+#include <utility>
+#include <vector>
 #include "PathContext.h"
 #include "DiffItemList.h"
 #include "FilterList.h"
@@ -241,6 +244,25 @@ public:
 	 */
 	using Merge20FileListNotifyCallback = std::function<void()>;
 	void SetMerge20FileListNotifyCallback(Merge20FileListNotifyCallback callback) { m_merge20FileListNotify = std::move(callback); }
+	// Merge20 (Panel P1, design section 12.5): register one more
+	// frame for the notification, keyed by its window handle (as an
+	// integer: this header must stay MFC-free, so HWND cannot be
+	// named here). Every registered frame is notified, so the
+	// P0 "last registered frame wins" limit is gone. Registering
+	// twice with the same key replaces that frame's callback.
+	// Entries of closed frames stay in the list: their callback
+	// only posts to a destroyed HWND, which is a harmless no-op
+	// (P0 note), so no unregister is needed.
+	void AddMerge20FileListNotifyCallback(std::uintptr_t key, Merge20FileListNotifyCallback callback);
+	// Merge20 (Panel P1, design section 12.5): suspend the
+	// notification while a bulk update runs (session restore,
+	// bulk classify), so a 1000-file run posts one refresh instead
+	// of one per file. Nested suspends nest; Resume notifies once
+	// when the outermost suspend ends and a change happened while
+	// suspended. Both are const: Notify is const, and the counters
+	// are mutable bookkeeping, not compare state.
+	void SuspendMerge20FileListNotify() const;
+	void ResumeMerge20FileListNotify() const;
 	void NotifyMerge20FileListChanged() const;
 
 	void Swap(int idx1, int idx2)
@@ -310,6 +332,13 @@ public:
 	std::vector<String> m_vCurrentlyHiddenItems; /**< The list of currently hidden items */
 	Merge20FileStates m_merge20FileStates; /**< Merge20 per-file work state (review state etc.), keyed by relative path; see GetMerge20ReviewState(). */
 	Merge20FileListNotifyCallback m_merge20FileListNotify; /**< Panel P0: frame refresh callback, empty when no panel is registered. */
+	// Merge20 (Panel P1): one callback per open file-compare frame,
+	// keyed by window handle (see AddMerge20FileListNotifyCallback).
+	// Entries of closed frames stay here; their callback only posts
+	// to a destroyed HWND (harmless no-op), so no unregister is needed.
+	std::vector<std::pair<std::uintptr_t, Merge20FileListNotifyCallback>> m_merge20FileListNotifyExtra;
+	mutable int m_nMerge20FileListNotifySuspend = 0; /**< Panel P1: bulk-update suspend depth (0 = notifications fire). */
+	mutable bool m_bMerge20FileListNotifyPending = false; /**< Panel P1: a change happened while notifications were suspended. */
 	std::unique_ptr<FilterExpression> m_pAdditionalCompareExpression; /** Additional compare condition applied in folder comparison */
 	std::unique_ptr<RenameMoveDetection> m_pRenameMoveDetection; /** Move detection object */
 
