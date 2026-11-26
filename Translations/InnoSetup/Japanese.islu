@@ -16,10 +16,10 @@ CompactInstallation=最小インストール
 CustomInstallation=カスタムインストール
 
 ;Components
-AppCoreFiles=WinMerge コアファイル
+AppCoreFiles=WizMerge コアファイル
 Filters=フィルタ
 Plugins=プラグイン
-ShellExtension32bit=32-bit WinMerge ShellExtension
+ShellExtension32bit=32-bit WizMerge ShellExtension
 
 ;Localization Components
 Languages=言語
@@ -70,12 +70,12 @@ ExplorerContextMenu=エクスプローラのコンテキストメニューに追
 IntegrateTortoiseCVS=TortoiseCVSとの連携(&T)
 IntegrateTortoiseGit=TortoiseGitとの連携(&R)
 IntegrateTortoiseSVN=TortoiseSVNとの連携(&O)
-AddToPath=システム環境変数PATHへWinMergeのフォルダを追加する(&A)
+AddToPath=システム環境変数PATHへWizMergeのフォルダを追加する(&A)
 
 ; 3-way merge wizard page
 ThreeWayMergeWizardPageCaption=3方向マージ
-ThreeWayMergeWizardPageDescription=TortoiseSVN/Gitで WinMerge を3方向マージツールとして使用しますか?
-RegisterWinMergeAs3WayMergeTool=WinMerge を3方向マージツールとして登録する
+ThreeWayMergeWizardPageDescription=TortoiseSVN/Gitで WizMerge を3方向マージツールとして使用しますか?
+RegisterWinMergeAs3WayMergeTool=WizMerge を3方向マージツールとして登録する
 MergeAtRightPane=右側ペインでマージ
 MergeAtCenterPane=中央ペインでマージ
 MergeAtLeftPane=左側ペインでマージ
@@ -84,11 +84,11 @@ AutoMergeAtStartup=起動時に自動マージする
 ;Icon Labels
 ReadMe=Read Me
 UsersGuide=ユーザーガイド
-ViewStartMenuFolder=WinMerge スタートメニューフォルダを表示(&V)
+ViewStartMenuFolder=WizMerge スタートメニューフォルダを表示(&V)
 
 ;Code Dialogs
 DeletePreviousStartMenu=インストーラは、スタートメニューフォルダの位置が "%s" から "%s" に変更されたことを検出しました. 以前のスタートメニューフォルダを削除しますか?
-ExplorerNeedsRestart=WinMerge のシェルエクステンションを更新するにはエクスプローラーの再起動が必要です。エクスプローラーを再起動しますか?
+ExplorerNeedsRestart=WizMerge のシェルエクステンションを更新するにはエクスプローラーの再起動が必要です。エクスプローラーを再起動しますか?
 
 ; Project file description
-ProjectFileDesc=WinMerge Project file
+ProjectFileDesc=WizMerge Project file
