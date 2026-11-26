@@ -33,6 +33,9 @@
 #include "Merge20/Merge20BatchCheckDlg.h"
 #include "DiffContext.h"
 #include "DirDoc.h"
+#include "OptionsMgr.h"
+#include "OptionsDef.h"
+#include "Merge20/Merge20FileListFilter.h"
 
 #include <map>
 
@@ -65,6 +68,8 @@ namespace
 	constexpr LONG Merge20FileListBatchButtonWidth = 110;
 	constexpr LONG Merge20FileListExpandButtonWidth = 90;
 	constexpr LONG Merge20FileListCollapseButtonWidth = 110;
+	/** @brief Width of the slim toggle button (P4). */
+	constexpr LONG Merge20FileListSlimButtonWidth = 90;
 	/** @brief Gap between the buttons in the button row (P2). */
 	constexpr LONG Merge20FileListButtonGap = 4;
 
@@ -93,6 +98,7 @@ BEGIN_MESSAGE_MAP(CMerge20FileListBar, CSizingControlBarCF)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_BATCH, OnMerge20BatchCheck)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_EXPAND_ALL, OnExpandAll)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_COLLAPSE_ALL, OnCollapseAll)
+	ON_BN_CLICKED(IDC_MERGE20_FILELIST_SLIM, OnSlimToggle)
 	ON_MESSAGE(WM_MERGE20_FILELIST_ROW_RCLICK, OnRowRClick)
 	ON_MESSAGE(WM_MERGE20_FILELIST_ROW_CLICK, OnRowClick)
 	//}}AFX_MSG_MAP
@@ -194,6 +200,17 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_btnCollapseAll.SetFont(pFont);
+	// Slim toggle (P4, design section 12.4): a check button for
+	// the "file name + review state only" view. The text is
+	// re-applied in UpdateResources().
+	if (!m_btnSlim.Create(_("Slim view").c_str(),
+		WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX,
+		rc, this, IDC_MERGE20_FILELIST_SLIM))
+	{
+		TRACE0("Failed to create Merge20FileListBar slim button\n");
+		return -1;
+	}
+	m_btnSlim.SetFont(pFont);
 	// Count line (P1, P-R6): "N displayed, M checked, K unreviewed"
 	// (S3 definition). Shown with the list; hidden with it when
 	// there is no folder document.
@@ -340,6 +357,87 @@ void CMerge20FileListBar::Refresh()
 }
 
 /**
+ * @brief Save the panel state (Panel P4).
+ *
+ * The slim flag, the selected filter tab, the search string and
+ * the folded directories go to the OPT_MERGE20_FILELIST_* keys
+ * (OptionsMgr persists them; the frame calls this from
+ * SavePosition, so the values are written when the frame closes
+ * and on the delayed pane-size save after hiding a bar). The
+ * display toggle and the width are NOT saved here: P0 already
+ * persists them (OnBarCheck and the bar's SaveState). The search
+ * string is saved here, not on every keystroke (OnSearchChanged
+ * would write the registry on each typed character); the tab,
+ * the folded set and the slim flag are saved at once when they
+ * change, and again here (the D11 dual-save precedent). Several
+ * frames share these keys: the last frame to close wins, the
+ * same rule as the bar width.
+ */
+void CMerge20FileListBar::SavePanelState()
+{
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions == nullptr)
+		return;
+	pOptions->SaveOption(OPT_MERGE20_FILELIST_SLIM, m_bSlim);
+	pOptions->SaveOption(OPT_MERGE20_FILELIST_TAB, m_nSelectedTab);
+	if (m_wndSearch.GetSafeHwnd() != nullptr)
+	{
+		CString text;
+		m_wndSearch.GetWindowText(text);
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_SEARCH,
+			String(static_cast<LPCTSTR>(text)));
+	}
+	if (m_wndList.GetSafeHwnd() != nullptr)
+	{
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_COLLAPSED,
+			Merge20JoinCollapsedPaths(m_wndList.GetCollapsedPaths()));
+	}
+}
+
+/**
+ * @brief Restore the panel state (Panel P4).
+ *
+ * Reads the OPT_MERGE20_FILELIST_* keys and applies them without
+ * saving. Slim first: it decides which rows LayoutChildren
+ * shows. The tab value is clamped (a stale or hand-edited value
+ * must not select a tab that does not exist). The folded set may
+ * hold stale paths (folders that no longer exist): they only
+ * match rows that exist. Setting the search edit fires EN_CHANGE,
+ * which filters the list; an empty saved string is a no-op.
+ * Called by the frame from OnCreate, before the first
+ * RefreshFileListPanel(), so the first list already shows the
+ * restored state. Every access is guarded: the frame calls this
+ * after the bar is created, but a missing child must not crash.
+ */
+void CMerge20FileListBar::RestorePanelState()
+{
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions == nullptr)
+		return;
+	ApplySlimState(pOptions->GetBool(OPT_MERGE20_FILELIST_SLIM));
+	int tab = pOptions->GetInt(OPT_MERGE20_FILELIST_TAB);
+	if (tab < 0)
+		tab = 0;
+	if (tab > 7)
+		tab = 7;
+	m_nSelectedTab = tab;
+	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
+		m_wndFilterTabs.SetCurSel(tab);
+	if (m_wndList.GetSafeHwnd() != nullptr)
+	{
+		m_wndList.SetActionFilter(tab == 0 ? -1 : tab - 1);
+		m_wndList.SetCollapsedPaths(Merge20SplitCollapsedPaths(
+			pOptions->GetString(OPT_MERGE20_FILELIST_COLLAPSED)));
+	}
+	if (m_wndSearch.GetSafeHwnd() != nullptr)
+	{
+		m_wndSearch.SetWindowText(
+			pOptions->GetString(OPT_MERGE20_FILELIST_SEARCH).c_str());
+	}
+	LayoutChildren();
+}
+
+/**
  * @brief Lay the search row, the filter tabs, the buttons, the
  * count line, the list and the empty label out.
  *
@@ -347,65 +445,114 @@ void CMerge20FileListBar::Refresh()
  * then the list fills the rest; only one of the list and the
  * empty label is visible at a time (see Refresh()), and the empty
  * label fills the whole bar when it shows.
+ *
+ * P4 (slim): in slim mode only the file-name and review columns
+ * show (CMerge20FileListCtrl::ApplySlim), and the search /
+ * filter / batch rows fold away, leaving the slim toggle, the
+ * count line and the list. The slim button stays visible in slim
+ * mode: it is the way back out. Hidden rows take no vertical
+ * space; without a folder document every row is hidden.
  */
 void CMerge20FileListBar::LayoutChildren()
 {
 	CRect rcClient;
 	GetClientRect(&rcClient);
+	const bool bHasDoc = m_pDirDoc != nullptr;
+	const bool bShowTopRows = bHasDoc && !m_bSlim;
 	int y = rcClient.top;
 	if (m_stSearchLabel.GetSafeHwnd() != nullptr)
+		m_stSearchLabel.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
+	if (m_wndSearch.GetSafeHwnd() != nullptr)
+		m_wndSearch.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
+	if (bShowTopRows)
 	{
 		CRect rcLabel = rcClient;
 		rcLabel.top = y;
 		rcLabel.bottom = y + Merge20FileListSearchHeight;
 		rcLabel.right = rcLabel.left + Merge20FileListSearchLabelWidth;
 		m_stSearchLabel.MoveWindow(&rcLabel);
-	}
-	if (m_wndSearch.GetSafeHwnd() != nullptr)
-	{
 		CRect rcSearch = rcClient;
 		rcSearch.top = y + 3;
 		rcSearch.bottom = y + Merge20FileListSearchHeight - 3;
 		rcSearch.left += Merge20FileListSearchLabelWidth + Merge20FileListButtonGap;
 		m_wndSearch.MoveWindow(&rcSearch);
+		y += Merge20FileListSearchHeight;
 	}
-	y += Merge20FileListSearchHeight;
 	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
+		m_wndFilterTabs.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
+	if (bShowTopRows)
 	{
 		CRect rcTabs = rcClient;
 		rcTabs.top = y;
 		rcTabs.bottom = y + Merge20FileListTabsHeight;
 		m_wndFilterTabs.MoveWindow(&rcTabs);
+		y += Merge20FileListTabsHeight;
 	}
-	y += Merge20FileListTabsHeight;
 	if (m_btnBatch.GetSafeHwnd() != nullptr)
-	{
-		CRect rcBatch = rcClient;
-		rcBatch.top = y + 3;
-		rcBatch.bottom = y + Merge20FileListButtonsHeight - 3;
-		rcBatch.right = rcBatch.left + Merge20FileListBatchButtonWidth;
-		m_btnBatch.MoveWindow(&rcBatch);
-	}
+		m_btnBatch.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
 	if (m_btnExpandAll.GetSafeHwnd() != nullptr)
-	{
-		CRect rcExpand = rcClient;
-		rcExpand.top = y + 3;
-		rcExpand.bottom = y + Merge20FileListButtonsHeight - 3;
-		rcExpand.left += Merge20FileListBatchButtonWidth + Merge20FileListButtonGap;
-		rcExpand.right = rcExpand.left + Merge20FileListExpandButtonWidth;
-		m_btnExpandAll.MoveWindow(&rcExpand);
-	}
+		m_btnExpandAll.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
 	if (m_btnCollapseAll.GetSafeHwnd() != nullptr)
+		m_btnCollapseAll.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
+	if (m_btnSlim.GetSafeHwnd() != nullptr)
+		m_btnSlim.ShowWindow(bHasDoc ? SW_SHOW : SW_HIDE);
+	if (bHasDoc)
 	{
-		CRect rcCollapse = rcClient;
-		rcCollapse.top = y + 3;
-		rcCollapse.bottom = y + Merge20FileListButtonsHeight - 3;
-		rcCollapse.left += Merge20FileListBatchButtonWidth + Merge20FileListButtonGap +
-			Merge20FileListExpandButtonWidth + Merge20FileListButtonGap;
-		rcCollapse.right = rcCollapse.left + Merge20FileListCollapseButtonWidth;
-		m_btnCollapseAll.MoveWindow(&rcCollapse);
+		if (m_bSlim)
+		{
+			// Slim mode: only the toggle in the button row, at the left.
+			if (m_btnSlim.GetSafeHwnd() != nullptr)
+			{
+				CRect rcSlim = rcClient;
+				rcSlim.top = y + 3;
+				rcSlim.bottom = y + Merge20FileListButtonsHeight - 3;
+				rcSlim.right = rcSlim.left + Merge20FileListSlimButtonWidth;
+				m_btnSlim.MoveWindow(&rcSlim);
+			}
+		}
+		else
+		{
+			if (m_btnBatch.GetSafeHwnd() != nullptr)
+			{
+				CRect rcBatch = rcClient;
+				rcBatch.top = y + 3;
+				rcBatch.bottom = y + Merge20FileListButtonsHeight - 3;
+				rcBatch.right = rcBatch.left + Merge20FileListBatchButtonWidth;
+				m_btnBatch.MoveWindow(&rcBatch);
+			}
+			if (m_btnExpandAll.GetSafeHwnd() != nullptr)
+			{
+				CRect rcExpand = rcClient;
+				rcExpand.top = y + 3;
+				rcExpand.bottom = y + Merge20FileListButtonsHeight - 3;
+				rcExpand.left += Merge20FileListBatchButtonWidth + Merge20FileListButtonGap;
+				rcExpand.right = rcExpand.left + Merge20FileListExpandButtonWidth;
+				m_btnExpandAll.MoveWindow(&rcExpand);
+			}
+			if (m_btnCollapseAll.GetSafeHwnd() != nullptr)
+			{
+				CRect rcCollapse = rcClient;
+				rcCollapse.top = y + 3;
+				rcCollapse.bottom = y + Merge20FileListButtonsHeight - 3;
+				rcCollapse.left += Merge20FileListBatchButtonWidth + Merge20FileListButtonGap +
+					Merge20FileListExpandButtonWidth + Merge20FileListButtonGap;
+				rcCollapse.right = rcCollapse.left + Merge20FileListCollapseButtonWidth;
+				m_btnCollapseAll.MoveWindow(&rcCollapse);
+			}
+			if (m_btnSlim.GetSafeHwnd() != nullptr)
+			{
+				CRect rcSlim = rcClient;
+				rcSlim.top = y + 3;
+				rcSlim.bottom = y + Merge20FileListButtonsHeight - 3;
+				rcSlim.left += Merge20FileListBatchButtonWidth + Merge20FileListButtonGap +
+					Merge20FileListExpandButtonWidth + Merge20FileListButtonGap +
+					Merge20FileListCollapseButtonWidth + Merge20FileListButtonGap;
+				rcSlim.right = rcSlim.left + Merge20FileListSlimButtonWidth;
+				m_btnSlim.MoveWindow(&rcSlim);
+			}
+		}
+		y += Merge20FileListButtonsHeight;
 	}
-	y += Merge20FileListButtonsHeight;
 	if (m_stCount.GetSafeHwnd() != nullptr)
 	{
 		CRect rcCount = rcClient;
@@ -463,6 +610,12 @@ void CMerge20FileListBar::UpdateResources()
 		String sText = _("Collapse all");
 		m_btnCollapseAll.SetWindowText(sText.c_str());
 	}
+	if (m_btnSlim.GetSafeHwnd() != nullptr)
+	{
+		String sText = _("Slim view");
+		m_btnSlim.SetWindowText(sText.c_str());
+		m_btnSlim.SetCheck(m_bSlim ? BST_CHECKED : BST_UNCHECKED);
+	}
 	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
 		SetupFilterTabs();
 	if (m_stEmpty.GetSafeHwnd() != nullptr)
@@ -519,6 +672,10 @@ void CMerge20FileListBar::SetupFilterTabs()
 /**
  * @brief Search box changed (P2, P-R4): filter the panel on every
  * keystroke (a 1,000-row rebuild is cheap, so no debounce).
+ *
+ * P4: the string itself is saved by SavePanelState (frame
+ * SavePosition), not here: saving on every keystroke would write
+ * the registry on each typed character.
  */
 void CMerge20FileListBar::OnSearchChanged()
 {
@@ -541,6 +698,12 @@ void CMerge20FileListBar::OnFilterTabChanged(NMHDR* /*pNMHDR*/, LRESULT* pResult
 		return;
 	m_nSelectedTab = sel;
 	m_wndList.SetActionFilter(sel == 0 ? -1 : sel - 1);
+	// P4: the selected tab is saved at once (a discrete user
+	// action; the D11 dual-save precedent). SavePanelState saves
+	// it again at SavePosition.
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions != nullptr)
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_TAB, sel);
 }
 
 /**
@@ -635,6 +798,49 @@ void CMerge20FileListBar::OnExpandAll()
 void CMerge20FileListBar::OnCollapseAll()
 {
 	m_wndList.CollapseAll();
+}
+
+/**
+ * @brief Slim toggle button (Panel P4, design section 12.4).
+ *
+ * BS_AUTOCHECKBOX flips its own check before BN_CLICKED, so the
+ * handler reads the check and applies it.
+ */
+void CMerge20FileListBar::OnSlimToggle()
+{
+	if (m_btnSlim.GetSafeHwnd() == nullptr)
+		return;
+	SetSlim(m_btnSlim.GetCheck() != 0);
+}
+
+/**
+ * @brief Set the slim display and save the flag (Panel P4).
+ */
+void CMerge20FileListBar::SetSlim(bool slim)
+{
+	ApplySlimState(slim);
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions != nullptr)
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_SLIM, m_bSlim);
+}
+
+/**
+ * @brief Apply the slim display without saving (Panel P4).
+ *
+ * The button check, the list columns (only file name and review
+ * state stay) and the folded-away top rows. In slim mode the
+ * output column is hidden, so the output flag can only be
+ * toggled through the review state (DONE turns it back on, the
+ * S2 linkage) or by leaving slim mode.
+ */
+void CMerge20FileListBar::ApplySlimState(bool slim)
+{
+	m_bSlim = slim;
+	if (m_btnSlim.GetSafeHwnd() != nullptr)
+		m_btnSlim.SetCheck(slim ? BST_CHECKED : BST_UNCHECKED);
+	if (m_wndList.GetSafeHwnd() != nullptr)
+		m_wndList.ApplySlim(slim);
+	LayoutChildren();
 }
 
 /**
