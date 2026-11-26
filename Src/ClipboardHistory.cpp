@@ -177,7 +177,7 @@ namespace ClipboardHistory
 					time(&item.timestamp);
 				item.description = FormatDescription(item.timestamp);
 
-				String text = i == 0 ? GetClipboardText() : _("32-bit WinMerge does not support Clipboard Compare");
+				String text = i == 0 ? GetClipboardText() : _("32-bit WizMerge does not support Clipboard Compare");
 				item.pTextTempFile = CreateTempTextFile(text);
 				item.previewText = text;
 			}
