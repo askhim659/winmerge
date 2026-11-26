@@ -38,6 +38,7 @@
 #include "Merge20/Merge20FileListCtrl.h"
 
 class CDirDoc;
+class DIFFITEM;
 
 class CMerge20FileListBar : public CSizingControlBarCF
 {
