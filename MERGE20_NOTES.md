@@ -3899,7 +3899,7 @@ FileFiltersDlg.cpp:520 と Merge.rc:4921 が "WinMerge" のままであること
   旧 "Merge20Exclude.sct WinMerge Plugin Options" は存在しない。
   フィルタテンプレートの "WinMerge" 版 msgid（訳付き）も存在する。
 - 記録のみのコミット後の最終 head（`f6d7950b3a5aa2e1e557631e5b7110a7b6be3b0d`）での CI 実行 45746328162：**結論 success**。ジョブ 139663172908（`build`）：completed／success。成果物 2 件：`WinMerge-x64.zip`（ID 15084195816、26,302,693 バイト）と `WinMerge-x64-Setup-x64.exe`（ID 15084160838、39,741,525 バイト）、いずれも 2027-02-24T03:02:27Z 失効。コードは最終 head と同一のため、GoogleTest・番兵・出荷 .po の内容は上記の実行 45744972468 と同じである（本コミットは記録のみ）。
-- リベース後の最終 head での CI 実行は（追記予定）。
+- リベース後の最終 head（`62c64210442afbb60eed93c9a6a1f56358a66f40`）での CI 実行 45755564247：**結論 success**。ジョブ 139693266827（`build`）：completed／success。GoogleTest：`[  PASSED  ] 627 tests.`（D3/D4 の新規テスト 19 件を含む。リベース前は 608 件）。ジョブログの "FAILED" は 0 件。番兵チェック（`Merge20 strings present in the bundled Japanese.po.`）も通過。成果物 2 件：`WinMerge-x64.zip`（ID 15087494108、26,317,841 バイト）と `WinMerge-x64-Setup-x64.exe`（ID 15088081570、39,756,286 バイト）、いずれも 2027-02-24T04:29:50Z 失効。成果物 ZIP の直接確認：外側 ZIP の中身は `wizmerge-2.16.60-bbc9235-x64-exe.zip` 1 件。内側の `WizMerge/Languages/Japanese.po` は 181,716 バイト・2,101 項目、SHA256 `1add635f35e608efb12397d0ceb96cf2769ae5e8f64022c8443d75de6eed72fe`。変更した 5 件の "WizMerge" 版 msgid と .sct タイトル 8 件はすべて訳付きで存在し、旧 "WinMerge" 版は存在しない。D3/D4 の 17 項目（"No unreviewed files" 等）も存在する。
 
 ### 29.6 Windows 実機で確認してもらう項目（未検証）
 
