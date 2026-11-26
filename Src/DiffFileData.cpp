@@ -127,7 +127,7 @@ void DiffFileData::Reset()
  */
 bool DiffFileData::Filepath_Transform(int target, bool bForceUTF8,
 	const FileTextEncoding& encoding, const String& filepath, String& filepathTransformed,
-	const String& filteredFilenames, PrediffingInfo& infoPrediffer)
+	const String& filteredFilenames, PrediffingInfo& infoPrediffer, int * pExcludedLines)
 {
 	// third step : prediff (plugins)
 	bool bMayOverwrite =  // temp variable set each time it is used
@@ -140,7 +140,9 @@ bool DiffFileData::Filepath_Transform(int target, bool bForceUTF8,
 	PluginPipelineContext pipelineContext;
 	pipelineContext.filteredFilenames = filteredFilenames;
 	pipelineContext.variables = { filepath };
-	if (!infoPrediffer.Prediffing(target, filepathTransformed, bMayOverwrite, pipelineContext))
+	// Merge20 (S0-F1): the prediffer-blanked line count for this side
+	// is reported through pExcludedLines when the caller wants it.
+	if (!infoPrediffer.Prediffing(target, filepathTransformed, bMayOverwrite, pipelineContext, pExcludedLines))
 		return false;
 
 	if ((encoding.m_unicoding && encoding.m_unicoding != ucr::UTF8) || bForceUTF8)
