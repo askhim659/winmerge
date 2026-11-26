@@ -4122,3 +4122,83 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 ### 注意
 - このアカウントの無料プラン上限は、上限に達した時点での作業を止めること。中途の未コミット作業を残さないことを、各子エージェントの指示に含めること。
 - 【Wiz】→【Wiz】Merge のユーザー確認はまだ取れていない。確認が取れるまで【Wiz】のまま進め、後で一括置換できる形にすること。
+
+## 33. Phase 4 D7（Grep 横断検索）— ブランチ `merge20/phase4-d7`
+
+- PR: #29（https://github.com/askhim659/winmerge/pull/29）。最終 head（コード）`66f69f8ddb8b91c7f5488e41164e6de1d0c26f51`。マージは本記録時点では未実施（コーディネーター判断待ち）。
+- 2026-11-26、master a95db0f0（§32 追加）へリベースした。旧ブランチ（base 8964c14d）では NOTES 末尾への両方追加で PR が mergeable: False になっていたため。コード内容は同一でコミット SHA のみ変わっている（本節の表は新 SHA に置き換え済み）。リベース前の head は ff774529a594b5fd4649eb5465f7778ed4cc077d。
+- 設計書 §5.2 D7・§4.3・§4.1、仕様書 §3 (4/4)・§4(g)。受け入れ条件：OLD／NEW 全ファイル横断検索、ヒットから該当差分へジャンプ、1000 ファイル規模でも UI が固まらない。
+
+### 33.1 変更一覧（1 ファイル 1 コミット、21 件）
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| 9f841b0d | Src/Merge20/Merge20Grep.h | 純粋モジュールヘッダ（ヒット記録・部分一致・抜粋・履歴・上限 80 件） |
+| fb570ff8 | Src/Merge20/Merge20Grep.cpp | 純粋モジュール実装 |
+| 4fba40a2 | Testing/GoogleTest/Merge20/Merge20Grep_test.cpp | 単体テスト 17 件 |
+| 830a0c48 | Src/Merge.vcxproj | Grep.cpp／.h 登録（pch.h グループ） |
+| d713c526 | Src/Merge.vcxproj.filters | 同上 |
+| 87cfaefc | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Grep.cpp＋テスト登録 |
+| 7fdd36e7 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上 |
+| 54ea18c6 | Src/resource.h | IDD 298、IDC 1778〜1784、コマンド 38956、`_APS_NEXT_*` 更新（299／1785／38957） |
+| 935383dd | Src/Merge.rc | Ctrl+Shift+F 加速子＋`IDD_MERGE20_GREP` 空テンプレート（640x420、CAPTION "Cross-File Search"） |
+| e534afb9 | Src/Merge20/Merge20GrepDlg.h | モーダルレスダイアログヘッダ |
+| 66e5c657 | Src/Merge20/Merge20Grep.cpp | **no-op（誤操作。内容同一のためツリー変更なし。後続 f465340d が実体）** |
+| f465340d | Src/Merge20/Merge20Grep.cpp | ダイアログ＋ワーカー実装（16,987 バイト） |
+| 3090c328 | Src/Merge.vcxproj | GrepDlg.cpp／.h 登録（StdAfx.h グループの既定エントリ） |
+| 01af066d | Src/Merge.vcxproj.filters | 同上 |
+| afb88636 | Src/Merge20/Merge20GrepDlg.cpp | 数値→文字列を既存の `strutils::to_str` に統一 |
+| c5ce86fc | Src/DirView.h | Grep ダイアログのメンバと OnMerge20Grep／一覧構築／ジャンプの宣言を追加 |
+| 05d83f00 | Src/DirView.cpp | 起動・一覧構築・ヒットからのジャンプ（GotoLine＋SelectDiff）を実装 |
+| 47a1cddc | Translations/WinMerge/Japanese.po | 新規 `_()` 文字列 11 件の日本語訳を追加（【Wiz】付き） |
+| b5eccaef | Src/Merge20/Merge20GrepDlg.h | CI 修正（C3668）：OnDestroy の `override` を外し afx_msg ハンドラ宣言に変更 |
+| c6298e67 | Src/Merge20/Merge20GrepDlg.cpp | CI 修正（C2589）：`std::max` → `(std::max)(...)`（既存コードの慣例） |
+| 66f69f8d | Src/DirView.cpp | CI 修正（C2589 予防）：`std::min`／`std::max` → `(std::min)(...)`／`(std::max)(...)` |
+
+### 33.2 設計判断（T-4-9 ほか。判断理由付き）
+
+- **T-4-9（対象テキスト取得方法）の結論**：未開封ファイルのテキストはワーカー側でディスクから直接読む（`codepage_detect::Guess(path, OPT_CP_DETECT)`＋`UniMemFile`＋`ReadString` ループ。`CDiffTextBuffer::LoadFromFile` の手順から unpacker／prediffer を除いたもの）。理由：CDiffContext は比較結果（DIFFITEM）のみ持ちテキストキャッシュなし。CMergeDoc をファイルごとに開くのはビュー／文書生成を伴いバックグラウンド不可。**帰結（仕様との意図的差分）**：Grep はディスク上の生テキストを検索する（unpacker／prediffer 処理後のテキストではない）。バイナリはスキップ（シングルバイト符号時の先頭 64KB 内 NUL 検査。UTF-16 は NUL を含むため対象外）。
+- **バックグラウンド走査**：DirScan の Poco ThreadPool 前例にならい `Poco::ThreadPool(1,1)`＋単一ワーカー。単一にした理由：ヒット順序をフォルダ一覧順に保つため（HTML との一致）と 80 件カットオフを正確にするため。進捗は `PostMessage`（`WM_MERGE20_GREP_PROGRESS = WM_USER + 100`）。ワーカーは `CoInitializeEx` を先に呼ぶ（Guess 背後の MLang 検出器が COM ベース）。COM 初期化失敗時は Guess が既定コードページへフォールバックし検索は継続する。
+- **差分インデックスは走査中は計算しない**。クリック時に開いた CMergeDoc の public メンバ `m_diffList.LineToDiff(apparentLine)`（apparent 行は `m_ptBuf[pane]->ComputeApparentLine(realLine)`）で解決。`GotoLine(realLine, bRealLine=true, pane)` が実→apparent 変換を内包。順序は SelectDiff → GotoLine（該当行を中央に）。ヒット行が共通領域・同一ファイル内の場合は LineToDiff が -1 を返し「行ジャンプのみ、差分選択なし」になる。
+- **一覧構築はフォルダツリー全体を対象**：`GetFirstDiffPosition()`＋`GetNextDiffRefPosition()` の平坦な深さ優先走査。ディレクトリをスキップ、片側のみ存在するファイルは存在する側のみ（不在側は空文字）。隠し／フィルタ対象ファイルも含む（設計：表示行だけでなく OLD／NEW「全ファイル」）。
+- **ジャンプの安全性**：フィルタで隠れたファイルは一覧行がないため、説明付きメッセージボックスでジャンプを拒否する（誤ったファイルを開かない）。開いた比較がヒットのファイルであることをパス照合で確認してから移動する。ヒット行はバッファ行数でクランプする（走査とクリックの間にファイルが変わった場合）。
+- **起動経路**：Ctrl+Shift+F（`IDR_MAINFRAME ACCELERATORS` で空きを確認済み）とフォルダ比較の右クリックメニュー「【Wiz】横断検索…」。コマンドはフォルダ比較（CDirView）でのみ処理する。IDirDoc に DirView アクセサがないため**ファイル比較からの起動は D7 の範囲外**。
+- **所有と寿命**：ダイアログは CDirView のメンバ（D6 の `CMergeEditFrame::m_wndSniper` パターンをフォルダビューに適用）。初回のみ Create、以後は表示／非表示切替。OnCancel／Esc は隠すだけ。CDirView::OnDestroy で CloseGrep（StopScan＋joinAll）してからウィンドウ破棄。
+- **検索文字列**：§4.1 の `grepText`／`OPT_MERGE20_GREP_HISTORY`（D0 のキー）に保存（最新 10 件、改行区切り）。検索結果そのものはセッションに保存しない（メモリ内のみ）。
+- **.po**：新規 msgid 11 件を追加。`Middle` は既存 msgid（訳「中央」、IDS_COLHDR_MIDDLE と同じ語彙）を再利用し新規作成しなかった。再利用 msgid（訳追加なし）：`Search`、`Stop`、`Close`、`File`、`Line`、`Text`、`Old`、`New side`。
+- **CI 修正の教訓**：(1) `CWnd::OnDestroy` は virtual ではない（SniperDlg も OnDestroy を宣言していない）。`override` を付けると C3668 になる。メッセージ マップ ハンドラは `afx_msg void OnDestroy();` と宣言すること。(2) Windows の `min`／`max` マクロと衝突するため、`std::min`／`std::max` は既存コードの慣例どおり `(std::min)(...)`／`(std::max)(...)` と書くこと。なお DirView.cpp の `std::min`／`std::max` は 1 回目の CI ではエラーにならなかったが、TU によってマクロ状態が異なるため予防的に括弧付きに統一した。
+
+### 33.3 CI 結果
+
+- 1 回目：実行 45771809109（head 586c0d8e、PR #29 作成時）→ **failure**。ジョブ 139745975582 "build" の "Build failure" ステップ。全文ログで原因特定：C3668 ×14（OnDestroy の override）、C2589 ×8（`std::max` の 4 箇所 ×2 回）。上記 3 件の修正コミットで対応。
+- 2 回目：実行 45773892169（リベース前 head ff774529。コード内容はリベース後と同一）→ **success**（完了 2026-11-26T07:24:43Z）。ジョブ 139752791350 "build" success。全文ログ（47,368 行）で確認：`error C*`／`error LNK*`／`error MSB*` は 0 件、`[  PASSED  ] 664 tests.`（D6 時 647 件＋新規 Merge20Grep 17 件＝664 件。`[  FAILED  ]` 行は 0 件。ログ中の "FAILED" は `.po` の `IDS_*_FAILED` コメントのみ）、`.po` チェック行 `Merge20 strings present in the bundled Japanese.po.` を確認。
+- リベース後の最終 head（本節の記録コミット込み）については CI を再検証すること（実行の conclusion、GoogleTest、成果物）。
+- 成果物 2 件（API 確認、未失効、失効日 2027-02-24T07:14:53Z）：WinMerge-x64.zip（ID 15095861711、26,351,360 バイト）、WinMerge-x64-Setup-x64.exe（ID 15095966596、39,811,973 バイト）。
+
+### 33.4 検証ゲート (a)〜(d)＋GoogleTest
+
+- (a) 仕様・設計書の条項：OLD／NEW 全ファイル横断検索（○、一覧構築で全ツリー走査）、ヒット＝（相対パス、ペイン、実ファイル行、差分インデックス、抜粋）（○、差分インデックスはクリック時に解決する点のみ設計判断として記録）、上限 80 件で打ち切り＋表示（○）、ヒットから該当差分へジャンプ（○、GotoLine＋SelectDiff）、モーダルレスでファイル比較を開いても閉じない（○、CDirView 所有のモーダルレスダイアログ）、Ctrl+Shift+F 起動（○）、検索文字列の保存（○）、検索結果はセッションに保存しない（○）。**仕様との意図的差分**：対象テキストは unpacker／prediffer 適用後のテキストではなくディスク生テキスト（T-4-9、§33.2 参照）。ファイル比較からの起動は対象外（§33.2 参照）。
+- (b) 利用可否：コード読解と GoogleTest で確認。**Windows 実機での操作の流れ（検索→結果一覧→クリック→該当差分へジャンプ、走査中の UI 応答）は未検証**（§33.5 のチェックリストで実施すること）。
+- (c) 表示の正当性：新規 `_()` 文字列は全て .po に訳あり（CI の .po チェックも通過）。**日本語 UI での実際の表示、レイアウト崩れ・文字の見切れは未検証**（§33.5 で実施すること）。
+- (d) 回帰：GoogleTest 664 件全パス（既存 647 件を含む）で確認。既存のフォルダ比較・ファイル比較の実機での動作は未検証（§33.5 で実施すること）。
+- GoogleTest：Merge20Grep 17 件全パス（FindInLine 5、MakeExcerpt 3、ParseHistory 3、FormatHistory 1、PushHistory 4、ReachedLimit 1）。純粋モジュールは g++ ハーネスでも全チェック合格（作業ファイル `~/workspace/d7-work/harness/`）。ダイアログ／ワーカー／ジャンプ経路（MFC 依存）は GoogleTest の対象外のため実機確認が必要。
+
+### 33.5 Windows 実機確認チェックリスト（手順付き。未検証）
+
+成果物 WinMerge-x64.zip（ID 15095861711）または WinMerge-x64-Setup-x64.exe（ID 15095966596）を入手し、以下を順に確認すること。
+
+1. **起動**：フォルダ比較を開く。フォルダ比較ウィンドウで Ctrl+Shift+F を押す→「【Wiz】横断検索」ダイアログが開くこと。右クリックメニューに「【Wiz】横断検索…」があり、そこからも開くこと。タイトル・ラベル・ボタンが日本語表示になること。
+2. **検索と一覧**：検索文字列（例：日本語を含む文字列）を入力し「検索」を押す→結果一覧に「ファイル」「ペイン」「行」「テキスト」の 4 列が表示され、ヒットがフォルダ一覧順に並ぶこと。ステータスに「【Wiz】○件ヒット」と表示されること。該当なしの場合は「【Wiz】該当なし」と表示されること。
+3. **ジャンプ**：結果行をシングルクリックする→該当ファイルのファイル比較が開き、ヒット行が中央付近に表示され、該当差分が選択されていること。ヒット行が共通領域の場合は行ジャンプのみで差分選択なしになること。ジャンプ後も Grep ダイアログが開いたまま残っていること（モーダルレス）。
+4. **80 件上限**：多数ヒットする文字列で検索する→80 件で一覧が止まり、ステータスに「【Wiz】上限に達しました（80件）」と表示されること。
+5. **走査中の UI 応答**：ファイル数の多いフォルダ（100〜1000 ファイル規模）で検索する→走査中にフォルダ比較ウィンドウが操作できること（固まらないこと）。「停止」ボタンで走査を止められること（ステータス「【Wiz】検索を停止しました」）。
+6. **履歴**：検索後、検索コンボのドロップダウンを開く→過去の検索文字列が最新順に表示されること（最大 10 件）。再起動後も履歴が残ること。
+7. **隠しファイルのジャンプ拒否**：フィルタで隠れているファイルのヒットをクリックする→「【Wiz】現在のフィルタで隠れているため開けません。…」のメッセージが出て、誤ったファイルが開かないこと。
+8. **回帰**：フォルダ比較（表示・ソート・フィルタ・ダブルクリックで開く）とファイル比較（差分表示・編集・マージ）が従来どおり動くこと。既存の Merge20 機能（巡回・フォーカス・スナイパー・学習・セッション保存）に影響がないこと。
+9. **レイアウト**：ダイアログをリサイズする→検索コンボ・結果一覧・ボタンが追従し、文字の見切れ・重なりがないこと。高 DPI 環境でも表示が崩れないこと。
+
+### 33.6 D8 への引き継ぎと残課題
+
+- D6 からの残課題（§31.6）は D7 では扱っていない。引き続き残課題。
+- D7 固有の残課題：(1) ファイル比較からの Grep 起動（IDirDoc に DirView アクセサがないため未対応。対応する場合は DirDoc／MainFrm 側の設計が必要）。(2) Grep は unpacker／prediffer 適用後のテキストではなくディスク生テキストを検索する（仕様との意図的差分。unpacker 適用後のテキストで検索すべきという判断になれば、ワーカー側の読み込み経路の再設計が必要）。(3) 3-way の中間ペインは Grep の対象に含まれる（`paths` は 3 要素、ペインラベルは既存訳「中央」を再利用）が、実機での 3-way 動作は未確認。(4) ダイアログの検索対象に「差分のあるファイルのみ」等の絞り込みはない（設計どおり全ファイル対象）。(5) `3d824036` は no-op コミット（履歴に残る。revert 不要）。
+- 次スライス（D8）の着手時は、master の最新 head と NOTES の次節番号（§34 の見込み）を再確認すること。

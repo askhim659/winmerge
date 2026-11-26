@@ -11319,3 +11319,58 @@ msgstr "【Wiz】新"
 msgid "Merged result"
 msgstr "【Wiz】マージ後"
 
+#. Merge20 (D7): Grep dialog title (CMerge20GrepDlg) and .rc caption (IDD_MERGE20_GREP)
+#: Src/Merge20/Merge20GrepDlg.cpp
+#: Src/Merge.rc
+msgid "Cross-File Search"
+msgstr "【Wiz】横断検索"
+
+#. Merge20 (D7): Grep context-menu item (CDirView)
+#: Src/DirView.cpp
+msgid "Cross-File Search..."
+msgstr "【Wiz】横断検索…"
+
+#. Merge20 (D7): Grep search-box label (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "Search Text"
+msgstr "【Wiz】検索文字列"
+
+#. Merge20 (D7): Grep result-list pane column (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "Pane"
+msgstr "【Wiz】ペイン"
+
+#. Merge20 (D7): Grep status, no hits (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "No matches"
+msgstr "【Wiz】該当なし"
+
+#. Merge20 (D7): Grep status while scanning (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "Searching... %1 hits (%2 of %3 files)"
+msgstr "【Wiz】検索中… %1件ヒット（%2/%3ファイル）"
+
+#. Merge20 (D7): Grep status, scan stopped by the user (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "Search stopped"
+msgstr "【Wiz】検索を停止しました"
+
+#. Merge20 (D7): Grep status, 80-hit limit reached (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "Limit reached (80 items)"
+msgstr "【Wiz】上限に達しました（80件）"
+
+#. Merge20 (D7): Grep status, hit count (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "%1 hits"
+msgstr "【Wiz】%1件ヒット"
+
+#. Merge20 (D7): Grep status, empty query (CMerge20GrepDlg)
+#: Src/Merge20/Merge20GrepDlg.cpp
+msgid "Enter a search string."
+msgstr "【Wiz】検索文字列を入力してください。"
+
+#. Merge20 (D7): Grep jump refused, file hidden by the filter (CDirView)
+#: Src/DirView.cpp
+msgid "Cannot open the file because it is hidden by the current filter."
+msgstr "【Wiz】現在のフィルタで隠れているため開けません。フィルタを解除してから開いてください。"
