@@ -37,6 +37,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <vector>
 #include "DiffList.h"
 #include "Merge20Types.h"
@@ -78,4 +79,32 @@ struct Merge20BulkDiffResult
  * @return Diff ranges in file order plus whether the simple fallback ran.
  */
 Merge20BulkDiffResult Merge20BulkDiff(const std::vector<String>& oldLines, const std::vector<String>& newLines,
+	const Merge20BulkDiffOptions& options);
+
+/** @brief One line reader for the simple-compare check: returns the raw line text, or false when the line does not exist. */
+using Merge20BulkLineReader = std::function<bool(int line, String& text)>;
+
+/**
+ * @brief True when the simple (positional) fallback would run for two line sequences (H-SIMPLE).
+ * @param [in] getOldLine Reader for old-side lines (0-based).
+ * @param [in] oldCount Old-side line count.
+ * @param [in] getNewLine Reader for new-side lines (0-based).
+ * @param [in] newCount New-side line count.
+ * @param [in] options Compare options (whitespace / case / threshold; blank lines do not affect the trim).
+ * @return True when the trimmed-middle line counts satisfy n*m > threshold (HTML `lcs`, threshold 0 disables).
+ *
+ * The trim is the HTML `diffFast` one: the common prefix/suffix on
+ * normalized lines is stripped first, so files that are huge but
+ * differ only in a small middle do NOT trigger the fallback. The
+ * readers are only asked for prefix/suffix lines (the scan stops
+ * at the first mismatch), so an opened merge doc can answer from
+ * its text buffers without copying all lines into vectors. This
+ * is the single place that decides the threshold, shared by the
+ * bulk differ (below) and the opened-file path
+ * (Merge20ClassifyIsSimpleCompare): both must agree, or the
+ * [Simple] badge would flicker when a bulk-classified file is
+ * opened.
+ */
+bool Merge20BulkIsSimple(const Merge20BulkLineReader& getOldLine, int oldCount,
+	const Merge20BulkLineReader& getNewLine, int newCount,
 	const Merge20BulkDiffOptions& options);

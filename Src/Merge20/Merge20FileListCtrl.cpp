@@ -209,6 +209,21 @@ void CMerge20FileListCtrl::Refresh()
 				const bool collapsed = m_collapsed.count(relPath) != 0;
 				row.fileName = (collapsed ? _T("\x25B8 ") : _T("\x25BE ")) + row.fileName;
 			}
+			// H-SIMPLE (coverage H-05/H-28): the [Simple] badge next
+			// to the file name in the compare window's file list, as
+			// the HTML tool shows it next to the file name. The
+			// folder list shows the same badge in the Summary column
+			// (D10, display-time prefix); the panel has no Summary
+			// column, so the badge goes on the file name instead.
+			// The msgid is the D10 one ("Simple" -> "簡易"); no new
+			// string, no [Wiz] mark on the badge itself (same rule
+			// as the folder list). Directories never carry it, and
+			// one-sided files never get it either (their
+			// simpleCompare stays false in both the bulk and the
+			// opened path). Display-only: the cached row text is
+			// changed, the S6 wrapper value (and the CSV) is not.
+			if (!row.isDirectory && state.simpleCompare)
+				row.fileName += String(_T(" [")) + _("Simple") + _T("]");
 			m_allRows.push_back(std::move(row));
 		}
 	}

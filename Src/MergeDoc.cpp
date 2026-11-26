@@ -502,6 +502,28 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 
 	ClearWordDiffCache();
 
+	// Merge20 (H-SIMPLE, coverage H-05/H-28): the simple-compare
+	// options and the huge-file decision for this 2-way text
+	// compare. The decision is the HTML `lcs` definition
+	// (trimmed-middle n*m > OPT_MERGE20_SIMPLE_THRESHOLD, default
+	// 2,200,000), shared with the bulk path through
+	// Merge20BulkIsSimple / Merge20ClassifyIsSimpleCompare, so a
+	// file the bulk classifier marked [Simple] keeps the badge
+	// after it is opened. Computed here, before the diff passes,
+	// so the two heavy post-passes below can be skipped for huge
+	// files, and reused by the classification hook at the end of
+	// Rescan. Binary files are excluded: the caller may already
+	// know (bBinary), and the hook below re-checks after
+	// detection. The opened diff itself stays the full diffutils
+	// diff; the engine is not replaced (see MERGE20_NOTES.md §45).
+	Merge20BulkDiffOptions merge20BulkOptions;
+	merge20BulkOptions.ignoreWhitespace = GetOptionsMgr()->GetBool(OPT_CMP_IGNORE_WHITESPACE);
+	merge20BulkOptions.ignoreCase = GetOptionsMgr()->GetBool(OPT_CMP_IGNORE_CASE);
+	merge20BulkOptions.ignoreBlankLines = GetOptionsMgr()->GetBool(OPT_CMP_IGNORE_BLANKLINES);
+	merge20BulkOptions.simpleThreshold = GetOptionsMgr()->GetInt(OPT_MERGE20_SIMPLE_THRESHOLD);
+	const bool merge20HugeFile = !bBinary && m_nBuffers == 2 &&
+		Merge20ClassifyIsSimpleCompare(*this, merge20BulkOptions);
+
 	m_diffWrapper.SetFilterList(
 		GetOptionsMgr()->GetBool(OPT_LINEFILTER_ENABLED) ?
 		theApp.m_pLineFilters->MakeFilterList() : nullptr);
@@ -704,7 +726,21 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 		if (GetOptionsMgr()->GetBool(OPT_CMP_ALIGN_SIMILAR_LINES))
 		{
 			if (m_nBuffers < 3)
-				AdjustDiffBlocks();
+			{
+				// Merge20 (H-SIMPLE): skip the similar-line alignment
+				// for huge files. It walks every changed block doing
+				// string-similarity work, which is the most expensive
+				// post-pass after diffutils itself on a huge file.
+				// Trade-off, recorded in MERGE20_NOTES.md §45:
+				// similar lines inside a changed block are no longer
+				// aligned for huge files (the same display as with
+				// the option off), and the classification counts for
+				// the file come from the coarser blocks. 3-way
+				// compares are untouched (the simple threshold is
+				// defined for 2-way only).
+				if (!merge20HugeFile)
+					AdjustDiffBlocks();
+			}
 			else
 				AdjustDiffBlocks3way();
 		}
@@ -720,7 +756,12 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 			FlagTrivialLines();
 		
 		// Apply flags to lines that moved, to differentiate from appeared/disappeared lines
-		if (m_diffWrapper.GetDetectMovedBlocks())
+		// Merge20 (H-SIMPLE): skip the moved-block detection for huge
+		// files as well. It compares diff blocks against each other,
+		// which is quadratic in the number of blocks; for a huge file
+		// the moved markers are dropped (the same display as with
+		// moved-block detection off). See MERGE20_NOTES.md §45.
+		if (m_diffWrapper.GetDetectMovedBlocks() && !merge20HugeFile)
 			FlagMovedLines();
 
 		// Hide identical lines if diff-context is not 'All'
@@ -763,11 +804,17 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 	// map onto OLD/NEW line counts, and binary compares have no
 	// meaningful diff list. Reclassifying on every rescan also keeps
 	// the cached result fresh after edits.
+	// Merge20 (H-SIMPLE): merge20HugeFile (computed before the diff
+	// passes) is passed through, so the [Simple] badge the bulk
+	// classifier gave the file survives opening: the classification
+	// itself is recomputed from the full diffutils diff list, only
+	// the flag records the file's size class.
 	if (nResult == RESCAN_OK && !bBinary && m_nBuffers == 2 &&
 		m_pDirDoc != nullptr && m_pDirDoc->HasDiffs())
 	{
 		Merge20FileState state = Merge20ClassifyFromMergeDoc(*this,
-			Merge20ParseRiskKeywords(GetOptionsMgr()->GetString(OPT_MERGE20_RISK_KEYWORDS)));
+			Merge20ParseRiskKeywords(GetOptionsMgr()->GetString(OPT_MERGE20_RISK_KEYWORDS)),
+			merge20HugeFile);
 		m_pDirDoc->SetMerge20Classification(m_filePaths, state);
 	}
 

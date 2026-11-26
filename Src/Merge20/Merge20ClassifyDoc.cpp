@@ -50,6 +50,24 @@ namespace
 		return buf.GetLine(buf.ComputeApparentLine(realLine), text);
 	}
 
+	// Count real (non-ghost) lines of one buffer (H-SIMPLE).
+	// GetLineCount() counts apparent lines (ghost lines included),
+	// so ghost lines are skipped: at the Rescan hook ghosts are
+	// present (PrimeTextBuffers added them), before the diff passes
+	// they are not (prepareForRescan removed them) — either way the
+	// count is the file's real line count.
+	int CountRealLines(const CDiffTextBuffer& buf)
+	{
+		int count = 0;
+		const int apparent = buf.GetLineCount();
+		for (int i = 0; i < apparent; ++i)
+		{
+			if ((buf.GetLineFlags(i) & LF_GHOST) == 0)
+				++count;
+		}
+		return count;
+	}
+
 	// One line reader, by pane (0 = old, 1 = new) and real line number.
 	// The merge-doc path reads from the text buffers, the bulk path
 	// from the in-memory line vectors (D10); the builder below only
@@ -213,7 +231,25 @@ namespace
 
 } // namespace
 
-Merge20FileState Merge20ClassifyFromMergeDoc(const CMergeDoc& doc, const std::vector<String>& riskKeywords)
+bool Merge20ClassifyIsSimpleCompare(const CMergeDoc& doc, const Merge20BulkDiffOptions& options)
+{
+	if (doc.m_nBuffers != 2)
+		return false;
+	const CDiffTextBuffer& oldBuf = *doc.m_ptBuf[0];
+	const CDiffTextBuffer& newBuf = *doc.m_ptBuf[1];
+	const int oldCount = CountRealLines(oldBuf);
+	const int newCount = CountRealLines(newBuf);
+	const Merge20BulkLineReader getOldLine = [&](int line, String& text) {
+		return GetBufferLine(oldBuf, line, text);
+	};
+	const Merge20BulkLineReader getNewLine = [&](int line, String& text) {
+		return GetBufferLine(newBuf, line, text);
+	};
+	return Merge20BulkIsSimple(getOldLine, oldCount, getNewLine, newCount, options);
+}
+
+Merge20FileState Merge20ClassifyFromMergeDoc(const CMergeDoc& doc, const std::vector<String>& riskKeywords,
+	bool simpleCompare)
 {
 	const CDiffTextBuffer& oldBuf = *doc.m_ptBuf[0];
 	const CDiffTextBuffer& newBuf = *doc.m_ptBuf[1];
@@ -235,6 +271,12 @@ Merge20FileState Merge20ClassifyFromMergeDoc(const CMergeDoc& doc, const std::ve
 		return pane == 0 ? GetBufferLine(oldBuf, realLine, text) : GetBufferLine(newBuf, realLine, text);
 	};
 	Merge20FileState state = ClassifyBuiltLines(BuildDiffLines(ranges, getLine), riskKeywords);
+	// H-SIMPLE: the caller computed whether this file exceeds the
+	// simple-compare threshold. Stored as-is, so the [Simple] badge
+	// the bulk classifier gave the file survives opening (the
+	// classification above still comes from the full diffutils
+	// diff list; only the flag records the file's size class).
+	state.simpleCompare = simpleCompare;
 	state.leftEncoding = oldBuf.getEncoding().GetName();
 	state.rightEncoding = newBuf.getEncoding().GetName();
 	return state;
