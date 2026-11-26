@@ -11087,7 +11087,7 @@ msgstr "学習データをクリアしました"
 #. Merge20 (D1): dedicated compare mode menu item (Merge.rc) and dedicated bar caption
 #: Src/Merge.rc
 msgid "Dedicated Compare Mode"
-msgstr "比較専用モード"
+msgstr "【Wiz】比較専用モード"
 
 #. Merge20 (D2): dedicated bar Prev button (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
