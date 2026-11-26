@@ -686,6 +686,68 @@ void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
 	m_pCtxt->ApplyMerge20ReviewState(di, state);
 }
 
+namespace
+{
+/**
+ * @brief Merge20 (Phase 4 D2): find the folder-compare item for a merge
+ * doc's file paths, with the swapped-paths fallback (same lookup as
+ * CDirDoc::UpdateChangedItem and SetMerge20Classification). Returns
+ * nullptr when the paths belong to no item (e.g. a file compare opened
+ * standalone, or a renamed item).
+ */
+DIFFITEM* FindMerge20ItemFromPaths(const CDiffContext& ctxt, const PathContext& paths)
+{
+	DIFFITEM* pos = FindItemFromPaths(ctxt, paths);
+	if (pos == nullptr && paths.GetSize() >= 2)
+	{
+		PathContext pathsSwapped(paths);
+		std::swap(pathsSwapped[0], pathsSwapped[pathsSwapped.GetSize() - 1]);
+		pos = FindItemFromPaths(ctxt, pathsSwapped);
+	}
+	return pos;
+}
+} // namespace
+
+/**
+ * @brief Merge20 (Phase 4 D2, IDirDoc): review state of the file a merge
+ * doc shows, found by the merge doc's paths.
+ * @param [in] paths Merge doc's file paths.
+ * @return Review state, TODO when the item has no entry yet, when the
+ * paths belong to no item, or when there is no compare context yet.
+ */
+ReviewState CDirDoc::GetMerge20ReviewState(const PathContext& paths) const
+{
+	if (m_pCtxt == nullptr)
+		return ReviewState::TODO;
+	DIFFITEM* pos = FindMerge20ItemFromPaths(*m_pCtxt, paths);
+	if (pos == nullptr)
+		return ReviewState::TODO;
+	return m_pCtxt->GetMerge20ReviewState(pos->getItemRelativePath());
+}
+
+/**
+ * @brief Merge20 (Phase 4 D2, IDirDoc): set the review state of the file
+ * a merge doc shows, with the S2 output-flag linkage, and repaint the
+ * folder-compare row (same repaint as SetMerge20Classification).
+ * @param [in] paths Merge doc's file paths.
+ * @param [in] state New review state.
+ */
+void CDirDoc::ApplyMerge20ReviewState(const PathContext& paths, ReviewState state)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	DIFFITEM* pos = FindMerge20ItemFromPaths(*m_pCtxt, paths);
+	if (pos == nullptr)
+		return;
+	m_pCtxt->ApplyMerge20ReviewState(*pos, state);
+	if (m_pDirView != nullptr)
+	{
+		const int nIdx = m_pDirView->GetItemIndex(pos);
+		if (nIdx != -1)
+			m_pDirView->UpdateDiffItemStatus(nIdx);
+	}
+}
+
 /**
  * @brief Merge20 (S8): audit memo of one item, from the sidecar map.
  * @param [in] di Difference item.
