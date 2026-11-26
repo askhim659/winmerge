@@ -37,6 +37,17 @@ public:
 	void SetFrameHwnd(HWND hwndFrame);
 	void UpdateResources();
 
+	// Merge20 (Phase 4 D2, bug fix for the D1 report "dedicated mode
+	// shows nothing"): the bar has one fixed row of buttons, so its
+	// height is fixed to Merge20DedBarHeight. LoadState forces that
+	// height over any persisted value (D1 saved the 200px default,
+	// and a dragged height persisted too), and CalcFixedLayout
+	// clamps the height the layout gives the bar, so dragging the
+	// bar's edge can never steal client area from the file panes.
+	// See MERGE20_NOTES.md section 24.6.
+	virtual void LoadState(LPCTSTR lpszProfileName) override;
+	virtual CSize CalcFixedLayout(BOOL bStretch, BOOL bHorz) override;
+
 	// State refresh, called by CMergeEditFrame::OnIdleUpdateCmdUI.
 	// Each setter is a no-op when the value did not change, so the
 	// idle-time refresh does not flicker the buttons.
