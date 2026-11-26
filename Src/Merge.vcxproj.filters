@@ -696,6 +696,9 @@
     <ClCompile Include="Merge20\Merge20Measure.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20BulkDiff.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20MemoDlg.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1563,6 +1566,9 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Measure.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20BulkDiff.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20MemoDlg.h">
