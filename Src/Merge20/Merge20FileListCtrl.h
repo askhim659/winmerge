@@ -65,6 +65,33 @@ public:
 	CMerge20FileListCtrl();
 	virtual ~CMerge20FileListCtrl();
 
+	/** @brief One cached row: display strings plus the enums the
+	 * custom draw and the count line need. Cached by value, never
+	 * by DIFFITEM pointer (see the file header comment). Public so
+	 * the bar can read the displayed rows for the batch check and
+	 * the directory operations (P2); the bar never writes them.
+	 * Declared first: member declarations below use Row in their
+	 * signatures, and a nested type is only visible after its
+	 * definition. */
+	struct Row
+	{
+		String output; /**< Output checkbox glyph (empty for directories) */
+		String fileName;
+		String action;
+		String risk;
+		String oldChangedNew; /**< Provisional counts column */
+		String review;
+		ReviewState reviewState = ReviewState::TODO; /**< Row tint (S2 rule) */
+		RiskLevel riskLevel = RiskLevel::NONE; /**< High-risk emphasis */
+		bool isDirectory = false; /**< Skipped by the count line (S3 rule) */
+		bool includeInOutput = false; /**< Counted as checked (S3 rule) */
+		String relPath; /**< P2: DIFFITEM::getItemRelativePath(), key for collapse and for resolving DIFFITEMs */
+		int depth = 0; /**< P2: DIFFITEM::GetDepth(), files directly under the root are 0 */
+		ActionCategory actionCategory = ActionCategory::NO_ACTION_IDENTICAL; /**< P2: filter-tab value (meaningful only when classified) */
+		bool classified = false; /**< P2: S4 classification ran for this file (unclassified files match no tab) */
+		bool hasChildren = false; /**< P2: DIFFITEM::HasChildren(), whether the row can be folded */
+	};
+
 	/** @brief Folder context to list (nullptr = no folder compare). */
 	void SetDiffContext(const CDiffContext* pCtxt) { m_pCtxt = pCtxt; }
 	/** @brief Rebuild the cached rows from the context. */
@@ -115,30 +142,6 @@ public:
 	afx_msg void OnDblclk(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
-
-	/** @brief One cached row: display strings plus the enums the
-	 * custom draw and the count line need. Cached by value, never
-	 * by DIFFITEM pointer (see the file header comment). Public so
-	 * the bar can read the displayed rows for the batch check and
-	 * the directory operations (P2); the bar never writes them. */
-	struct Row
-	{
-		String output; /**< Output checkbox glyph (empty for directories) */
-		String fileName;
-		String action;
-		String risk;
-		String oldChangedNew; /**< Provisional counts column */
-		String review;
-		ReviewState reviewState = ReviewState::TODO; /**< Row tint (S2 rule) */
-		RiskLevel riskLevel = RiskLevel::NONE; /**< High-risk emphasis */
-		bool isDirectory = false; /**< Skipped by the count line (S3 rule) */
-		bool includeInOutput = false; /**< Counted as checked (S3 rule) */
-		String relPath; /**< P2: DIFFITEM::getItemRelativePath(), key for collapse and for resolving DIFFITEMs */
-		int depth = 0; /**< P2: DIFFITEM::GetDepth(), files directly under the root are 0 */
-		ActionCategory actionCategory = ActionCategory::NO_ACTION_IDENTICAL; /**< P2: filter-tab value (meaningful only when classified) */
-		bool classified = false; /**< P2: S4 classification ran for this file (unclassified files match no tab) */
-		bool hasChildren = false; /**< P2: DIFFITEM::HasChildren(), whether the row can be folded */
-	};
 
 private:
 	/** @brief Panel columns, in display order (design section 12.3 P-R1). */
