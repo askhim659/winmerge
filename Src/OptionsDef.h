@@ -363,6 +363,13 @@ inline const String OPT_MERGE20_DOCK_HIDDEN {_T("Merge20/DockHidden"s)};
 inline const String OPT_MERGE20_FOCUS_DOCK_HEIGHT {_T("Merge20/FocusDockHeight"s)};
 inline const String OPT_MERGE20_GREP_HISTORY {_T("Merge20/GrepHistory"s)};
 
+// Merge20 (W1, D1.5): version of the saved folder-compare column
+// layout. 0 = before the Merge20 columns existed (or never
+// migrated); 1 = the five default-visible Merge20 columns have
+// been appended to a pre-existing layout once (see
+// DirViewColItems::MigrateMerge20Columns).
+inline const String OPT_MERGE20_COLUMN_LAYOUT_VERSION {_T("Merge20/ColumnLayoutVersion"s)};
+
 /// Substitution Filters
 inline const String OPT_SUBSTITUTION_FILTERS_ENABLED {_T("Settings/SubstitutionFiltersEnabled"s)};
 
