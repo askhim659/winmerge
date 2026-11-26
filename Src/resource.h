@@ -866,6 +866,7 @@
 #define IDC_MERGE20_BULK_CLOSE          1809
 #define IDC_MERGE20_FILELIST_LIST       1810
 #define IDC_MERGE20_FILELIST_EMPTY      1811
+#define IDC_MERGE20_FILELIST_COUNT      1812
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2593,7 +2594,8 @@
 // stop, close) and command 38960 (bulk classify launch).
 // D11 consumes commands 38961-38965 (review-state filter toggles).
 // P0 consumes command 38966 (file-list panel toggle) and controls
-// 1810-1811 (panel list, empty label).
+// 1810-1811 (panel list, empty label). P1 consumes control 1812
+// (panel count line).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2616,7 +2618,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
 #define _APS_NEXT_COMMAND_VALUE         38967
-#define _APS_NEXT_CONTROL_VALUE         1812
+#define _APS_NEXT_CONTROL_VALUE         1813
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
