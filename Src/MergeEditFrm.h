@@ -135,6 +135,7 @@ private:
 	afx_msg void OnMerge20DedPin();
 	afx_msg void OnMerge20DedTodoOnly();
 	afx_msg void OnMerge20DedSniper();
+	afx_msg void OnMerge20DedDiffsOnly();
 	afx_msg void OnMerge20DedZoomReset();
 	afx_msg LRESULT OnStorePaneSizes(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
