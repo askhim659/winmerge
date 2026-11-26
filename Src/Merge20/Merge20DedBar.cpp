@@ -26,6 +26,11 @@ IMPLEMENT_DYNAMIC(CMerge20DedBar, CSizingControlBarCF);
 
 namespace
 {
+	/** @brief Fixed bar height: one row of 24px buttons with 4px
+	 * margins top and bottom. The height is enforced in LoadState
+	 * and CalcFixedLayout (see section 24.6); never derive it from
+	 * a saved size or a drag. */
+	constexpr int Merge20DedBarHeight = 32;
 	/** @brief Button height and vertical position in the bar. */
 	constexpr int Merge20DedBarButtonHeight = 24;
 	constexpr int Merge20DedBarButtonTop = 4;
@@ -148,11 +153,12 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	SetSCBStyle(SCBS_EDGETOP | SCBS_EDGEBOTTOM | SCBS_SIZECHILD);
 
-	// One row of 24px buttons: fix the bar height to 32px. (A saved
-	// height from LoadState still wins afterwards; the user can drag
-	// the bar taller, LayoutButtons keeps the row at the top.)
-	m_szHorz = CSize(120, 32);
-	m_szMinHorz = CSize(33, 32);
+	// One row of 24px buttons: fix the bar height to 32px. The
+	// LoadState override below re-asserts this after any persisted
+	// size is read, and CalcFixedLayout clamps the laid-out height,
+	// so a saved or dragged taller size can never come back.
+	m_szHorz = CSize(120, Merge20DedBarHeight);
+	m_szMinHorz = CSize(33, Merge20DedBarHeight);
 
 	CFont* pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
 	const DWORD dwPushStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON;
@@ -186,6 +192,45 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	LayoutButtons();
 
 	return 0;
+}
+
+/**
+ * @brief Load the saved bar size, then force the fixed thin height.
+ *
+ * The base LoadState reads the persisted sizeHorzCY (and the
+ * vertical/floating sizes). A D1 run saved the 200px class default
+ * there, and a dragged height persisted too, so without this the
+ * D2 bar would come back 200px tall (or taller) on the next frame
+ * even though OnCreate sets 32px: the frame calls LoadState after
+ * OnCreate. The width/length components are kept as saved.
+ */
+void CMerge20DedBar::LoadState(LPCTSTR lpszProfileName)
+{
+	CSizingControlBarCF::LoadState(lpszProfileName);
+	m_szHorz.cy = Merge20DedBarHeight;
+	m_szVert.cx = Merge20DedBarHeight;
+	m_szFloat.cy = Merge20DedBarHeight;
+}
+
+/**
+ * @brief Clamp the height the layout gives the bar to one button row.
+ *
+ * The base implementation returns max(min, m_szHorz.cy), so dragging
+ * the bar's bottom edge (OnTrackUpdateSize writes m_szHorz.cy for
+ * every sizing bar on the row, up to the remaining client height)
+ * would let the bar grow over the file panes. Clamping the returned
+ * size keeps all the base row negotiation and only caps the height;
+ * the dragged m_szHorz.cy is never used for layout, and LoadState
+ * resets it on the next frame. The bar is only ever docked top or
+ * bottom (EnableDocking TOP|BOTTOM), so the vertical branch is
+ * unreachable; it is left to the base.
+ */
+CSize CMerge20DedBar::CalcFixedLayout(BOOL bStretch, BOOL bHorz)
+{
+	CSize size = CSizingControlBarCF::CalcFixedLayout(bStretch, bHorz);
+	if (bHorz)
+		size.cy = Merge20DedBarHeight;
+	return size;
 }
 
 /**
