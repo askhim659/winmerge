@@ -15,6 +15,7 @@
 #include "BasicFlatStatusBar.h"
 #include "DirCompProgressBar.h"
 #include "DirFilterBar.h"
+#include "Merge20/Merge20FilterDeckBar.h"
 #include "MergeFrameCommon.h"
 #include <memory>
 
@@ -50,6 +51,12 @@ public:
 	void HideFilterBar();
 	DirCompProgressBar* GetCompProgressBar() { return m_pCmpProgressBar.get(); }
 	CDirFilterBar* GetFilterBar() { return m_pFilterBar.get(); }
+	// Merge20 (H-FILTER): the filter deck bar (always the member
+	// object; its window exists after OnCreate). The folder view
+	// uses it to push deck state into the checkboxes
+	// (CDirView::Merge20SyncFilterDeckBar).
+	CMerge20FilterDeckBar* GetFilterDeckBar() { return &m_wndFilterDeckBar; }
+	virtual BOOL OnBarCheck(UINT nID);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -61,6 +68,7 @@ public:
 
 protected:
 	CEditorFilePathBar m_wndFilePathBar;
+	CMerge20FilterDeckBar m_wndFilterDeckBar; /**< H-FILTER: filter deck bar (top dock) */
 	std::unique_ptr<DirCompProgressBar> m_pCmpProgressBar;
 	std::unique_ptr<CDirFilterBar> m_pFilterBar;
 	int m_nCompareDirs = 3;
