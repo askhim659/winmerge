@@ -40,6 +40,16 @@
  * after every Refresh()). Panel-initiated changes are also pushed
  * to the folder view (row repaint + status-bar count) through the
  * CDirDoc forwarders, closing the P2 known limitation.
+ *
+ * P4 adds the save/restore (design section 12.7): the search
+ * string, the selected filter tab, the folded directories and the
+ * slim flag are persisted in the OPT_MERGE20_FILELIST_* keys and
+ * restored by the frame at creation (RestorePanelState); the
+ * display toggle and the width were already persisted by P0
+ * (OPT_MERGE20_FILELIST_VISIBLE and the bar's SaveState/
+ * LoadState). Slim is a toggle button in the button row: file
+ * name + review state only (design section 12.4), the search /
+ * filter / batch rows folding away with it.
  */
 #pragma once
 
@@ -90,6 +100,23 @@ public:
 	 * PreTranslateMessage (the list itself cannot swallow keys).
 	 * Returns true when the key was handled. */
 	bool HandleListKey(UINT nVKey);
+	/** @brief Set the slim display (Panel P4, design section
+	 * 12.4): file name + review state only. Applies at once and
+	 * saves the flag (OPT_MERGE20_FILELIST_SLIM). */
+	void SetSlim(bool slim);
+	/** @brief Save the panel state (Panel P4): the slim flag, the
+	 * selected filter tab, the search string and the folded
+	 * directories, to the OPT_MERGE20_FILELIST_* keys. Called by
+	 * the frame from SavePosition (close, or the delayed
+	 * pane-size save after hiding a bar). */
+	void SavePanelState();
+	/** @brief Restore the panel state (Panel P4): read the
+	 * OPT_MERGE20_FILELIST_* keys and apply them (slim, tab,
+	 * folded directories, search string). Called by the frame
+	 * from OnCreate, after LoadState and before the first
+	 * RefreshFileListPanel(), so the first list already shows
+	 * the restored state. Applies without saving. */
+	void RestorePanelState();
 
 	// Merge20 (Panel P0, D2 lesson): clamp the persisted width so a
 	// saved abnormal value can never come back and steal client area.
@@ -107,6 +134,7 @@ public:
 	afx_msg void OnMerge20BatchCheck();
 	afx_msg void OnExpandAll();
 	afx_msg void OnCollapseAll();
+	afx_msg void OnSlimToggle();
 	afx_msg LRESULT OnRowRClick(WPARAM wParam, LPARAM lParam);
 	afx_msg LRESULT OnRowClick(WPARAM wParam, LPARAM lParam);
 	//}}AFX_MSG
@@ -155,6 +183,12 @@ private:
 	 * already shown, and without a frame window. */
 	void OpenRowFile(int row);
 
+	/** @brief Apply the slim display without saving (Panel P4):
+	 * the button check, the list columns (ApplySlim) and the
+	 * folded-away top rows (LayoutChildren). Used by SetSlim
+	 * and by RestorePanelState. */
+	void ApplySlimState(bool slim);
+
 	HWND m_hwndFrame; //*< Frame window handle */
 	CDirDoc* m_pDirDoc; /**< Folder document (owned by the folder compare, not by this bar) */
 	CStatic m_stSearchLabel; /**< P2 search label: "Search file name or folder:" */
@@ -163,6 +197,8 @@ private:
 	CButton m_btnBatch; /**< P2 "Batch check..." button (P-R3): opens the S3 dialog for the displayed rows */
 	CButton m_btnExpandAll; /**< P2 "Expand all" button (P-R5) */
 	CButton m_btnCollapseAll; /**< P2 "Collapse all" button (P-R5) */
+	CButton m_btnSlim; /**< P4 slim toggle (BS_AUTOCHECKBOX): file name + review state only */
+	bool m_bSlim = false; /**< P4: slim display is on */
 	int m_nSelectedTab = 0; /**< P2: selected filter tab (0 = all categories) */
 	CStatic m_stCount; /**< Count line (P1, P-R6): "N displayed, M checked, K unreviewed" */
 	CMerge20FileListCtrl m_wndList; /**< Virtual file list */

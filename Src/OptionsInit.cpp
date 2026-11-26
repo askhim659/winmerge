@@ -263,6 +263,14 @@ void Init(COptionsMgr *pOptions)
 	// Merge20 (Panel P0): the file-list panel starts shown when
 	// there is a folder compare to list (frame OnCreate decides).
 	pOptions->InitOption(OPT_MERGE20_FILELIST_VISIBLE, true);
+	// Merge20 (Panel P4): the panel state restored by the frame
+	// (design section 12.7). Search empty, tab 0 = all categories
+	// (range 0-7: all + seven action categories), no folded
+	// directories, slim off.
+	pOptions->InitOption(OPT_MERGE20_FILELIST_SEARCH, _T(""));
+	pOptions->InitOption(OPT_MERGE20_FILELIST_TAB, 0, 0, 7);
+	pOptions->InitOption(OPT_MERGE20_FILELIST_COLLAPSED, _T(""));
+	pOptions->InitOption(OPT_MERGE20_FILELIST_SLIM, false);
 	pOptions->InitOption(OPT_MERGE20_FOCUS_DOCK_HEIGHT, 0);
 	pOptions->InitOption(OPT_MERGE20_GREP_HISTORY, _T(""));
 	pOptions->InitOption(OPT_MERGE20_COLUMN_LAYOUT_VERSION, 0, 0, 1);

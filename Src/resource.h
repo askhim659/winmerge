@@ -872,6 +872,7 @@
 #define IDC_MERGE20_FILELIST_EXPAND_ALL 1815
 #define IDC_MERGE20_FILELIST_COLLAPSE_ALL 1816
 #define IDC_MERGE20_FILELIST_FILTER_TABS 1817
+#define IDC_MERGE20_FILELIST_SLIM       1818
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2604,7 +2605,7 @@
 // 1810-1811 (panel list, empty label). P1 consumes control 1812
 // (panel count line). P2 consumes controls 1813-1817 (panel search
 // edit, batch-check button, expand-all button, collapse-all button,
-// filter tabs).
+// filter tabs). P4 consumes control 1818 (panel slim toggle button).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2627,7 +2628,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
 #define _APS_NEXT_COMMAND_VALUE         38968
-#define _APS_NEXT_CONTROL_VALUE         1818
+#define _APS_NEXT_CONTROL_VALUE         1819
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif

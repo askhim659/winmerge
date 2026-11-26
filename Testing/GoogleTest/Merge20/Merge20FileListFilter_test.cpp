@@ -224,3 +224,48 @@ TEST(Merge20FileListFilter, SearchIgnoresCollapse)
 	EXPECT_TRUE(visible[1]);
 	EXPECT_FALSE(visible[2]);
 }
+
+TEST(Merge20FileListFilter, CollapsedJoinEmptyIsEmpty)
+{
+	// Nothing folded: the stored option value is the empty string
+	// (the same as the key's default).
+	EXPECT_TRUE(Merge20JoinCollapsedPaths(std::set<String>()).empty());
+}
+
+TEST(Merge20FileListFilter, CollapsedJoinSplitsRoundTrip)
+{
+	// Join then split returns the same set; the joined text is in
+	// sorted order, so the same set always stores the same string.
+	const std::set<String> paths = { L"tax", L"src\\deep", L"src" };
+	const String joined = Merge20JoinCollapsedPaths(paths);
+	EXPECT_EQ(joined, String(L"src\nsrc\\deep\ntax"));
+	const std::set<String> back = Merge20SplitCollapsedPaths(joined);
+	EXPECT_EQ(back, paths);
+}
+
+TEST(Merge20FileListFilter, CollapsedSplitSkipsEmptyPieces)
+{
+	// A leading, trailing or doubled line break makes no phantom
+	// empty path (a hand-edited or truncated value stays safe).
+	const std::set<String> paths = Merge20SplitCollapsedPaths(L"\nsrc\n\ntax\n");
+	ASSERT_EQ(paths.size(), static_cast<size_t>(2));
+	EXPECT_TRUE(paths.count(L"src") != 0);
+	EXPECT_TRUE(paths.count(L"tax") != 0);
+}
+
+TEST(Merge20FileListFilter, CollapsedSplitEmptyIsEmpty)
+{
+	// The default (never saved) value splits to no paths.
+	EXPECT_TRUE(Merge20SplitCollapsedPaths(L"").empty());
+}
+
+TEST(Merge20FileListFilter, CollapsedJoinKeepsBackslashPaths)
+{
+	// Relative paths carry backslashes; they survive the round
+	// trip unchanged (the separator is the line break, not the
+	// backslash).
+	const std::set<String> paths = { L"tax\\deep\\b.txt", L"src\\a.txt" };
+	const std::set<String> back =
+		Merge20SplitCollapsedPaths(Merge20JoinCollapsedPaths(paths));
+	EXPECT_EQ(back, paths);
+}

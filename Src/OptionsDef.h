@@ -377,6 +377,23 @@ inline const String OPT_MERGE20_DOCK_HIDDEN {_T("Merge20/DockHidden"s)};
 // width persists through the bar's own SaveState/LoadState, and
 // slim/search persistence is P4 (design section 12.7).
 inline const String OPT_MERGE20_FILELIST_VISIBLE {_T("Merge20/FileListVisible"s)};
+// Merge20 (Panel P4, design section 12.7): the file-list panel
+// state saved and restored with the frame. Four dedicated keys:
+// the search string (P-R4, deferred from P2), the selected
+// action-category filter tab (P-R10, deferred from P2), the
+// folded directories (P-R5, deferred from P2) and the slim flag
+// (design section 12.4: file name + review state only). The
+// folder-list slim key OPT_MERGE20_SLIM is NOT reused: it drives
+// the folder compare list (D9), and sharing it would couple the
+// two lists (the same reason P0 gave OPT_MERGE20_FILELIST_VISIBLE
+// its own key instead of reusing OPT_MERGE20_DOCK_HIDDEN, see
+// MERGE20_NOTES.md section 38). The panel display toggle and the
+// width are already persisted (P0: OPT_MERGE20_FILELIST_VISIBLE
+// and the bar's SaveState/LoadState), so no key is added for them.
+inline const String OPT_MERGE20_FILELIST_SEARCH {_T("Merge20/FileListSearch"s)};
+inline const String OPT_MERGE20_FILELIST_TAB {_T("Merge20/FileListTab"s)};
+inline const String OPT_MERGE20_FILELIST_COLLAPSED {_T("Merge20/FileListCollapsed"s)};
+inline const String OPT_MERGE20_FILELIST_SLIM {_T("Merge20/FileListSlim"s)};
 inline const String OPT_MERGE20_FOCUS_DOCK_HEIGHT {_T("Merge20/FocusDockHeight"s)};
 inline const String OPT_MERGE20_GREP_HISTORY {_T("Merge20/GrepHistory"s)};
 

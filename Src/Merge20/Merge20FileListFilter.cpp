@@ -98,3 +98,33 @@ std::vector<bool> Merge20ComputeFileListVisibility(
 	}
 	return visible;
 }
+
+String Merge20JoinCollapsedPaths(const std::set<String>& paths)
+{
+	String text;
+	for (const String& path : paths)
+	{
+		if (!text.empty())
+			text += L'\n';
+		text += path;
+	}
+	return text;
+}
+
+std::set<String> Merge20SplitCollapsedPaths(const String& text)
+{
+	std::set<String> paths;
+	size_t start = 0;
+	while (start <= text.size())
+	{
+		const size_t nl = text.find(L'\n', start);
+		const String piece = text.substr(start,
+			nl == String::npos ? String::npos : nl - start);
+		if (!piece.empty())
+			paths.insert(piece);
+		if (nl == String::npos)
+			break;
+		start = nl + 1;
+	}
+	return paths;
+}

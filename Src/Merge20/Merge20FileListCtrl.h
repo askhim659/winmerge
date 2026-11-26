@@ -147,6 +147,20 @@ public:
 	/** @brief Fold every directory row that has children (P2,
 	 * "collapse all"). */
 	void CollapseAll();
+	/** @brief Folded directories, as relative paths (Panel P4):
+	 * the set behind m_collapsed, for saving. */
+	std::set<String> GetCollapsedPaths() const { return m_collapsed; }
+	/** @brief Replace the folded directories (Panel P4, restore):
+	 * stale paths are kept (they only match rows that exist).
+	 * Does not save: the bar saves the restored set with the
+	 * rest of the panel state. */
+	void SetCollapsedPaths(const std::set<String>& paths);
+	/** @brief Slim display (Panel P4, design section 12.4): hide
+	 * every column except file name and review state (the
+	 * "file name + review only" view). The hidden columns'
+	 * widths are remembered and restored on un-slim, so a
+	 * manually widened column survives a slim round trip. */
+	void ApplySlim(bool slim);
 	/** @brief Number of displayed rows (after search / tab /
 	 * collapse). */
 	int GetDisplayedRowCount() const { return static_cast<int>(m_rows.size()); }
@@ -189,10 +203,19 @@ public:
 	DECLARE_MESSAGE_MAP()
 
 private:
+	/** @brief Persist the folded directories at once (Panel P4):
+	 * every collapse change (button, menu, double-click) saves
+	 * immediately, so the state survives even a crash (the D11
+	 * dual-save precedent: the dock-hidden key is saved both on
+	 * toggle and at SavePosition). */
+	void SaveCollapsedState();
+
 	const CDiffContext* m_pCtxt; /**< Folder context (owned by CDirDoc, not by this control) */
 	std::vector<Row> m_allRows; /**< P2: all rows, in compare order (before search / tab / collapse) */
 	std::vector<Row> m_rows; /**< Cached displayed rows, in compare order */
 	std::set<String> m_collapsed; /**< P2: relative paths of folded directories (default: all unfolded) */
 	String m_searchText; /**< P2: raw search text (trimmed and lower-cased by the filter module) */
 	int m_actionFilter = -1; /**< P2: -1 = all action categories, otherwise static_cast<int>(ActionCategory) */
+	bool m_bSlim = false; /**< P4: slim display (file name + review state only) */
+	int m_savedColWidths[COL_COUNT] = {}; /**< P4: column widths remembered while slim */
 };

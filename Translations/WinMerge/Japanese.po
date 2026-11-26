@@ -11669,3 +11669,8 @@ msgstr "【Wiz】フォルダを折りたたむ"
 #: Src/Merge20/Merge20FileListBar.cpp
 msgid "Toggle output"
 msgstr "【Wiz】出力を切り替える"
+
+#. Merge20 (Panel P4): file-list panel slim toggle (design section 12.4)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Slim view"
+msgstr "【Wiz】スリム表示"
