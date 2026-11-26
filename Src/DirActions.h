@@ -110,6 +110,13 @@ struct DirViewFilterSettings
 		show_missing_right_only = getoptbool(OPT_SHOW_MISSING_RIGHT_ONLY);
 		show_empty_folders = getoptbool(OPT_SHOW_EMPTY_FOLDERS);
 		tree_mode = getoptbool(OPT_TREE_MODE);
+		// Merge20 (Phase 4 D11): review-state filter (D9 added the
+		// keys only). Index is static_cast<int>(ReviewState).
+		show_review[0] = getoptbool(OPT_MERGE20_SHOW_REVIEW_TODO);
+		show_review[1] = getoptbool(OPT_MERGE20_SHOW_REVIEW_DONE);
+		show_review[2] = getoptbool(OPT_MERGE20_SHOW_REVIEW_HOLD);
+		show_review[3] = getoptbool(OPT_MERGE20_SHOW_REVIEW_SPECIAL);
+		show_review[4] = getoptbool(OPT_MERGE20_SHOW_REVIEW_KEEP);
 	};
 	bool show_skipped;
 	bool show_unique_left;
@@ -126,6 +133,10 @@ struct DirViewFilterSettings
 	bool show_missing_right_only;
 	bool show_empty_folders;
 	bool tree_mode;
+	/** @brief Review-state filter (OPT_MERGE20_SHOW_REVIEW_*, D11):
+	 * index is static_cast<int>(ReviewState): 0 TODO, 1 DONE,
+	 * 2 HOLD, 3 SPECIAL, 4 KEEP. */
+	bool show_review[5];
 	FileFilterHelper displayFilterHelper; /**< File filter helper */
 };
 
