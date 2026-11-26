@@ -1291,7 +1291,7 @@ bool PrediffingInfo::GetPrediffPlugin(const String& filteredFilenames, bool bRev
 		});
 }
 
-bool PrediffingInfo::Prediffing(int target, String & filepath, bool bMayOverwrite, const PluginPipelineContext& context)
+bool PrediffingInfo::Prediffing(int target, String & filepath, bool bMayOverwrite, const PluginPipelineContext& context, int * pExcludedLines)
 {
 	// no handler : return true
 	if (m_PluginPipeline.empty())
