@@ -120,6 +120,7 @@
 #define IDD_MERGE20_SNIPER              297
 #define IDD_MERGE20_GREP                298
 #define IDD_MERGE20_MASTER              299
+#define IDD_MERGE20_BULK_CLASSIFY      300
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -859,6 +860,10 @@
 #define IDC_MERGE20_MASTER_BTN_IMPORT   1803
 #define IDC_MERGE20_MASTER_HINT         1804
 #define IDC_MERGE20_DED_DIFFS_ONLY      1805
+#define IDC_MERGE20_BULK_PROGRESS       1806
+#define IDC_MERGE20_BULK_STATUS         1807
+#define IDC_MERGE20_BULK_STOP           1808
+#define IDC_MERGE20_BULK_CLOSE          1809
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1826,6 +1831,7 @@
 #define ID_MERGE20_MASTER              38957
 #define ID_MERGE20_DED_DIFFS_ONLY      38958
 #define ID_MERGE20_SLIM                38959
+#define ID_MERGE20_BULK_CLASSIFY       38960
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2574,7 +2580,9 @@
 // controls 1785-1804 (master select, list, editor, buttons) and
 // command 38957 (master dialog launch); D9 consumes commands
 // 38958-38959 (dedicated-bar diffs-only toggle, slim list) and
-// control 1805 (dedicated-bar diffs-only button).
+// control 1805 (dedicated-bar diffs-only button); D10 consumes
+// dialog 300 (bulk classify), controls 1806-1809 (progress, status,
+// stop, close) and command 38960 (bulk classify launch).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2595,9 +2603,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        300
-#define _APS_NEXT_COMMAND_VALUE         38960
-#define _APS_NEXT_CONTROL_VALUE         1806
+#define _APS_NEXT_RESOURCE_VALUE        301
+#define _APS_NEXT_COMMAND_VALUE         38961
+#define _APS_NEXT_CONTROL_VALUE         1810
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
