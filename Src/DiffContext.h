@@ -7,6 +7,7 @@
 
 #define POCO_NO_UNWINDOWS 1
 #include <Poco/Mutex.h>
+#include <functional>
 #include <memory>
 #include "PathContext.h"
 #include "DiffItemList.h"
@@ -227,6 +228,21 @@ public:
 	/** @brief Direct access to the sidecar map (const version). */
 	const Merge20FileStates& GetMerge20FileStates() const { return m_merge20FileStates; }
 
+	/**
+	 * @brief Frame notification for per-file state changes (Panel P0,
+	 * design section 12.5). The frame registers a callback that posts
+	 * MSG_MERGE20_FILELIST_REFRESH to itself, so the file-list panel
+	 * refreshes without polling. The callback is a std::function
+	 * (not an HWND) because this header must stay MFC-free (pch.h
+	 * group: StdAfx.h, and the MSG_ constants with it, are not
+	 * visible here). Only the last registered frame is notified:
+	 * the context is shared by every file compare opened from the
+	 * same folder compare.
+	 */
+	using Merge20FileListNotifyCallback = std::function<void()>;
+	void SetMerge20FileListNotifyCallback(Merge20FileListNotifyCallback callback) { m_merge20FileListNotify = std::move(callback); }
+	void NotifyMerge20FileListChanged() const;
+
 	void Swap(int idx1, int idx2)
 	{
 		String tmp;
@@ -293,6 +309,7 @@ public:
 	std::vector<std::map<std::vector<uint8_t>, DuplicateInfo>> m_duplicateValues; /**< Number of duplicate hash values */
 	std::vector<String> m_vCurrentlyHiddenItems; /**< The list of currently hidden items */
 	Merge20FileStates m_merge20FileStates; /**< Merge20 per-file work state (review state etc.), keyed by relative path; see GetMerge20ReviewState(). */
+	Merge20FileListNotifyCallback m_merge20FileListNotify; /**< Panel P0: frame refresh callback, empty when no panel is registered. */
 	std::unique_ptr<FilterExpression> m_pAdditionalCompareExpression; /** Additional compare condition applied in folder comparison */
 	std::unique_ptr<RenameMoveDetection> m_pRenameMoveDetection; /** Move detection object */
 
