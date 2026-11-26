@@ -368,6 +368,15 @@ inline const String OPT_MERGE20_SNIPER_FONT {_T("Merge20/SniperFont"s)};
 inline const String OPT_MERGE20_SNIPER_LAYOUT {_T("Merge20/SniperLayout"s)};
 inline const String OPT_MERGE20_SLIM {_T("Merge20/Slim"s)};
 inline const String OPT_MERGE20_DOCK_HIDDEN {_T("Merge20/DockHidden"s)};
+// Merge20 (Panel P0, design section 12.6/12.7): the persistent
+// file-list panel toggle. A dedicated key: OPT_MERGE20_DOCK_HIDDEN
+// already stores the Diff Pane (focus dock) visibility, and both
+// OnBarCheck and SavePosition write it from m_wndDetailBar, so
+// reusing it would make the two bars fight over one key (see
+// MERGE20_NOTES.md section 38). P0 persists the toggle only; the
+// width persists through the bar's own SaveState/LoadState, and
+// slim/search persistence is P4 (design section 12.7).
+inline const String OPT_MERGE20_FILELIST_VISIBLE {_T("Merge20/FileListVisible"s)};
 inline const String OPT_MERGE20_FOCUS_DOCK_HEIGHT {_T("Merge20/FocusDockHeight"s)};
 inline const String OPT_MERGE20_GREP_HISTORY {_T("Merge20/GrepHistory"s)};
 

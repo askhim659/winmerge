@@ -11619,3 +11619,13 @@ msgstr "保存されたセッションは現在のフォルダと一致しない
 #: Src/Merge20/Merge20SessionDoc.cpp
 msgid "Note: the saved compare options were applied and the folders were compared again: %1."
 msgstr "注：保存されていた比較オプション（%1）を適用し、フォルダを再比較しました。"
+
+#. Merge20 (Panel P0): file-list panel menu item (Merge.rc) and bar caption
+#: Src/Merge.rc
+msgid "File List Panel"
+msgstr "【Wiz】ファイル一覧パネル"
+
+#. Merge20 (Panel P0): empty state when the file compare was not opened from a folder compare (Merge20FileListBar)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "No folder comparison"
+msgstr "フォルダ比較がありません"

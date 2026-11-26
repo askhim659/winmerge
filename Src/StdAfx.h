@@ -62,6 +62,8 @@ const UINT MSG_UI_UPDATE = WM_USER + 1;
 const UINT MSG_STORE_PANESIZES = WM_USER + 2;
 /// Request to generate file compare report
 const UINT MSG_GENERATE_FLIE_COMPARE_REPORT = WM_USER + 3;
+/// File-list panel refresh request from the folder compare (Merge20 Panel P0, design section 12.5)
+const UINT MSG_MERGE20_FILELIST_REFRESH = WM_USER + 4;
 /* @} */
 
 /// Seconds ignored in filetime differences if option enabled
