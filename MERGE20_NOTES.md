@@ -4874,3 +4874,102 @@ PR #36（Panel P2: file-list panel operations）。コード head a137693e（CI 
 - 再スキャン後のパネル更新は未整備のまま（§39.6 参照）。P3 で検討する。
 - 閉じたフレームの通知登録は残るまま（§39.6 参照）。P3 で解除 API を検討する。
 - 実機確認待ち（§40.5 の全項目）。実機で問題が出た場合は本節へ結果を追記すること。
+
+## 41. Panel P3 — 常設ファイル一覧パネル 連動（設計書 §12.7 P3）
+
+- 対応する設計書：§12.3 P-R7（パネルからの比較切替・選択追従）、P-R8（パネルからの確認内容・出力決定）。P1 の残課題（再スキャン後のパネル更新、閉じたフレームの通知登録の解除 API なし）と P2 の既知の制限（フォルダ比較画面のステータスバー件数表示の遅延）も P3 の範囲として解消した。
+- ブランチ：`merge20/panel-p3`（base master 58da8968）。PR #37（作成後に番号・URL を追記）。
+- コード head：95ade37e（.po まで）。最終 head（本節の記録コミット後）は §41.4 に追記。
+
+### 41.1 変更一覧（1ファイル1コミット。連続コミットの間に sleep 3）
+
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | Src/StdAfx.h | 4456f124 | `MSG_MERGE20_FILELIST_OPEN_FILE = WM_USER + 5` を追加（WM_USER + 1〜+4 は使用済みで +5 は未使用。取得済みファイルの grep で確認） |
+| 2 | Src/resource.h | c4b0319e | `ID_MERGE20_FILELIST_TOGGLE_OUTPUT 38967` を追加。`_APS_NEXT_COMMAND_VALUE` を 38967 → 38968 に更新。コメント欄に P3 の消費を追記 |
+| 3 | Src/DiffContext.h | dff1f1b3 | `RemoveMerge20FileListNotifyCallback(std::uintptr_t key)` の宣言 |
+| 4 | Src/DiffContext.cpp | c104aa30 | `RemoveMerge20FileListNotifyCallback` の実装（キー一致エントリを erase、未知キーは no-op） |
+| 5 | Testing/GoogleTest/Merge20/Merge20FileListNotify_test.cpp | b50ec52a | Remove の単体テスト 3 件を追加（`RemoveUnregistersOne`、`RemoveUnknownKeyIsNoop`、`RemoveThenReaddFires`） |
+| 6 | Src/DirDoc.h | 5047787b | P3 公開 API 5 件の宣言（`Merge20FindItemByRelPath`、`Merge20FindRelPath`、`Merge20MoveToFile`、`Merge20UpdateDirViewItem`、`Merge20UpdateDirViewStatus`） |
+| 7 | Src/DirDoc.cpp | 734456a6 | P3 実装本体（上記 5 件＋`Merge20DocMatchesItem`）。`CompareReady()` の末尾に再スキャン完了通知を追加 |
+| 8 | Src/DirView.h | 8f643c16 | `Merge20OpenFile` の宣言。`UpdateMerge20StatusCount` を private から public へ移動 |
+| 9 | Src/DirView.cpp | 407fd4d4 | `Merge20OpenFile` の実装 |
+| 10 | Src/Merge20/Merge20FileListCtrl.h | 8a8d4c32 | `WM_MERGE20_FILELIST_ROW_CLICK`（`WM_USER + 121`）、`Column` enum の public 化、`SelectRowByRelPath`／`GetSelectedRow`／`OnClick` の宣言 |
+| 11 | Src/Merge20/Merge20FileListCtrl.cpp | a928f2c8 | `OnClick`、`SelectRowByRelPath`、`GetSelectedRow` の実装。メッセージ・マップに `ON_NOTIFY_REFLECT(NM_CLICK, OnClick)` を追加 |
+| 12 | Src/Merge20/Merge20FileListBar.h | 3cbbc7e5 | 行操作 API（`HandleListKey`、`OnRowClick`、`TakePendingOpenRelPath`、`SetCurrentFileRelPath` ほか）とメンバ `m_sCurrentRelPath`／`m_sPendingOpenRelPath` の宣言 |
+| 13 | Src/Merge20/Merge20FileListBar.cpp | a0f88ba4 | 行クリック振り分け、キー処理、ファイル行メニュー、行操作ヘルパー、Refresh 末尾での選択追従、一括・ディレクトリ単位操作後のフォルダ側同期 |
+| 14 | Src/MergeEditFrm.h | f75725bd | `RefreshFileListPanel()` と `OnMerge20FileListOpenFile` の宣言 |
+| 15 | Src/MergeEditFrm.cpp | 1bef93f3 | 開くメッセージの受信、`RefreshFileListPanel()`、既存 4 か所の Refresh() の置き換え、`PreTranslateMessage` へのキー処理、`DestroyWindow()` での登録解除、`ChangeFile` 成功時の追従 |
+| 16 | Translations/WinMerge/Japanese.po | 95ade37e | 新規 msgid `"Toggle output"`（msgstr「【Wiz】出力を切り替える」）を 1 件追加 |
+| 17 | MERGE20_NOTES.md | （本コミット） | 本節 §41 の記録 |
+
+- 新規コマンド ID は 38967 の 1 件のみ。タスク指示の「コマンド ID 38966 以降」は古く、実際は 38966 は P0 のパネル・トグル `ID_VIEW_MERGE20_FILELIST_PANEL` が使用済みだった。resource.h の全 define を値でソートして空きを確認し、389xx に重複がないことを確認済み（35xxx〜36xxx の重複は master と同一の既存分）。
+- 新規 .po 文字列は `"Toggle output"` 1 件のみ。確認内容の 5 表示名は S1 の既存 msgid（"Not reviewed"→未確認、"Done"→済、"On hold"→保留、"Needs manual work"→個別対応要、"Keep as is"→現状維持）をリテラル `_()` 呼び出しで流用。右クリックメニューの確認内容項目 ID は専用バーのレビュー・ボタン ID `ID_MERGE20_DED_REVIEW_TODO`〜`ID_MERGE20_DED_REVIEW_KEEP`（38945〜38949）を流用し、`TPM_RETURNCMD` で受けて `state = id - TODO` とする（P2 がコントロール ID をメニュー ID として流用したのと同じ方式）。`WM_MERGE20_FILELIST_ROW_KEY`（WM_USER + 122）は作らない（フレームの PreTranslateMessage 経由に一本化）。
+
+### 41.2 設計判断（設計書との食い違いと判断理由）
+
+- **行クリックの開き方：「現在の比較を閉じて開く」**（P-R7）。HTML 版の selFile と同じ「その場で切り替える」動き。開くたびに MDI 子ウィンドウを増やすのは「マージしながら出力対象を決める」動線に合わないため。`CDirDoc::MoveToNextFile` と同じ形（現在の merge doc を `CloseNow()` してから `CDirView::Merge20OpenFile` で開く）。`CloseNow()` が false（未保存変更をユーザーがキャンセル）を返した場合は何も開かない（MoveToNextFile は戻り値を無視する既存の挙動だが、P3 では尊重する）。
+- **既に開いている場合は重複して開かず、そのフレームを活性化する**（P-R7 の「既に開いている場合はそのファイルに切り替わる」）。照合は `Merge20DocMatchesItem`（全ペインの比較。比較パスが NUL デバイスで doc パスが空の場合も一致とみなす。根拠：`CDiffContext::GetComparePaths` は欠落側に `paths::NATIVE_NULL_DEVICE_NAME` を使い、`CDirView::Open` は欠落側の FileLocation を未設定のままにするため `FileLocation` の既定コンストラクタにより merge doc の `m_filePaths` は空になる。`CMergeDoc::LoadFile` で `m_filePaths[nBuffer] = sFileName` であることも実読で確認済み）。
+- **閉じる操作の安全性：バーは PostMessage のみ**。フレームのハンドラ `OnMerge20FileListOpenFile` は `Merge20MoveToFile` を最後の文として呼び、`CloseNow()` がフレームを同期的に破棄するため、その後にフレームのメンバに触れない（DedBar の Prev/Next ボタンが main frame へ PostMessage する前例と、`CFrameWnd::OnClose` が `DestroyWindow()` を最後の文として呼ぶ MFC 標準パターンを根拠とする）。
+- **宛先の受け渡し：relPath をバーのメンバに置き、フレームが処理時に解決する**（`TakePendingOpenRelPath()` → `Merge20FindItemByRelPath`）。PostMessage に DIFFITEM ポインタを載せないため、クリックと処理の間に再スキャンが走っても誤った行を開かない。
+- **行クリックの振り分け（P-R8）**：出力列→トグル（フォルダ一覧の S2 と同じ）、確認内容列→巡回（Space と同じ）、それ以外→ファイルを開く。ディレクトリ行のシングルクリックは何もしない（折りたたみは P2 どおりダブルクリック）。
+- **キー操作の場所：フレームの `PreTranslateMessage` → バー `HandleListKey`**（`WM_MERGE20_FILELIST_ROW_KEY` は作らない）。リスト自体はキーを swallow できないため。フォーカスがリストそのものであることと、Ctrl／Alt／Shift が押されていないこと（bare keys のみ、DirView と同じ条件）を確認してから、1〜5→設定、Space→巡回。処理したら TRUE を返して swallow する。専用モードでもパネルが表示されるため専用モードでも動く（フォーカス条件によりエディタでの入力とは干渉しない）。
+- **選択行の追従（P-R7、逆方向）**：フレームに private ヘルパー `RefreshFileListPanel()` を新設。`m_pMergeDoc->m_filePaths` から `CDirDoc::Merge20FindRelPath` で relPath を求め、バーに `SetCurrentFileRelPath(relPath)` してから `Refresh()` する。既存の 4 か所の `m_wndFileListBar.Refresh()` 呼び出し（`OnCreate`、`OnBarCheck`、`OnMDIActivate`、`OnMerge20FileListRefresh`）をすべてこれに置き換えた。これにより、パネル・クリック／Next・Prev／専用バーの Prev・Next で新しいフレームが開いた場合も、パネルの選択行が新しいファイルになる。ファイル・パス・バーからの `ChangeFile` 成功時（`OnCreateClient` の `SetOnFileSelectedCallback` 内）にも `RefreshFileListPanel()` を呼ぶ（同一フレーム内でのファイル切替にも追従する）。
+- **relPath の解決（`Merge20FindRelPath`）**：まず D2 と同じ全パス照合 `FindMerge20ItemFromPaths` を試す。片側のみファイルでは doc の欠落側パスが空のため全パス照合が失敗するので、フォールバックとしてコンテキスト全走査で「空でない任意の1ペインが一致する」項目を探す（同一フォルダ比較内では1ペインのパスは1項目を一意に特定する）。なお、`Merge20OpenFileAtLine`（Grep ジャンプ、D7）の照合条件（`!paths[i].empty() && pDoc->GetPath(i)!= paths[i]`）は片側のみファイルでは黙って失敗する（doc パスは空、比較パスは NUL なので不一致になる）。これは D7 の既存の wart であり P3 では直さないが、`Merge20FindRelPath` のフォールバックではこの問題を回避している。
+- **パネルの選択は常に比較ウィンドウのファイルと一致させる**（シングルクリックが開く操作であるため）。バーの `Refresh()` の末尾で、格納済みの `m_sCurrentRelPath` が空でなければ `m_wndList.SelectRowByRelPath(m_sCurrentRelPath)` を呼ぶ（行が再構築された後なので、インデックスではなく relPath で追う）。表示されていない行（検索・フィルタタブ・折りたたみで隠れている、または再スキャンで消えた）の場合は、陳腐化した選択を残さないよう選択を解除する（`SetItemState(-1, 0, ...)`）。非表示時の Refresh() は早期 return するので、その場合は選択更新をスキップし、表示時にフレーム経由で再設定される。
+- **フォルダ比較画面との同期（P-R8 の (b)、P2 の既知の制限の解消）**：`CDirDoc::Merge20UpdateDirViewItem`（行の再描画＋ステータスバー件数更新）と `Merge20UpdateDirViewStatus`（フォルダ一覧の Invalidate＋件数更新を1回だけ）を新設。単一行の変更（パネルからの確認内容・出力変更）で前者、一括チェック／ディレクトリ単位操作の後に後者を呼ぶ（S3 のフォルダ側の一括処理と同じ「ループ後に1回」の規則）。`CDirView::UpdateMerge20StatusCount` を private から public へ移動（`GetMerge20StatusCountText()` は private のまま）。
+- **同期を setter 自体に入れない理由**：`SetMerge20IncludeInOutput`／`ApplyMerge20ReviewState`（DIFFITEM 版）のフォワーダ自体にフォルダ側同期を入れると、一括ループの中で呼ばれてファイル数分の再描画・件数更新になってしまうため。同期はバーの操作単位（単一行→`Merge20UpdateDirViewItem`、一括→`Merge20UpdateDirViewStatus`）で行う。
+- **再スキャン後のパネル更新（P1 の残課題）**：`CDirDoc::CompareReady()` の末尾に `m_pCtxt->NotifyMerge20FileListChanged()` を追加（`m_pCtxt != nullptr` でガード）。再スキャン完了（`CDirView::OnUpdateUIMessage` の `EVENT_COMPARE_COMPLETED` → `CompareReady()` → `Redisplay()`）時に全パネルへ通知する。通知は PostMessage（非同期）なので、パネルの Refresh はフォルダ側の Redisplay の後に行われる。初回比較時にはまだパネルが登録されていないため no-op。`SaveModified` の中断経路からも `CompareReady()` が呼ばれるが、その場合も通知は無害。
+- **閉じたフレームの通知登録の解除（P1 の残課題）**：`CDiffContext::RemoveMerge20FileListNotifyCallback(std::uintptr_t key)` を追加（宣言＋実装＋単体テスト 3 件）。フレームは `CMergeEditFrame::DestroyWindow()` の先頭で、登録時と同じキー（フレーム HWND を `std::uintptr_t` 化したもの）で解除する。`DestroyWindow()` はフレーム生成失敗の途中でも呼ばれるため、解除は未知キー no-op であることが重要（テストで確認済み）。P0 の単一コールバック（`SetMerge20FileListNotifyCallback`）は変更しない（本番コードからの呼び出しは P1 以降 Add 経由のみ。テストのみが Set を使う）。
+- **`CDirView::GetItemIndex` は未発見時に -1 ではなく 0 を返す upstream の癖がある**（`DirView.cpp` の実装を実読して確認。`return 0;`）。既存コードの `nIdx != -1` チェックはそのため実質死んでいる。P3 のコードでは `GetItemIndex` の結果を `GetItemKey(nIdx) == &di` で検証してから使う（`Merge20OpenFile` と `Merge20UpdateDirViewItem` の両方）。既存の -1 判定（`Merge20OpenFileAtLine` ほか）は直さない（upstream の既存挙動への変更は P3 の範囲外）。
+- **P1／P2 の残課題のうち P3 の範囲外のもの**：旧／変／新の内訳 3 列（H-LIST）は未実装のまま（P1 の暫定 1 列）。H-FILTER との整理も P3 の範囲外。P4（保存・復元の完成：表示状態・幅・スリム化・検索文字列・折りたたみ状態・選択タブ）は P3 の範囲外であることを明記する。
+
+### 41.3 受け入れ条件の照合表（設計書 §12.7 P3）
+
+| 条件 | 設計書の文言 | 判定 | 根拠 |
+|---|---|---|---|
+| (a) | 「マージしつつ出力対象を決める動線が使えること」：パネルでファイルを選ぶ→差分を判定する→パネルで確認内容を「済」にする→出力チェックが ON になる、という一連の動きがファイル比較ウィンドウから出ずに完結すること | コード上は満たす（実機未検証） | `OnRowClick`（開く）→`ApplyRowReview`（DONE へ。S2 の出力連動で DONE は出力フラグ ON へ。ただし 2-way の NEW_ONLY ファイルは OFF のまま）→`ToggleRowOutput`。実機での確認は §41.5 の手順 6 |
+| (b) | フォルダ比較画面に戻ったときに、パネルでの変更が反映されていること | コード上は満たす（実機未検証） | 同じ CDiffContext のサイドカーを共有するため変更自体は即座に共有される。加えて `Merge20UpdateDirViewItem`／`Merge20UpdateDirViewStatus` でフォルダ行の再描画とステータスバー件数更新を行う。実機での確認は §41.5 の手順 12・13 |
+| (c) | 比較ウィンドウでのファイル移動にパネルの選択行が追従すること | コード上は満たす（実機未検証） | `RefreshFileListPanel()`（Next／Prev／専用バーの Prev・Next／ファイル・パス・バーの ChangeFile の全経路で呼ぶ）。実機での確認は §41.5 の手順 4・5 |
+| P-R7 | パネルで行をシングルクリックすると、そのファイルの比較がファイル比較ウィンドウで開く（または既に開いている場合はそのファイルに切り替わる）。比較ウィンドウで別のファイルに移動した場合は、パネルの選択行も追従する（双方向の連動） | コード上は満たす（実機未検証） | `OnRowClick`→`OpenRowFile`→`MSG_MERGE20_FILELIST_OPEN_FILE`→`Merge20MoveToFile`（既存フレームの活性化を含む）。逆方向は `RefreshFileListPanel()` |
+| P-R8 | パネルの行で確認内容を変更できる（キー 1〜5・Space・右クリックメニュー・確認内容列のクリック）。出力チェックの ON／OFF もパネルのチェックボックスで直接変更できる。変更はフォルダ比較の一覧と即座に同期する | コード上は満たす（実機未検証） | キー（`HandleListKey`）、Space（巡回）、右クリックメニュー（5 状態＋出力トグル）、確認内容列クリック（巡回）、出力列クリック（トグル）。同期は `Merge20UpdateDirViewItem`／`Merge20UpdateDirViewStatus` |
+
+- P1 の残課題「再スキャン後のパネル更新」：`CompareReady()` への通知追加で解消（コード上。実機確認は §41.5 の手順 14）。
+- P1 の残課題「閉じたフレームの通知登録の解除 API なし」：`RemoveMerge20FileListNotifyCallback` の追加と `DestroyWindow()` での解除で解消（単体テスト 3 件で検証済み。実機での観察は §41.5 の手順 15）。
+- P2 の既知の制限「パネルからの出力フラグ変更時、フォルダ比較画面のステータスバー件数表示が次回更新まで古いまま」：`Merge20UpdateDirViewItem`／`Merge20UpdateDirViewStatus` の追加で解消（コード上。実機確認は §41.5 の手順 12・13）。
+
+### 41.4 検証レポート
+
+- **CI（PR 作成後に追記）**：PR #37 の最終 head の CI 実行が completed/success であること、全文ログに GoogleTest の全パス行（`[ PASSED] N tests.`、`[ FAILED] 0`）があること、コンパイルエラー 0件であること、成果物（WinMerge-x64.zip と WinMerge-x64-Setup-x64.exe）が API で存在確認できること（名前・バイト数・失効日）、をすべて確認してここに追記する。最終 head が本節の記録だけのコミットでも、その CI 実行まで確認する。
+- **GoogleTest のテスト数**：P2 時点の 715 件から＋3 件で **718 件**になる見込み（新規は `Merge20FileListNotify` の Remove 3 件のみ。MFC 側の新規コードに単体テストはない）。
+- **.po 監査**：ブランチ版は msgid **2158 件**（master 版 2157 件＋1）、【Wiz】**126 件**（master 版 125 件＋1）。増分が新規文字列 1 件（"Toggle output"）と一致することを確認済み。msgstr は「【Wiz】出力を切り替える」（.po ファイルへの追加は exec 経由で行い、全角括弧の欠落がないことを確認済み）。
+- **ローカル検証（コード上）**：変更した 15 ファイルの括弧バランス（文字列・コメント除去後の ()、{}、[]）をすべて確認済み。リソース ID の重複チェック（389xx に重複なし。35xxx〜36xxx の重複は master と同一の既存分）。新規 msgid `"Toggle output"` のリテラル `_()` 呼び出し（`Src/Merge20/Merge20FileListBar.cpp:767`）を確認済み。`WM_USER + 5` と `WM_USER + 121` が未使用であることを取得済みファイルの grep で確認済み（`WM_USER + 122` は作らない）。
+- **実読で確認済みの事実（実装の根拠）**：`CMergeDoc::CloseNow()` は `PromptAndSaveIfNeeded(true)` の後に `GetParentFrame()->DestroyWindow()` を同期的に呼ぶ。`CDirDoc::m_MergeDocs` は `AddMergeDoc` で追加、`MergeDocClosing` で除去される。`CDirDoc::GetMainView()` は public。`CDirView::GetItemKey(int)` は public（範囲外は ASSERT）。`CDirView::OpenSelection`／`MoveFocus`／`GetFocusedItem` は private のため、パネルからは `Merge20OpenFile`（新規 public メソッド）経由でのみ開く。`CMergeDoc::m_filePaths` は `MergeEditFrm.cpp` から既にアクセスされている public メンバ。`GetItemIndex` の未発見時 0 返却（`DirView.cpp` の `return 0;` を実読）。`Merge20OpenFileAtLine` の片側ファイルでの黙った失敗（D7 の既存の wart。P3 では直さない）。
+- **未検証（実機でしか確認できないもの）**：§41.5 の実機確認チェックリストの全項目。「できた」とは言わない。
+
+### 41.5 実機確認チェックリスト（未検証。Windows 実機での確認手順）
+
+1. **行クリックで比較が開く**：フォルダ比較で2ファイル以上を開く。比較ウィンドウ左のパネルで別のファイルの行をシングルクリックする→そのファイルの比較が同じウィンドウに開くこと。現在の比較は閉じられること（MDI 子ウィンドウが増えないこと）。
+2. **既に開いているファイルへの切り替え**：2つの比較ウィンドウを開いておく。1つ目のウィンドウのパネルで、2つ目のウィンドウで開いているファイルの行をクリックする→2つ目のウィンドウが活性化されること（重複して開かないこと）。
+3. **現在のファイルの行クリック**：パネルで現在開いているファイルの行をクリックする→何も起きないこと（比較が閉じて開き直されることがないこと）。
+4. **Next／Prev での選択行の追従**：比較ウィンドウで Next／Prev（ツールバーまたは専用バーの Prev／Next）でファイル移動する→パネルの選択行が移動先のファイルになること。
+5. **ファイル・パス・バーでの切替時の追従**：比較ウィンドウのファイル・パス・バーから別のファイルに切り替える→パネルの選択行が切り替えたファイルになること。
+6. **受け入れ条件 (a) の一連の動線**：パネルでファイルを選ぶ→差分を判定する（エディタで差分を確認する）→パネルで確認内容を「済」にする（キー 2 または確認内容列クリックの巡回、または右クリックメニューで「済」）→出力チェックが ON になること。ファイル比較ウィンドウから出ずに完結すること。
+7. **確認内容の変更（キー 1〜5）**：パネルのリストにフォーカスを当て、キー 1〜5 を押す→確認内容がそれぞれ未確認／済／保留／個別対応要／現状維持になること。フォルダ比較の一覧の確認内容も同時に変わること。検索エディットにフォーカスがある状態で '1' を入力した場合は検索文字列になること（確認内容が変わらないこと）。
+8. **Space での循環**：パネルのリストにフォーカスを当て、Space を押す→確認内容が TODO→DONE→HOLD→SPECIAL→KEEP→TODO と巡回すること。
+9. **確認内容列クリックでの循環**：パネルで確認内容列（「確認内容」）をシングルクリックする→Space と同じ巡回をすること。
+10. **出力列クリックでのトグル**：パネルで出力列（「出力」）をシングルクリックする→出力チェックが ON／OFF すること。フォルダ比較の一覧の出力チェックも同時に変わること。
+11. **右クリックメニュー**：パネルのファイル行を右クリックする→確認内容 5 状態（現在の状態にチェック付き）と「出力を切り替える」（ON ならチェック付き）のメニューが出ること。各項目を選択するとその状態／出力になること。ディレクトリ行の右クリックは従来どおりのメニュー（折りたたみ／チェック／解除）が出ること。
+12. **フォルダ比較画面への反映**：パネルで確認内容・出力を変更した後、フォルダ比較画面に戻る→該当行の表示（確認内容・出力チェック）が変わっていること。ステータスバーの件数表示（出力対象・未確認件数）が変更直後の値になっていること（次回更新まで古いままにならないこと）。
+13. **一括チェック後のフォルダ側ステータスバー件数**：パネルで一括チェックを実行する→フォルダ比較画面のステータスバー件数が変更直後の値になっていること。
+14. **再スキャン後のパネル更新**：フォルダ比較で再スキャン（F5 等）を実行する→比較ウィンドウのパネルの一覧が新しい比較結果に更新されること（次の活性化まで古いままにならないこと）。
+15. **閉じたフレームの通知**：同じフォルダ比較から複数の比較ウィンドウを開いて閉じてを繰り返す→パネルの表示が壊れないこと（閉じたフレームへの通知が残っていないこと。目視での確認）。
+16. **片側ファイル（旧のみ／新のみ）の行クリックと選択追従**：旧のみ／新のみのファイルの行をクリックする→そのファイルの比較が開くこと（片側ファイルでも開けること）。そのファイルを開いた状態でパネルの選択行がそのファイルになっていること。
+17. **回帰なし**：専用モード、スナイパー、巡回（未確認のみ）、フォーカス・ドック、ダブルクリックでのフォルダ折りたたみ／展開、検索、フィルタタブ、一括チェック、ディレクトリ単位操作が従来どおり動くこと。
+
+### 41.6 P4 への引き継ぎ（P3 の範囲外）
+
+- **P4（保存・復元の完成）**：表示状態・幅・スリム化・検索文字列・折りたたみ状態・選択タブの保存・復元の完成。P3 で追加した `m_sCurrentRelPath`（比較ウィンドウのファイル）は復元対象ではない（フレームごとに解決する）。`m_sPendingOpenRelPath` は一時的な受け渡し用メンバであり、保存対象ではない。
+- **P3 で未実装のまま（P1 の暫定のまま）**：旧／変／新の内訳 3 列（H-LIST）。H-FILTER との整理も未着手。
+- **既知の制限（P3 で直さないもの）**：`CDirView::GetItemIndex` の未発見時 0 返却（upstream の癖。P3 の新規コードは `GetItemKey` 検証で回避済み）。`Merge20OpenFileAtLine`（Grep ジャンプ、D7）の片側のみファイルでの黙った失敗（`Merge20FindRelPath` のフォールバックでは回避済み）。`Merge20OpenFile` はフォルダ側フィルタで隠れている行は開けず、Grep ジャンプと同じ msgid「Cannot open the file because it is hidden by the current filter.」のメッセージボックスを出す（既存 msgid の流用で新規文字列なし）。
+- **実機確認待ち**：§41.5 の全項目（特に手順 6 の受け入れ条件 (a) の動線と、手順 16 の片側ファイル）。
