@@ -1778,6 +1778,8 @@
 #define ID_MERGE20_DED_TODO_ONLY      38951
 #define ID_MERGE20_DED_SNIPER         38952
 #define ID_MERGE20_DED_ZOOM_RESET     38953
+#define ID_MERGE20_SPLIT_DIFF        38954
+#define ID_MERGE20_REGROUP_DIFF      38955
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2517,8 +2519,8 @@
 // (ID_VIEW_MERGE20_DEDICATED_MODE); D2 consumes commands 38942-38953
 // (dedicated-bar actions) and controls 1745-1756 (dedicated-bar buttons);
 // D3 consumes control 1757 (dedicated-bar file info); D4 consumes
-// controls 1758-1766 (focus dock header + result view); D5-D9 allocate
-// from these ranges.
+// controls 1758-1766 (focus dock header + result view); D5 consumes
+// commands 38954-38955 (split/regroup); D6-D9 allocate from these ranges.
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 297 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2526,9 +2528,10 @@
 //   taken; dialog IDs must skip those values.
 // - controls (IDC_*): from 1767 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603).
-// - commands (ID_*): from 38954 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
-//   D1; 38942-38953 are the D2 dedicated-bar commands;
-//   _APS_NEXT_COMMAND_VALUE is now 38954), free up to 38976
+// - commands (ID_*): from 38956 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
+//   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
+//   are the D5 split/regroup commands;
+//   _APS_NEXT_COMMAND_VALUE is now 38956), free up to 38976
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2538,7 +2541,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        297
-#define _APS_NEXT_COMMAND_VALUE         38954
+#define _APS_NEXT_COMMAND_VALUE         38956
 #define _APS_NEXT_CONTROL_VALUE         1767
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
