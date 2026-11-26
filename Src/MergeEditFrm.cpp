@@ -697,8 +697,7 @@ void CMergeEditFrame::ShowMerge20Sniper(int nDiff)
 		return;
 	if (m_wndSniper.GetSafeHwnd() == nullptr && !m_wndSniper.Create(this))
 	{
-		TRACE0("Failed to create CMerge20SniperDlg
-");
+		TRACE0("Failed to create CMerge20SniperDlg\n");
 		return;
 	}
 	m_wndSniper.OpenSniper(m_pMergeDoc, nDiff);
