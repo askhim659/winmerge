@@ -217,6 +217,31 @@ public class PoFileUpdater
                 }
                 i++;
             }
+            // Merge20 (W1): keep language-specific entries that are not in
+            // the POT file (e.g. strings used only in C++ code, which the
+            // POT generator does not scan, and scriptlet dialog strings).
+            // Before this fix the file was rewritten from the POT keys only,
+            // so every build deleted those translations from the shipped
+            // .po (111 Merge20 msgids in the 2026-11-25 build). Kept entries
+            // are appended verbatim, in their original order, after the
+            // POT entries. Housekeeping: if a kept string is deleted from
+            // the code, remove its PO entry by hand in the same change,
+            // otherwise it stays in the PO file.
+            foreach (var sKey in oLanguagePoContent.Keys)
+            {
+                if (sKey != "__head__" && !oEnglishPotContent.ContainsKey(sKey))
+                {
+                    var oKept = oLanguagePoContent[sKey];
+                    oPoFile.Write("\n");
+                    oPoFile.Write(oKept.sTranslatorComments);
+                    oPoFile.Write(oKept.sExtractedComments);
+                    oPoFile.Write(oKept.sReferences);
+                    oPoFile.Write(oKept.sFlags);
+                    oPoFile.Write(oKept.sMsgCtxt2);
+                    oPoFile.Write(oKept.sMsgId2);
+                    oPoFile.Write(oKept.sMsgStr2);
+                }
+            }
         }
     }
 
