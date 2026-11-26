@@ -3193,3 +3193,365 @@ PR #22。master 94149386 から分岐。D2（PR #21）が先にマージされ �
 
 - タイトルバーに WizMerge と出ること、About ダイアログ（タイトル・バージョン情報・リンク文言）、インストーラーの表示名・インストール先・ショートカット名、エクスプローラ右クリックメニュー、ZIP 内フォルダ名、.chm 以外のヘルプ表示。
 - 日本語 UI で上記の日本語訳（「WizMerge について」等）が出ること。
+
+## 26. W1（日本語統一・【Wiz】表示・列レイアウト移行 D1.5）— ブランチ `merge20/phase4-w1`
+
+> 節番号について：D2（PR #21）が §24、W2（PR #22）が §25 を取ったため、
+> 本節は §26 とした。ベースは W2 マージ後の master
+> `2890f0a069a0ba701df29b4a29091afe2b3ec7c8`
+> （マージコミット「Merge pull request #22 from askhim659/merge20/phase4-w2」、
+> 2026-11-26 01:59:50 UTC）。W1 の範囲にプログラム名の改名は含まない。
+
+### 26.0 要約
+
+- フォーク追加の全 UI 文字列 368 件を監査し、日本語訳の漏れ・誤訳を修正した。
+  Merge20 の欠落は 6 件のみで、他は .rc／.cpp のどちらにもある既存の訳だった。
+- ただし監査で出荷物の根本原因が判明した：**リポジトリの .po を直すだけでは
+  出荷される .po は直らない**。ビルド中の MergeLang ステップが
+  `English.pot` を `Merge.rc`＋`Plugins/Strings.rc` から再生成し、
+  `UpdatePoFilesFromPotFile.ps1` が全 .po をその .pot から書き直すため、
+  `.cpp` にしかない文字列の訳は毎回削除されていた（2026-11-25 の出荷物で
+  111 件欠落）。この systemic な欠陥を2つの修正で塞いだ（26.2）。
+- 追加 UI の表示名に 【Wiz】 ラベルを付けた（48 件、msgstr のみ。26.3）。
+  D2 の専用バー上のボタン 6 件（Prev／Next／Pin／Unreviewed only／Sniper／
+  Back to Normal Mode）を含む。
+- 古い列レイアウトに Merge20 の5列を末尾追加する移行（D1.5）を実装した（26.4）。
+- 検証ゲート（ユーザーの 2026-11-26 指示）に従い、「できた」と言うのは
+  検証証拠のあるものだけとする。証拠は (a) 再生成シミュレーション（26.2）、
+  (b) CI ログでの番兵チェックの通過（26.5）、(c) CI 成果物 ZIP の中の
+  `Japanese.po` の直接確認（26.5）、(d) 各 【Wiz】 ラベルのコード上の場所と
+  .po の対応（26.3 の表）。Windows 実機でしか確認できない表示は
+  「未検証」として 26.6 のチェックリストに残す。
+
+### 26.1 (A) 日本語の総点検と修正
+
+- 方法：`Src/Merge20/*.cpp|*.h` と変更ファイル
+  （`DirViewColItems.cpp`、`DirView.cpp`、`PropCompare.cpp`、
+  `MergeDocResultPane.cpp`、`MergeEditFrm.cpp`、`DirDoc.cpp`、
+  `MergeDoc.cpp`、`MergeResultView.cpp`）の `_()`／`N_()`／`NC_()` を
+  抽出し、`.rc` の Merge20 追加分（メニュー・ダイアログ）と
+  `Merge20Exclude.sct` の HTA ダイアログ（`${...}` 9 件）も拾い、
+  `Translations/WinMerge/Japanese.po` と突き合わせた。
+  監査スクリプトは `w1-work/scripts/audit.py`（ローカル検証用。PR には
+  含めない）。コンテキスト付き項目は `I18n::tr` のキー
+  （`"\x01\"ctx\"msgid"`）で対応を確認した。
+- 結果：**368 件を列挙。リポジトリの .po に無いものは 23 件**。
+  - Merge20 の欠落 6 件：`"%1 | %2"`（S3、ステータスバーの結合書式）、
+    `.rc` ダイアログの初期テキスト 4 件（`"0 files will be checked"`、
+    `"Check selected (0 items)"`、`"Checked files only (0 files)"`、
+    `"All files with differences (0 files)"` — 実行時に `%1` 形で上書き
+    されるが、初期表示のために訳が必要）、
+    `"Merge20Exclude.sct WinMerge Plugin Options"`（.sct の HTA タイトル）。
+    6 件とも今回 `Japanese.po` に追加した（26.1 の表のあと）。
+  - stock／デバッグの欠落 17 件：デバッグ列 7 件（`[Debug]diffcode` 等）、
+    列の説明文 5 件（`Compare result`、`This item`、`Parent of current item`、
+    `Link to first child of this item`、`Forward/Backward "sibling" link`）、
+    `ViewCustomFlags flags`、EOL 名 3 件（`Mac`／`Unix`／`Win`）。
+    いずれもフォーク以前から .po に無かったもので、W1 の対象外として
+    修正しない。なお `Mac`／`Unix`／`Win` は `StringBlacklist.txt` に
+    載っているため .pot にも入らない。
+  - ほかに、訳が msgid と同一で意図的に未訳のもの 7 件（`OK`、`Mixed`、
+    `default`、`histogram`、`minimal`、`none`、`patience`）は正しいもの
+    として扱う（パーサ再現チェックでは `# same` として許容）。
+- 誤訳の修正 1 件：`"Review (modified)"` の訳を
+  「要判断（同一書換）」→「要判断（変更のみ）」に修正した
+  （REVIEW_MOD_ONLY＝変更のみの差分。「同一書換」は誤り）。
+  値はセル・CSV と共有されるため 【Wiz】 は付けない。
+- Lpath／Rpath／Mpath の不具合を修正した（コーディネーター調査の事実2）。
+  `Src/DirViewColItems.cpp` の `f_cols`（Lpath／Rpath）と `f_cols3`
+  （Lpath／Mpath／Rpath）の計 5 行で、第2フィールド（idNameContext）が
+  `nullptr` だったのを `"DirView|ColumnHeader"` にした。
+  `NC_` マクロはコンテキストを捨てるためこのフィールドが唯一の経路で、
+  `Path`／`Binary` は既に正しかった。`.po` には
+  msgctxt `"DirView|ColumnHeader"` 付きの訳（左のフォルダー／右のフォルダー／
+  中央のフォルダー）があるため、これで日本語になる。
+- Phase 1 の `Merge20Exclude.sct` には設定ダイアログがあることを確認した
+  （HTA `dialog1` リソース、`ShowSettingsDialog()`、`mergeApp.Translate`
+  経由で訳される）。`${...}` 9 件のうちタイトル以外は訳済みだった。
+
+### 26.2 (B) 出荷 .po の根本原因と2つの systemic 修正、番兵、再現チェック
+
+- 根本原因（出荷物 ZIP の直接確認と CI ジョブログによる裏付け）：
+  - CI 実行 45724735474（master 9414938）の成果物 ZIP 中の
+    `WinMerge/Languages/Japanese.po` は 166,451 バイト・1,934 項目で、
+    リポジトリの .po（294,568 バイト・2,041 項目）と比べ 111 項目が欠落し、
+    4 項目（.rc ダイアログの初期テキスト）が余分にあった。
+    欠落した 111 件はすべて `.cpp` にしかない Merge20 文字列だった。
+  - 仕組み：`Src/MergeLang.vcxproj` の CustomBuild がビルドのたびに
+    `Translations/WinMerge/CreateMasterPotFile.js` で `English.pot` を
+    `Merge.rc`＋`Plugins/Strings.rc` から再生成する（`.cpp` はスキャン
+    しない）。続いて `UpdatePoFilesFromPotFile.ps1` が全 .po をその .pot
+    から書き直し、.pot に無い項目を削除する。`BuildTranslations.cmd` は
+    その .po をコピーして `#:`／`#.` 行を除去するだけで、欠落の原因では
+    ない。`.mo` は存在しない（WinMerge は .po を直接読む）。
+    「.mo が古い」「BuildTranslations.cmd の問題」という仮説は誤りだった。
+  - 検証：`CreateMasterPotFile.js` の Python 移植版
+    （`w1-work/scripts/pot_gen.py`）で現行 master の .rc から .pot を
+    再生成したところ、キー集合が出荷 .po と完全一致した（差分 0 件）。
+    コミット済みの `English.pot`（1,900 項目）とは 34 件の差があり、
+    いずれも Merge20 の .rc 追加分で、.pot が最後に生成されてから
+    .rc が変わった分だった。つまり出荷 .po のキー集合＝再生成された
+    .pot のキー集合であり、仕組みは確定した。
+- 修正1：`Translations/WinMerge/UpdatePoFilesFromPotFile.ps1` の
+  `CreateUpdatedPoFile` をマージ方式に変えた。`.pot` にある項目は従来
+  どおり .pot 順に書き、`.pot` に無い言語固有の項目は原文のまま末尾に
+  追加する（訳・コメント・参照をそのまま保持）。これにより `.cpp` に
+  しかない文字列や .sct のタイトルが今後も削除されない。
+  運用上の注意：削除された文字列の .po 項目は残り続けるため、文字列を
+  コードから消すときは同じ変更で .po の項目も手で消すこと。
+- 修正2：`Translations/WinMerge/CreateMasterPotFile.js` に .cpp 抽出を
+  追加した。`../../Src` 配下を再帰走査し、`_()`／`N_()`／`NC_()` の
+  リテラル文字列（隣接リテラルの結合、複数行にまたがるものを含む）を
+  .pot に入れる。`.rc` の項目がキー衝突時は勝つ（リソース ID を
+  `#. ` コメントとして持つため）。ファイルは相対パス順にソートして
+  走査するため .pot は決定的。`#:` 参照は Src 相対パス＋行番号。
+  なお .sct は JScript の構文が違うため抽出対象外で、タイトルは修正1
+  のマージ方式で保持される。
+  （検討したが採用しなかった案：Merge20 文字列を `Merge.rc` の
+  STRINGTABLE に `IDS_MERGE20_*` として追加する方法。将来の .cpp
+  文字列はやはり欠落するため systemic ではなく、未使用のリソース ID
+  が 112 個増えるだけなので見送った。）
+- `Translations/WinMerge/English.pot` を再生成してコミットした
+  （1,900 → 2,068 項目、追加 168 件、削除 0 件）。再生成には移植版
+  （`pot_gen.py --cpp-src`、全 606 ファイル走査）を使い、追加分の内訳は
+  .rc の陳腐化 34 件＋Merge20 の .cpp 文字列 112 件＋stock の .cpp
+  文字列 22 件（`Abort`／`Ignore`／`Redo`／`Retry`／`Try Again`／
+  `Undo`／`%s`／`at position`／デバッグ列・説明文 14 件。いずれも
+  コード上の正しい `_()` リテラルで、誤検出はない）。
+  CI では .js が同じ .pot を再生成するはずで、`fc` による差分検出が
+  働く（差があれば CI 側の .pot が使われるため自己修復される）。
+- 番兵チェック：`BuildTranslations.cmd` に追加した。同梱する
+  `Build\Translations\WinMerge\Japanese.po` に Merge20 の必須 msgid
+  6 件（`"Review State"`、`"Include in Output"`、`"Action Category"`、
+  `"Risk"`、`"Summary"`、`"Memo"`）が含まれていることを `findstr` で
+  確認し、無ければ `exit /b 1` でビルドを失敗させる。
+  `BuildAll.cmd` は既に失敗を伝播する（`call BuildTranslations.cmd ||
+  exit /b 1`）。ASCII の msgid のみを調べるため UTF-8 ファイルでも
+  問題ない。【Wiz】 ラベル自体の確認は番兵では行わず（.cmd に全角文字を
+  書かない方針）、成果物 ZIP の直接確認（26.5）で行う。
+- パーサ再現チェック：`CLanguageSelect::LoadLanguageFile` の読み取り規則
+  （素の項目→素のキー、msgctxt 付き→`"\x01\"ctx\"msgid"` キー、空 msgid
+  は格納しない、msgstr が空なら msgid を使う、後勝ち、引用符なし行で
+  フラッシュ、`unslash` の escapes）を再現した
+  `w1-work/scripts/po_check.py` で、編集後の `Japanese.po` に対し
+  監査で列挙した 368 件を検査した。結果：**351/368 件が日本語に解決**。
+  残り 17 件は 26.1 の stock／デバッグの欠落（対象外）で、Merge20 の
+  欠落は 0 件。意図的に未訳の 7 件と `"%1 | %2"`（書式のみ）は
+  `# same` として許容した。
+- 再生成シミュレーション（検証ゲート (a) の証拠）：
+  `.pot` 生成の移植版と `.po` 更新の移植版（`w1-work/scripts/po_raw.py`、
+  修正前後の両モードを持つ）で、編集後の `Japanese.po` に対し4通りを
+  実行し、112 件（111 件＋`"%1 | %2"`）の残存と 42 件の 【Wiz】 ラベルを数えた。
+
+  | 組合せ | 項目数 | 112 件の残存 | 42 件の 【Wiz】 |
+  |---|---|---|---|
+  | BEFORE（修正前の .pot＋修正前の更新） | 1,935 | 0/112（欠落を再現） | 21/42（.rc 分のみ残存） |
+  | PS1ONLY（.ps1 修正のみ） | 2,048 | 112/112 | 42/42 |
+  | JSONLY（.js 修正のみ） | 2,061 | 112/112 | 42/42 |
+  | BOTH（両方の修正） | 2,062 | 112/112 | 42/42 |
+
+  BEFORE のキー集合は出荷 .po のキー集合と完全一致し、欠落の再現を
+  確認した。PS1ONLY と JSONLY はどちらか一方でも欠落を防げるが、
+  .sct タイトルは .ps1 修正でのみ残る（.js は .sct を走査しないため、
+  JSONLY では欠落する）。両方やることで 112 件＋42 件＋.sct タイトル
+  のすべてが残る。シミュレーションの入出力は `w1-work/sim/` にある。
+
+### 26.3 (C) 【Wiz】表示（全追加 UI）
+
+- 方針：【Wiz】 ラベルは日本語 .po の msgstr の先頭に付けるだけとし、訳自体
+  は変えない（誤訳があれば別途修正）。英語 msgid と .rc のラベルは
+  ASCII のまま変更しない（.rc は ASCII 前提で、日本語・全角括弧を直書き
+  しないこと。英語 UI では 【Wiz】 は付かないが、ユーザーは日本語 UI を
+  使うため問題ない）。
+- 付与一覧（48 件。msgstr は編集後の `Japanese.po` から取った正確な値。D2 の専用バー上のボタン 6 件を含む）：
+| `Review State` | 【Wiz】確認内容 | Src/DirViewColItems.cpp:73 (COLHDR_REVIEWSTATE) |
+| `Include in Output` | 【Wiz】出力 | Src/DirViewColItems.cpp:74 (COLHDR_OUTPUT) |
+| `Action Category` | 【Wiz】対応区分 | Src/DirViewColItems.cpp:75 (COLHDR_ACTION) |
+| `Risk` | 【Wiz】リスク | Src/DirViewColItems.cpp:76 (COLHDR_RISK) |
+| `Summary` | 【Wiz】要約 | Src/DirViewColItems.cpp:77 (COLHDR_SUMMARY) |
+| `Memo` | 【Wiz】メモ | Src/DirViewColItems.cpp:78 (COLHDR_MEMO) |
+| `Ignored diffs` | 【Wiz】無視差分 | Src/DirViewColItems.cpp:72 (COLHDR_EXCLUDED) |
+| `Batch check...` | 【Wiz】一括チェック… | Src/DirView.cpp:897 (context menu) |
+| `Export diff list as CSV...` | 【Wiz】差分一覧 CSV… | Src/DirView.cpp:901 (context menu) |
+| `Save session` | 【Wiz】セッションを保存 | Src/DirView.cpp:905 (context menu) |
+| `Restore session...` | 【Wiz】セッションを復元… | Src/DirView.cpp:907 (context menu) |
+| `Edit audit memo...` | 【Wiz】監査メモを編集… | Src/DirView.cpp:916 (context menu) |
+| `Learning...` | 【Wiz】学習… | Src/DirView.cpp:922 (context menu) |
+| `Check all files under folder` | 【Wiz】配下をすべてチェック | Src/DirView.cpp:926 (context menu) |
+| `Uncheck all files under folder` | 【Wiz】配下のチェックをすべて外す | Src/DirView.cpp:928 (context menu) |
+| `Apply Learning Suggestion` | 【Wiz】🎓 学習候補を適用 | Src/Merge.rc:83 (menu ID_MERGE20_LEARN_APPLY) |
+| `Dismiss Learning Suggestion` | 【Wiz】候補を却下 | Src/Merge.rc:84 (menu ID_MERGE20_LEARN_DISMISS) |
+| `Apply Learning Suggestion (%1, %2, %3)` | 【Wiz】🎓 学習候補を適用（%1・%2・%3件） | Src/MergeResultView.cpp:588 (dynamic menu label) |
+| `Batch Check` | 【Wiz】一括チェック | Src/Merge.rc:3021 (dialog IDD_MERGE20_BATCH_CHECK) |
+| `Export Diff List as CSV` | 【Wiz】差分一覧 CSV 出力 | Src/Merge.rc:3040 (dialog IDD_MERGE20_CSV_EXPORT) |
+| `Edit Audit Memo` | 【Wiz】監査メモの編集 | Src/Merge.rc:3053 (dialog IDD_MERGE20_MEMO) |
+| `Learning (merge judgment history and sharing)` | 【Wiz】🎓 学習機能（マージ判定の蓄積と共有） | Src/Merge.rc:3064 (dialog IDD_MERGE20_LEARN) |
+| `Review states to check` | 【Wiz】チェックする確認内容 | Src/Merge.rc:3024 (batch dialog LTEXT) |
+| `Check all displayed` | 【Wiz】表示分すべてチェック | Src/Merge.rc:3032 (batch dialog button) |
+| `Clear all checks` | 【Wiz】全解除 | Src/Merge.rc:3033 (batch dialog button) |
+| `Check selected (%1 items)` | 【Wiz】選択分を一括チェック（%1件） | Src/Merge20/Merge20BatchCheckDlg.cpp:70 (dynamic label) |
+| `%1 files will be checked` | 【Wiz】%1件のファイルが対象です | Src/Merge20/Merge20BatchCheckDlg.cpp:71 (dynamic label) |
+| `Range to export` | 【Wiz】出力する範囲 | Src/Merge.rc:3043 (CSV dialog LTEXT) |
+| `Checked files only (%1 files)` | 【Wiz】選択分のみ（%1件） | Src/Merge20/Merge20CsvExportDlg.cpp:36 (dynamic radio) |
+| `All files with differences (%1 files)` | 【Wiz】差分全件（%1件） | Src/Merge20/Merge20CsvExportDlg.cpp:37 (dynamic radio) |
+| `Toggle ON/OFF` | 【Wiz】ON/OFF切替 | Src/Merge.rc:3069 (learn dialog button) |
+| `Sources (per import)` | 【Wiz】出典（取込単位） | Src/Merge.rc:3072 (learn dialog LTEXT) |
+| `Delete selected sources` | 【Wiz】選択したソースを削除 | Src/Merge.rc:3074 (learn dialog button) |
+| `Export merged sources` | 【Wiz】🔗 選択したソースを統合して出力 | Src/Merge.rc:3075 (learn dialog button) |
+| `Learned rules (top 50)` | 【Wiz】学習したルール（上位50件） | Src/Merge.rc:3076 (learn dialog LTEXT) |
+| `Export learning data (JSON)` | 【Wiz】📤 学習データを出力（JSON） | Src/Merge.rc:3079 (learn dialog button) |
+| `Import learning data` | 【Wiz】📥 学習データを取込（蓄積型） | Src/Merge.rc:3080 (learn dialog button) |
+| `Clear learning data` | 【Wiz】🗑️ 学習データをクリア | Src/Merge.rc:3081 (learn dialog button) |
+| `Dedicated Compare Mode` | 【Wiz】比較専用モード | Src/Merge.rc:873 (View menu); Src/MergeEditFrm.cpp:142 |
+| `Enable learning` | 【Wiz】🎓 学習機能 | Src/Merge.rc:2727 (compare options checkbox) |
+| `When off, learning suggestions and recording stop.` | 【Wiz】OFF にすると候補提示と記録を停止します。 | Src/Merge.rc:2728 (compare options LTEXT) |
+| `%1 displayed, %2 checked` | 【Wiz】表示 %1 件中 %2 件チェック | Src/DirView.cpp:3289 (status bar) |
+| `Prev` | 【Wiz】前へ | Src/Merge20/Merge20DedBar.cpp:331 (dedicated bar button) |
+| `Next` | 【Wiz】次へ | Src/Merge20/Merge20DedBar.cpp:333 (dedicated bar button) |
+| `Pin` | 【Wiz】ピン固定 | Src/Merge20/Merge20DedBar.cpp:349 (dedicated bar button) |
+| `Unreviewed only` | 【Wiz】未確認のみ | Src/Merge20/Merge20DedBar.cpp (dedicated bar toggle) |
+| `Sniper` | 【Wiz】スナイパー | Src/Merge20/Merge20DedBar.cpp (dedicated bar toggle) |
+| `Back to Normal Mode` | 【Wiz】通常モードへ戻る | Src/Merge20/Merge20DedBar.cpp (dedicated bar exit button) |
+- 除外・代替の判断（勝手に省略しないための記録）：
+  - 確認内容の 5 状態名（未確認／済／保留／個別対応要／現状維持）と
+    対応区分・リスクの値そのものはセル内の値で、CSV の値・ステータス表示
+    とも共有されるため、値自体には 【Wiz】 を付けず、列ヘッダ・ダイアログの
+    チェックボックス見出し・メニュー項目側で 【Wiz】 を付けた。
+  - 存在区分名（旧のみ／新のみ／両方あり 等）と「Not calculated」、
+    戦略名（Insert old／Keep new／Replace with old／Both old and new）、
+    「Exact match」／「Feature match」、学習モーダルのソース名・動的
+    ステータス行、S4 の要約文、メッセージ本文、CSV 専用ヘッダ
+    （Directory／File name／Full path／Existence category／Total diffs／
+    Missing lines／Changed lines／Added lines）、列の説明文（COLDESC_*）、
+    stock の OK／Cancel／Close（全ダイアログと共有）、stock の
+    「Ignored Diff」列（Merge20 の Sexcluded 列とは別物）には付けない。
+    いずれもセル内の値・共有ラベル・CSV の値であり、ヘッダやダイアログ
+    名で十分に目立つため。
+  - 狭い列（出力・リスク等）もユーザーの例示どおりヘッダに 【Wiz】 を付けた。
+  - JSON のファイル名・キー、ログ行（`Merge20 measure...`）、開発者向け
+    診断文には付けない。
+  - ダイアログ内の説明文（LTEXT の長文）には付けない（タイトルとボタンで
+    十分に目立つため）。
+  - 副作用として CSV ヘッダ行も 【Wiz】 付きになる（列ヘッダと msgid を共有
+    するため）。CSV の値は 【Wiz】 なしのまま。
+  - L3/L4 で既に絵文字マーカー（🎓／🔗／📤／📥／🗑️）が付いていた訳には、
+    そのまま先頭に 【Wiz】 を付けた（例：【Wiz】＋🎓 学習候補を適用）。二重に
+    なるが、訳自体を変えない方針による。
+- 今後のスライス（D3〜D11、S5／S7）への約束事：追加 UI の表示名には
+  同じ方針で 【Wiz】 を付けること。新しい `_()`／`N_()`／`NC_()` 文字列を
+  追加したら、(1) `Japanese.po` に訳を追加すること（.js の .cpp 抽出で
+  .pot に入るため、訳があれば出荷 .po に残る）、(2) 表示名・ラベルには
+  msgstr に 【Wiz】 を付けること（値そのもの・JSON・ログは除く）、
+  (3) 文字列を削除したら .po の項目も同じ変更で消すこと
+  （.ps1 のマージ方式では削除された文字列の項目が残り続けるため）。
+- 未確認事項：プログラム名が 2026-11-26 に WizMerge と決まったが、
+  ラベルを WizMerge にするかはユーザーに未確認（2026-11-26 に質問済み）。
+  確認が取れたら msgstr の 【Wiz】 を WizMerge に機械的に置換できる。
+  本節では指示どおり 【Wiz】 で実装した。
+
+### 26.4 (D) 列レイアウト移行（D1.5）
+
+- 新規オプションキー `Merge20/ColumnLayoutVersion`（整数、既定 0、現行
+  バージョン＝1）を `OptionsDef.h`／`OptionsInit.cpp` に追加した
+  （D0・S8・L1 と同じパターン。`InitOption(..., 0, 0, 1)`）。
+- `DirViewColItems::MigrateMerge20Columns()`（`DirViewColItems.cpp` 末尾、
+  宣言は `DirViewColItems.h`）を追加した。Merge20 の新列 5 つ
+  （Sreview／Soutput／Saction／Srisk／Ssummary）のうち既定 order ≧ 0
+  かつ現在非表示のものを、既定 order 順に末尾へ追加する。stock 列には
+  一切触れず、既定で非表示の Smemo／Sexcluded も対象外。
+  `m_dispcols < 0` や `m_dispcols >= m_numcols` のときは何もしない。
+- `CDirView::OnInitialUpdate` で `LoadColumnOrders()` の直後に呼ぶ。
+  保存済みバージョン＜1 なら移行を実行し、追加があれば列順を即保存し、
+  バージョンを 1 に保存する。移行を `LoadColumnOrders()` の中に
+  無条件に入れていないのは、S8 のセッション復元
+  （`Merge20ApplyColumnSettings`）が `LoadColumnOrders()` を直接呼ぶため。
+- 制限事項：バージョンキーは 2-way／3-way 共通の単一キーのため、アップ
+  グレード後に先に開いたほうのレイアウトだけが移行され、もう一方の
+  既存レイアウトは移行されない。将来どちらも移行したい場合は
+  キーを 2-way／3-way 別に分けること。
+
+### 26.5 CI 結果（PR #23）
+
+- PR：https://github.com/askhim659/winmerge/pull/23
+  （ブランチ `merge20/phase4-w1`。マージはしないこと。コーディネーターが検証してマージする。）
+- 旧ベース（master `94149386`、head `094cebcf6006c61c2f382fd04a08a2bf0cabf4ee`、11 コミット）での CI 実行 45733502310（`pull_request`、2026-11-26 01:16:43 UTC 更新）：**結論 success**。ジョブ 139621061666（`build`）：completed／success。GoogleTest：`[  PASSED  ] 608 tests.`。成果物：`WinMerge-x64.zip`（ID 15078491883、26,282,223 バイト、失効 2027-02-24）、`WinMerge-x64-Setup-x64.exe`（ID 15077904099、39,713,377 バイト、失効 2027-02-24）。ジョブログで MergeLang ステップ（`Creating POT file from Merge.rc...`、`Updating PO files from POT file...`、`All PO files updated`）と番兵チェック（`Checking bundled Japanese.po for Merge20 strings...`／`Merge20 strings present in the bundled Japanese.po.`）の通過を確認。成果物 ZIP の直接確認：出荷 `Japanese.po` は 180,094 バイト・2,070 項目で、必要 113 件の欠落は 0 件、Wiz 42/42 件が一致、.sct タイトルも存在した。
+- 記録のみのコミット後の最終 head（`cacf6f1d795a00725e6c0a128817c8ea85a5f67d`）での CI 実行 45734915627：**結論 success**。成果物：`WinMerge-x64.zip`（ID 15078562969、26,282,198 バイト、失効 2027-02-24）、`WinMerge-x64-Setup-x64.exe`（ID 15079121097、39,714,469 バイト、失効 2027-02-24）。
+- D2 マージ後のリベース（本節のベース `fc0e24b3`、head `ee3091fa8808c13d72b71f0614e66d9fbb081603`、11 コミット）での CI 実行 45737590691（`pull_request`、2026-11-26 01:53:11 UTC 更新）：**結論 success**。ジョブ 139634462743（`build`）：completed／success。GoogleTest：`[  PASSED  ] 608 tests.`（ジョブログ 11955 行目）。成果物：`WinMerge-x64.zip`（ID 15079408660、26,288,822 バイト、失効 2027-02-24T01:42:45Z、SHA256 `cc9a2a032d87ab7141409f27fddc06fdfaf5724d3468bc6646206abb6ea4af20`）、`WinMerge-x64-Setup-x64.exe`（ID 15078974601、39,723,321 バイト、失効 2027-02-24T01:42:45Z）。ジョブログで MergeLang ステップ（`Creating POT file from Merge.rc...` 8565 行目、`Updating PO files from POT file...` 8698 行目、`All PO files updated` 8740 行目）と番兵チェック（`Prepare Translations...` 11956 行目、`Checking bundled Japanese.po for Merge20 strings...`／`Merge20 strings present in the bundled Japanese.po.` 11957〜11958 行目）の通過を確認。成果物 ZIP の直接確認：外側 ZIP の中身は `winmerge-2.16.60-a7c96cd-x64-exe.zip` 1 件。内側の `WinMerge/Languages/Japanese.po` は 180,598 バイト・2,081 項目で、必要 124 件（旧出荷物で欠落していた 111 件＋`"%1 | %2"`＋.sct タイトル＋D2 の 11 件）の欠落は **0 件**。Wiz 48/48 件が存在し msgstr はリポジトリの .po と完全一致（D2 のボタン 6 件も含む。`"Prev"`→`【Wiz】前へ`、`"Sniper"`→`【Wiz】スナイパー`、`"Back to Normal Mode"`→`【Wiz】通常モードへ戻る`。`"TODO"` は未確認のまま）。`.sct` タイトルも存在する。リポジトリの .po のキーに対する出荷 .po の欠落は 0 件。出荷 .po にだけある 22 件は stock の .cpp 文字列（未訳のまま追加）。
+- リベース時の注意点（教訓）：ブランチを D2 マージ後の master（`fc0e24b3`）へ force-push した直後、PR #23 は GitHub により自動クローズされた（head が一時的に base と同一になり、変更 0 件とみなされたため）。その後の 11 コミットは PR に同期されず CI も走らなかった。PR を API で再開（`PATCH /pulls/23 {"state": "open"}`）したところ head が `ee3091fa` に同期され、CI 実行 45737590691 が走った。**force-push でブランチを base と同一にする操作は PR を自動クローズさせる**ため、今後のリベースでは base と同一の状態を作らず、コミットを載せてから push するか、クローズされたら再開すること。
+- W2 マージ後のリベース（本節のベース `2890f0a0`）での CI 実行：（リベース後に追記する。追記する項目：実行 ID と結論、GoogleTest の結果、成果物の有無・サイズ・ID・失効日、ジョブログでの番兵チェックの通過、成果物 ZIP 中の `Japanese.po` の直接確認（124 件＋48 件の Wiz＋.sct タイトル）。）
+
+### 26.6 Windows 実機で確認してもらう項目（未検証）
+
+- 以下の項目は Linux VM では確認できないため、実機での確認が必要。
+  「できた」ではなく「未検証」として残す。
+- 1. 成果物 ZIP を丸ごと新しいフォルダに展開し（exe だけ差し替えないこと）、
+  `Languages\Japanese.po` を開いて「確認内容」で検索すること。
+  見つからなければ Languages フォルダが古いので ZIP を丸ごと再展開すること。
+  見つかるのに英語表示なら実行時バグとして報告してもらうこと。
+- 2. フォルダ比較で「列の表示」ダイアログを開き、【Wiz】 付き日本語名
+  （【Wiz】 確認内容、【Wiz】 出力、【Wiz】 対応区分、【Wiz】 リスク、【Wiz】 要約、【Wiz】 メモ、
+  【Wiz】 無視差分）が出ること。左／右／中央のフォルダーも日本語になること。
+- 3. 古い `winmerge.ini`（またはレジストリ）のまま起動し、フォルダ比較で
+  5 列（確認内容・出力・対応区分・リスク・要約）が末尾に追加されること。
+  stock 列の順序が変わっていないこと。
+- 4. 表示メニューの専用モードが「【Wiz】 比較専用モード」になっていること。
+- 5. 一括チェック・CSV 出力・監査メモ・学習の各ダイアログのタイトルと
+  ボタンに 【Wiz】 が付いていること。比較オプションの学習チェックボックスが
+  「【Wiz】 🎓 学習機能」になっていること。
+- 6. フォルダ比較のステータスバーに「表示 N 件中 M 件チェック」と出ること
+  （【Wiz】 付きの表示）。
+- 7. 既存のファイル比較・フォルダ比較が従来どおり動くこと（回帰確認）。
+- 8. 学習候補のメニュー項目に 【Wiz】 が付いていること（学習データを記録して
+  から候補を表示させた場合）。
+
+### 26.7 D3 以降への引き継ぎ・残課題
+- W2 の不整合（W1 の範囲外。コーディネーターへの報告事項）：W2 は
+  .rc／.po の表示名を "WinMerge"→"WizMerge" に変えたが、.cpp／.sct の
+  ソース文字列は変えていない。master `2890f0a0` で確認した限り、
+  .cpp に残る "WinMerge" の `_()` 文字列は 6 件以上ある
+  （`"32-bit WinMerge does not support Clipboard Compare"`
+  ClipboardHistory.cpp:180、 `"WinMerge detected a previous crash..."`
+  CrashLogger.cpp:411、 `"WinMerge comes with ABSOLUTELY NO WARRANTY..."`
+  MergeApp.cpp:154、 `"Another application updated...since WinMerge loaded it..."`
+  HexMergeDoc.cpp:240／MergeDoc.cpp:1133、
+  `"WinMerge Project Files (*.WinMerge)|*.WinMerge||"`
+  MainFrm.cpp:2868／OpenView.cpp:1254、
+  `"Cannot find filter template!...WinMerge/Filters Folder..."`）。
+  .po の msgid は "WizMerge" 化されたため、これらの .cpp 経路の検索は
+  外れて英語表示になる（W2 以前は日本語だったものが英語に戻る）。
+  同様に 8 個の .sct ファイルの `<title>` も "WinMerge Plugin Options"
+  のままで、.po の 6 件（CompareMSExcelFiles／CompareMSWordFiles／
+  CompareMSPowerPointFiles／CompareMSVisioFiles／PrediffLineFilter／AI.sct）
+  は "WizMerge Plugin Options" に変えられたため、.sct タイトルの訳も
+  外れる。W1 の `.pot` 再生成では両方の版が .pot に入るため、出荷 .po には
+  "WinMerge" 版が未訳で追加される（表示は英語のまま）。正しい修正は
+  W2 のフォローアップとして .cpp／.sct 側も "WizMerge" 化すること。
+  なお W1 の新規項目 `"Merge20Exclude.sct WinMerge Plugin Options"` は
+  .sct ファイルが "WinMerge" のままのため、あえて "WinMerge" のままに
+  した（.sct 側が変わったら合わせて変えること）。
+- W2 のリベースで `Japanese.po` のアンカー 1 件を変更した：W1 の新規項目
+  （Merge20Exclude.sct のタイトル）の挿入位置アンカーを
+  `"PrediffLineFilter.sct WinMerge Plugin Options"` から
+  `"PrediffLineFilter.sct WizMerge Plugin Options"` に変えた
+  （W2 の改名に追従。挿入する項目自体は上記の理由で "WinMerge" のまま）。
+- `resource.h` は W2 で変更なし（新規リソース ID なし）。W1 は新規リソース
+  ID を使わないため重複はない。`Merge.rc` は W1 では触らない
+  （W2 がタイトルバー・メニュー・About 等を WizMerge 化済み）。
+
+- D2（PR #21）と W2（PR #22）はマージ済み。本節は W2 マージ後の master
+  （`2890f0a0`）にリベースしたもので、D2 の専用バー上のボタン 6 件への
+  【Wiz】 付与と、D2 の 11 文字列の `English.pot` への追加、W2 の改名への
+  追従（アンカー 1 件の変更）を行った。なお D2 側が既に
+  `"Dedicated Compare Mode"` に 【Wiz】 を付けていたため、W1 では二重付けを
+  避けてスキップした（26.3 の表を参照）。D2 の新規文字列は .js の .cpp
+  抽出で .pot に入るため、訳があれば出荷 .po に残る。
+- 専用モードのウィンドウが空に見える件（ユーザーの 2026-11-26 09:25 報告）
+  は D2 の領域であり、W1 では扱わない。
+- `.po` の `#.` コメントについて：.cpp 文字列の訳は、ビルド後の .po では
+  `#. ` が空（または .pot 由来）になる。`.po` に手書きした
+  `#. Merge20 ...` コメントは、.pot に入った文字列についてはビルド時に
+  .pot 由来のものに置き換わる。訳自体は保持される。
+- `.ps1` のマージ方式では、削除された文字列の .po 項目が残り続ける。
+  文字列を削除する変更では .po の項目も一緒に消すこと（26.2 参照）。
+- 監査子エージェントが別途 Phase 1〜4 の監査を行っている。W1 の修正内容
+  は本節が W1 自身の検証レポートである。
