@@ -1056,6 +1056,8 @@
     <ClInclude Include="Merge20\Merge20Sniper.h" />
     <ClInclude Include="Merge20\Merge20FocusDock.h" />
     <ClInclude Include="Merge20\Merge20FocusResultView.h" />
+    <ClInclude Include="Merge20\Merge20SniperDlg.h" />
+    <ClInclude Include="Merge20\Merge20SniperView.h" />
     <ClInclude Include="Merge20\Merge20Learn.h" />
     <ClInclude Include="Merge20\Merge20LearnDoc.h" />
     <ClInclude Include="Merge20\Merge20LearnDlg.h" />
@@ -1388,6 +1390,8 @@
     </ClCompile>
     <ClCompile Include="Merge20\Merge20FocusDock.cpp" />
     <ClCompile Include="Merge20\Merge20FocusResultView.cpp" />
+    <ClCompile Include="Merge20\Merge20SniperDlg.cpp" />
+    <ClCompile Include="Merge20\Merge20SniperView.cpp" />
     <ClCompile Include="Merge20\Merge20Learn.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
