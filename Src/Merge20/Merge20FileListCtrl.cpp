@@ -45,7 +45,7 @@ namespace
 	 * the three count columns are narrow numbers. The eight
 	 * columns (714px) are slightly narrower than the six P1
 	 * columns were (742px), so the panel does not get wider. */
-	const int Merge20FileListColWidths[COL_COUNT] =
+	const int Merge20FileListColWidths[8] =
 	{
 		48, // selection (checkbox glyph, centred)
 		160, // file name
