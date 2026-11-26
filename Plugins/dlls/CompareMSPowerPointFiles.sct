@@ -434,7 +434,7 @@ function importSettingsFromXMLFile(filepath) {
 <html>
   <head>
     <HTA:APPLICATION ID="objHTA">
-    <title>${CompareMSPowerPointFiles.sct WinMerge Plugin Options}</title>
+    <title>${CompareMSPowerPointFiles.sct WizMerge Plugin Options}</title>
     <meta content="text/html" charset="UTF-16">
     <style>
     body { background-color: #f2f2f2; font-family: Arial, sans-serif; }
