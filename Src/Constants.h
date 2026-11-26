@@ -32,6 +32,9 @@ inline const tchar_t ContributorsPath[] = _T("contributors.txt");
 /** @brief Release notes in HTML format. */
 inline const tchar_t RelNotes[] = _T("\\Docs\\ReleaseNotes%s.html");
 
+/** @brief WizMerge user manual in HTML format (H-DOC). */
+inline const tchar_t WizManual[] = _T("\\Docs\\WizMergeManual.html");
+
 /** @brief GPL Licence local file name. */
 inline const tchar_t LicenseFile[] = _T("Copying");
 

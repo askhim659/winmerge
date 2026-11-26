@@ -5447,3 +5447,75 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - 実機確認待ち（§46.5 の全項目）。特に項目 2（HTML 版との ⊘N の一致）と項目 6（比較時間）は S0-F1 の主眼のため、実機での確認結果を本節へ追記すること。
 - 既知の制限（勝手に削っていない。理由は §46.2 参照）：(1) FILE_PREDIFF プラグインとフィルタ式分岐は計数対象外。(2) prediffer が空白化ではなく置換で正規化する場合は計数されない。(3) 複数の prediffer が同じ行を空白化するとステップごとに加算され二重計上になりうる。(4) 要約文の「除外:N行」（S4、OP_TRIVIAL 行数）と列の ⊘N（prediffer 空行化行数）は別数量のまま。統一にはファイル比較ロード経路への計数引渡しが必要（フォローアップ）。(5) 比較が途中で失敗した場合は計数を不明（-1）にする（部分計数を表示しない）。(6) IsBlank は半角空白とタブのみを空白とみなす（その他の空白文字を含む行は非空白として扱う。prediffer が空行化する行は "" になるため、通常は影響しない）。
 - 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §46.5 のチェックリストでユーザーに確認してもらうこと。
+
+## 47. H-DOC — 使い方マニュアルの Docs 同梱（カバレッジ行列 H-DOC・H-67）— ブランチ `merge20/h-doc`
+
+- PR: #43（https://github.com/askhim659/winmerge/pull/43）。最終 head（コード）`e94e9c0abe431f49486d188cc29e72bb9f892ee6`（15 件）。マージは本記録時点では未実施（コーディネーター判断待ち）。
+- カバレッジ行列 H-DOC・H-67、仕様書 §3、HTML `17_v17.15.html`（`helpMo`、656〜830 行目）。受け入れ条件：ヘルプメニューからマニュアルが開けること（【Wiz】付きのメニュー項目）、マニュアルの内容がフォークの実装と一致していること、マニュアルが成果物（ZIP／Setup exe）に同梱されていること。
+
+### 47.1 変更一覧（1 ファイル 1 コミット、15 件＋本節の記録コミット。連続コミットの間に sleep 3）
+
+| # | コミット | ファイル | 内容 |
+|---|---|---|---|
+| 1 | `4fb2000d` | Docs/Users/WizMergeManual.html | 新規。日本語マニュアル 17 節（32,089 バイト）。HTML 版 17 節を出発点にフォークの実装に合わせて書き直し。単一 HTML（インライン CSS のみ、外部参照・スクリプト・画像なし）。【Wiz】23 か所 |
+| 2 | `869afac2` | BuildArc.cmd | Docs コピー一覧に `Docs\Users\WizMergeManual.html` を追加（ZIP の `WizMerge\Docs` へ） |
+| 3 | `e2c22c59` | Installer/InnoSetup/WinMergeX64.is6.iss | [Files] にマニュアル行を追加（`{app}\Docs`、ReleaseNotes.html と同じ Flags・Components） |
+| 4 | `a7032d4c` | Installer/InnoSetup/WinMergeARM64.is6.iss | 同上（ARM64） |
+| 5 | `38628325` | Installer/InnoSetup/WinMergeX64.iss | 同上（x64、Inno Setup 5 用） |
+| 6 | `1dc80dfa` | Installer/InnoSetup/WinMergeX64NonAdmin.iss | 同上（x64 PerUser） |
+| 7 | `8e5fbb3d` | Installer/InnoSetup/WinMergeX86.iss | 同上（x86） |
+| 8 | `afebe9b4` | Src/Constants.h | `WizManual[] = _T("\\Docs\\WizMergeManual.html")` を追加（`RelNotes` の直後） |
+| 9 | `8827b5f1` | Src/resource.h | `ID_MERGE20_USER_MANUAL` = 38969 を追加。割当コメントに H-DOC を追記。`_APS_NEXT_COMMAND_VALUE` 38969→38970 |
+| 10 | `c669e8a9` | Src/Merge.rc | 3 つのヘルプメニュー（IDR_MAINFRAME／IDR_DIRDOCTYPE／IDR_MERGEDOCTYPE）に `MENUITEM "&User Manual", ID_MERGE20_USER_MANUAL` を追加（「WizMerge Help」の直後） |
+| 11 | `bc8c0b22` | Src/Merge.rc | 修正：メニュー項目の ID 列を隣の項目と揃えた（自己レビュー） |
+| 12 | `c45d0821` | Src/MainFrm.h | `afx_msg void OnHelpWizManual();` を宣言（`OnHelpContents` の直後） |
+| 13 | `a93d58dc` | Src/MainFrm.cpp | メッセージマップに `ON_COMMAND(ID_MERGE20_USER_MANUAL, OnHelpWizManual)` を追加。ハンドラ `OnHelpWizManual()` を実装（`OnHelpReleasenotes()` と同じ方式：`env::GetProgPath()`＋`WizManual` を `shell::Open` で開く。ファイルがない場合は `AfxMessageBox` で日本語メッセージ） |
+| 14 | `dad3ac75` | Translations/WinMerge/Japanese.po | 新規 2 件：`"&User Manual"` → 「【Wiz】使い方マニュアル(&U)」、`"WizMerge user manual (Docs\\WizMergeManual.html) was not found."` → 「WizMerge の使い方マニュアル（Docs\WizMergeManual.html）が見つかりませんでした。」。msgid 2169 → 2171 件、【Wiz】132 → 133 件 |
+| 15 | `e94e9c0a` | BuildTranslations.cmd | 番兵リストに `"User Manual"` を追加（`&` はバッチのメタ文字のため、`"&User Manual"` ではなく部分一致トークンで検査） |
+
+### 47.2 設計判断（判断理由付き）
+
+1. **形式は HTML（単一ファイル、インライン CSS のみ）。** WinMerge のヘルプは Docs/Manual サブモジュール（.chm）であり、フォークのマニュアルを .chm に組み込むのは難しい（サブモジュールのビルド手順・HTML Help Workshop が必要）。HTML なら既定ブラウザで開くだけで表示でき、ZIP／Setup への同梱も既存の Docs コピー経路（BuildArc.cmd の一覧、.iss の [Files]）に 1 行追加するだけで済む。外部参照・スクリプト・画像はなし（オフラインで開ける。HTML 版の CDN 依存とは違う）。
+2. **同梱場所は `Docs/Users/WizMergeManual.html`。** Stock の `Docs/Users/ReleaseNotes.html`・`ChangeLog.html` と同じ場所・同じ同梱経路。`Docs/Manual` はサブモジュール（.chm の元 XML）のため使わない。アプリ内リソース（.rc に埋め込む案）は、32KB の HTML をリソース化する手間と、将来の更新のしにくさから不採用。
+3. **開き方はヘルプメニューの新項目＋ `shell::Open`。** `OnHelpReleasenotes()` と同じ方式（`env::GetProgPath()`＋相対パスを既定ブラウザで開く）。内部ビューアは作らない（ブラウザ表示で十分であり、新規ビューは検証範囲が広がる）。F1（WinMerge Help、.chm）は stock のまま残す。
+4. **英語版は作らない。** ユーザーは日本語 UI を使用し、マニュアルの読み手も日本語話者に限られる。英語版を作ると二重管理になり、日本語の統一（W1 の主眼）が崩れる。理由をここに記録する。
+5. **内容は HTML 版 17 節を出発点に、フォークの実装に合わせて書き直した。** フォークにない機能は除くか、未実装である旨を明記した：マージ後 ZIP 出力（§13・§17）、強調文字の比較画面表示（§12・§17。マスタの管理だけができる）、サンプル読込（§17）、FORM／XML 比較表示（§17）、監査コメント自動挿入（記述なし）、全体マップの倍率操作（記述なし。位置ビューは移動のみと明記）。フォーク独自の機能（学習、専用モード、スナイパー、パネル、フィルタデッキ、一括分類、セッション、⊘N、[簡易]）はすべて記述した。
+6. **メニュー項目の加速キーは U。** Help メニューで未使用の文字（W・E・T・O・G・A は使用済み）。`.rc` ラベルは英語 `"&User Manual"`（W1 の規則：【Wiz】は msgstr にだけ付ける）。日本語表示は「【Wiz】使い方マニュアル(&U)」。
+7. **コマンド ID は 38969。** タスク指示の「38968 以降」は、H-FILTER が 38968（デッキバー切替）を既に使用済みのため 38969 に訂正した（resource.h の割当コメントと `_APS_NEXT_COMMAND_VALUE` で確認）。次に使える空きは 38970。
+8. **ファイル欠落時は日本語メッセージボックス。** `OnHelpReleasenotes()` には欠落時の処理がないが、マニュアルは H-DOC で新規追加するファイルのため、ZIP／Setup への同梱漏れやビルドディレクトリからの起動で欠落する可能性があり、沈黙の失敗を避けた。メッセージは `_()` リテラル（.po に訳あり）。
+9. **番兵トークンは `"User Manual"`（部分一致）。** msgid 本体は `"&User Manual"` だが、`&` はバッチのメタ文字のため FOR 集合に入れられない。`.po` 内の `"User Manual"` は新規 msgid の 1 件だけであることを grep で確認済み（偽陽性なし）。欠落メッセージは番兵に入れない（括弧が FOR 集合を壊すため）。代わりに .po 件数監査（§47.4）でカバーする。
+10. **新規 msgid は 2 件。** メニュー項目と欠落メッセージ。欠落メッセージの msgstr に【Wiz】は付けない（エラーメッセージのため。S4 要約値・S0-F1 ツールチップの前例）。`.pot` は触らない（CI が再生成し自己修復。S0-F1 と同じ）。
+
+### 47.3 カバレッジ行列の照合表（H-67・H-DOC を 1 件ずつ確認）
+
+| 条項 | HTML 版の機能 | フォークでの対応 | 判定 |
+|---|---|---|---|
+| H-67 | 使い方マニュアル 17 節（`openMan`／`helpMo`・「📖 使い方」ボタン）。基本の流れ、フォルダ読込、画面構成、左一覧、フィルタ、差分判定、確認内容、AI要約、フォーカス詳細、専用モード、スナイパー、Grep・強調・除外、出力、保存・復元、学習、キーボード、制限と注意。ツールの挙動と一致することを検証済み（v17.13） | 17 節を `Docs/Users/WizMergeManual.html` として書き直し、ヘルプメニュー（【Wiz】使い方マニュアル）から開けるようにした。各節はフォークの実装に合わせて書き換え済み（§47.2 項目 5）。HTML 版の「📖 使い方」ボタン（ブラウザ内モーダル）は、フォークではヘルプメニューの項目に置き換えた | 満たす（コード）＋未検証（実機。§47.5 項目 1〜4） |
+| H-DOC | 使い方マニュアルの Docs 同梱。ヘルプメニューから開ける形にする。内容は本行列と各設計書から生成する | マニュアルを `Docs/Users/` に同梱し、ヘルプメニューから既定ブラウザで開く。ZIP へは BuildArc.cmd、Setup exe へは .iss 5 件で同梱。内容は本行列と各設計書（NOTES §1〜§46）から生成し、フォークにない機能は未実装と明記 | 満たす（コード）＋未検証（実機・成果物。§47.4・§47.5） |
+
+### 47.4 検証レポート
+
+- CI（PR #43、コード head `e94e9c0a`）：実行 45890866054（2026-11-26 20:24:57Z 作成、20:33:44Z 更新）：**結論 success**。ジョブ 140152908669（`build`）：completed／success。GoogleTest：`[  PASSED  ] 754 tests.`（master ベースライン 742 件＋S0-F1 の 12 件。H-DOC は単体テストを追加しないため同数。`[ FAILED ]` 行なし）。コンパイルエラー 0 件（`: error` 0 件、`error C` 0 件、`error LNK` 0 件、`Build succeeded` 1 件）。成果物：`WinMerge-x64.zip`（26,471,329 バイト、ID 15151747699、失効 2027-02-24T20:24:57Z）、`WinMerge-x64-Setup-x64.exe`（39,922,628 バイト、ID 15152600240、失効 2027-02-24T20:24:57Z）。全文ログは `~/workspace/h-doc-work/hdoc_ci_log.txt` に保存（47,702 行）。ジョブログで MergeLang ステップ（`Creating POT file from Merge.rc...`、`All PO files updated`）と番兵チェック（`Checking bundled Japanese.po for Merge20 strings...`／`Merge20 strings present in the bundled Japanese.po.`）の通過を確認。インストーラのログには `WizMergeManual.html` の読込・圧縮行が 2 回（x64 Setup と x64 PerUser Setup）ある。
+- 成果物 ZIP 内のマニュアルの直接確認：成果物 `WinMerge-x64.zip`（ID 15151747699）をダウンロードし、内側の `wizmerge-2.16.60-4aacb54-x64-exe.zip`（671 エントリ、`WinMergeU.exe` あり）から `WizMerge/Docs/WizMergeManual.html` を取り出して確認。コミット版と CRLF 正規化後にバイト一致（出荷時は Windows ランナーの git チェックアウトで CRLF 化されており 253 バイト増えている）。出荷 .po の監査：新規 msgid 2 件がすべて存在し、msgstr が期待値と完全一致（「【Wiz】使い方マニュアル(&U)」、「WizMerge の使い方マニュアル（Docs\WizMergeManual.html）が見つかりませんでした。」）。ブランチ版にあって出荷版にない msgid は 0 件。出荷 .po の msgid 件数は 2185 件（ブランチ版 2162 件に対し +23 件。差分は `.pot` 再生成で追加された stock 文字列で、S0-F1 と同じパターン）。【Wiz】133 件で一致。
+
+
+- .po 監査：ブランチ版は msgid 2171 件・【Wiz】133 件。master 版は msgid 2169 件・【Wiz】132 件。増分は +2 msgid・+1【Wiz】で、新規文字列 2 件（メニュー項目＋欠落メッセージ）と一致。重複 msgid の新規発生なし（master と同一の既存重複 5 件のみ：None・Folder・Binary・Diff・Disabled）。新規 2 件の msgid はコード／.rc のリテラルと完全一致し、msgstr がすべて設定されていることを API から取得したブランチ版で確認。`msgfmt` は本 VM に未導入のため、Python による構文・重複チェックで代替した（CI の MergeLang ステップも .po を読むため、CI の成功が追加の裏付けになる）。
+- マニュアル HTML の検証：タグバランスを確認（html/head/body/ol/ul/table/div/li すべて対応）。h2 17 節、目次リンク 31 件。外部参照（http/https）0 件、script タグ 0 件、img タグ 0 件。【Wiz】23 か所。UTF-8 として読めること、32,089 バイトであることを確認。
+- 静的整合性チェック（作業用スクリプト。CI ではなくローカルで実行）：(1) コマンド ID 38969 が resource.h で 1 件だけ定義され、他と重複しないこと（全 define を値でソートして確認。38968 は H-FILTER、38970 が次の空き）。(2) メニュー項目が 3 つの Help ポップアップすべてにあること（Merge.rc で 3 件）。(3) `WizManual` 定数が Constants.h にあり、他に同名がないこと。(4) `OnHelpWizManual` の宣言（MainFrm.h）・メッセージマップ（MainFrm.cpp）・定義（MainFrm.cpp）が揃っていること。(5) `Merge.h` が `resource.h` を include しているため MainFrm.cpp で `ID_MERGE20_USER_MANUAL` が見えること。(6) BuildArc.cmd／.iss 5 件の追加行が、それぞれ ReleaseNotes.html 行の直後に 1 件だけあること。(7) 全変更ファイルの改行コードが原本と同じであること（Merge.rc・BuildArc.cmd・Constants.h・MainFrm.h・MainFrm.cpp・BuildTranslations.cmd は LF、resource.h は CRLF、.iss はファイルごとの混在を維持）。すべて合格。
+- 未検証（Windows 実機でのみ確認できる挙動）：§47.5 のチェックリスト。実機で確認するまで「できた」とは言わない。
+
+### 47.5 実機確認チェックリスト（手順付き。未検証）
+
+1. **ヘルプメニューからの表示**：WizMerge を起動し、ヘルプメニューを開くと「【Wiz】使い方マニュアル」が表示されること（「WizMerge ヘルプ」の直後）。クリックすると既定ブラウザでマニュアル（17 節）が開くこと。フォルダ比較ウィンドウ・ファイル比較ウィンドウのどちらからでも同じ項目が出ること。
+2. **マニュアルの内容の正確さ**：マニュアルの各節（特に §6 差分判定、§10 専用モード、§11 スナイパー、§12 マスタ管理、§15 学習）の記述が、実際の画面・メニュー名・キー操作と一致していること。食い違いがあれば本節へ追記すること。
+3. **ZIP の中にマニュアルファイルがあること**：CI 成果物 `WinMerge-x64.zip` を展開し、`WizMerge\Docs\WizMergeManual.html` があること。展開したフォルダで `WinMergeU.exe` を起動し、ヘルプメニューからマニュアルが開けること。
+4. **Setup exe の中にマニュアルファイルがあること**：CI 成果物 `WinMerge-x64-Setup-x64.exe` でインストールし、`{app}\Docs\WizMergeManual.html` があること。インストール後にヘルプメニューからマニュアルが開けること。
+5. **ファイル欠落時のメッセージ**：`Docs\WizMergeManual.html` を一時的にリネームしてヘルプメニューから開くと、「WizMerge の使い方マニュアル（Docs\WizMergeManual.html）が見つかりませんでした。」と日本語で表示されること（英語のまま・無言の失敗でないこと）。確認後はファイルを戻すこと。
+6. **回帰なし**：ヘルプメニューの他の項目（WizMerge ヘルプ、リリースノート、翻訳、設定ログ、GNU ライセンス、WizMerge について）が従来どおり動くこと。
+
+### 47.6 次への移行
+
+- H-DOC は完了（コード）。これで Wave 4（新規設計分）はすべて完了（H-FILTER・H-LIST・H-SIMPLE・S0-F1・H-DOC、常設ファイル一覧パネル P0〜P4）。
+- 実機確認待ち（§47.5 の全項目）。特に項目 1（メニューからの表示）と項目 3・4（成果物への同梱）は H-DOC の主眼のため、実機での確認結果を本節へ追記すること。
+- 既知の制限（勝手に削っていない。理由は §47.2 参照）：(1) マニュアルは日本語のみ。英語版なし。(2) マニュアルは HTML（.chm には組み込んでいない）。(3) マニュアルの内容の正確さは実機未検証（§47.5 項目 2）。(4) FORM／XML 比較表示・マージ後 ZIP 出力・強調文字の比較画面表示・サンプル読込は、この版には含まれていない（マニュアル §17 に明記）。(5) 欠落メッセージは番兵リストに入っていない（括弧のため）。件数監査でカバーする。
+- 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §47.5 のチェックリストでユーザーに確認してもらうこと。

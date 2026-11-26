@@ -614,6 +614,7 @@ Source: ..\..\ColorSchemes\*.ini; DestDir: {app}\ColorSchemes; Flags: sortfilesb
 Source: ..\..\Docs\Users\ReadMe.txt; DestDir: {app}\Docs; Flags: overwritereadonly uninsremovereadonly; Components: Core
 Source: ..\..\Docs\Users\Contributors.txt; DestDir: {app}; Flags: overwritereadonly uninsremovereadonly; Components: Core
 Source: ..\..\Docs\Users\ReleaseNotes.html; DestDir: {app}\Docs; Flags: overwritereadonly uninsremovereadonly; Components: Core
+Source: ..\..\Docs\Users\WizMergeManual.html; DestDir: {app}\Docs; Flags: overwritereadonly uninsremovereadonly; Components: Core
 Source: ..\..\Docs\Users\ChangeLog.html; DestDir: {app}\Docs; Flags: overwritereadonly uninsremovereadonly; Components: Core
 Source: ..\..\Build\Manual\htmlhelp\WinMerge.chm; DestDir: {app}\Docs\; Flags: overwritereadonly uninsremovereadonly; Components: Core
 Source: ..\..\Docs\users\GPL.rtf; DestDir: {app}\Docs\; Flags: overwritereadonly uninsremovereadonly; Components: Core

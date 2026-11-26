@@ -424,6 +424,7 @@ protected:
 	afx_msg void OnViewSelectfont();
 	afx_msg void OnViewUsedefaultfont();
 	afx_msg void OnHelpContents();
+	afx_msg void OnHelpWizManual();
 	afx_msg void OnClose();
 	afx_msg void OnToolsGeneratePatch();
 	afx_msg void OnToolsGenerateArchive();
