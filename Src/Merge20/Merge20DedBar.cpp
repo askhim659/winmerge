@@ -7,12 +7,13 @@
  * Merge20 (Phase 4 D1/D2): the dedicated compare mode bar, following
  * the CDiffViewBar precedent. D2 adds the buttons (Prev/Next file,
  * five review-state buttons, pin, unreviewed-only and sniper toggles,
- * zoom display, exit) in a single row. The bar owns no state: clicks
- * are forwarded as WM_COMMAND (ID_MERGE20_DED_*) to the parent frame,
- * which applies them and refreshes the button states through the
- * setters. Toggle buttons are BS_PUSHLIKE checkboxes whose check is
- * set by the frame (not auto-toggled), so the shown state is always
- * the frame's state.
+ * zoom display, exit) in a single row. D3 adds the file-info label at
+ * the left end (current file name + (n/m) position in the patrol set).
+ * The bar owns no state: clicks are forwarded as WM_COMMAND
+ * (ID_MERGE20_DED_*) to the parent frame, which applies them and
+ * refreshes the button states through the setters. Toggle buttons are
+ * BS_PUSHLIKE checkboxes whose check is set by the frame (not
+ * auto-toggled), so the shown state is always the frame's state.
  */
 
 #include "StdAfx.h"
@@ -39,9 +40,12 @@ namespace
 	constexpr int Merge20DedBarGap = 4;
 
 	/** @brief Fixed button widths, in bar order. Wide enough for the
-	 * English and the Japanese labels (see Japanese.po). */
+	 * English and the Japanese labels (see Japanese.po). The first
+	 * entry is the D3 file-info label (file name + (n/m)), not a
+	 * button; long names are ellipsized (SS_ENDELLIPSIS). */
 	constexpr int Merge20DedBarWidths[] =
 	{
+		300, // File info
 		60, // Prev
 		60, // Next
 		72, // TODO
@@ -164,6 +168,18 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	const DWORD dwPushStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON;
 	const DWORD dwToggleStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHLIKE | BS_CHECKBOX;
 	CRect rc(0, 0, 0, 0);
+	// Merge20 (Phase 4 D3): the file-info label (current file name +
+	// (n/m) position), first in the bar. A label, not a button: it
+	// never sends BN_CLICKED, so it is not part of the button arrays
+	// below. Long names are ellipsized, and the text is vertically
+	// centered (SS_CENTERIMAGE) to line up with the 24px buttons.
+	if (!m_stFileInfo.Create(_T(""), WS_CHILD | WS_VISIBLE | SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS | SS_CENTERIMAGE,
+		rc, this, IDC_MERGE20_DED_FILE_INFO))
+	{
+		TRACE0("Failed to create Merge20DedBar file info\n");
+		return -1;
+	}
+	m_stFileInfo.SetFont(pFont);
 	CButton* pButtons[] =
 	{
 		&m_btnPrev, &m_btnNext,
@@ -272,28 +288,37 @@ void CMerge20DedBar::OnSize(UINT nType, int cx, int cy)
 }
 
 /**
- * @brief Lay the buttons out in one row, left aligned, in spec order.
- * Buttons past the right edge are clipped (the bar is full-width when
- * docked at the top; the exit button is last per spec section 5.2,
- * and the View menu still exits dedicated mode).
+ * @brief Lay the file-info label and the buttons out in one row, left
+ * aligned, in spec order. Buttons past the right edge are clipped
+ * (the bar is full-width when docked at the top; the exit button is
+ * last per spec section 5.2, and the View menu still exits dedicated
+ * mode).
  */
 void CMerge20DedBar::LayoutButtons()
 {
 	if (m_btnPrev.GetSafeHwnd() == nullptr)
 		return;
+	int x = Merge20DedBarMargin;
+	// Merge20 (Phase 4 D3): the file-info label first.
+	if (m_stFileInfo.GetSafeHwnd() != nullptr)
+	{
+		m_stFileInfo.SetWindowPos(nullptr, x, Merge20DedBarButtonTop,
+			Merge20DedBarWidths[0], Merge20DedBarButtonHeight,
+			SWP_NOZORDER | SWP_NOACTIVATE);
+		x += Merge20DedBarWidths[0] + Merge20DedBarGap;
+	}
 	CButton* pButtons[] =
 	{
 		&m_btnPrev, &m_btnNext,
 		&m_btnReview[0], &m_btnReview[1], &m_btnReview[2], &m_btnReview[3], &m_btnReview[4],
 		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnZoom, &m_btnExit,
 	};
-	int x = Merge20DedBarMargin;
 	for (size_t i = 0; i < std::size(pButtons); ++i)
 	{
 		pButtons[i]->SetWindowPos(nullptr, x, Merge20DedBarButtonTop,
-			Merge20DedBarWidths[i], Merge20DedBarButtonHeight,
+			Merge20DedBarWidths[i + 1], Merge20DedBarButtonHeight,
 			SWP_NOZORDER | SWP_NOACTIVATE);
-		x += Merge20DedBarWidths[i] + Merge20DedBarGap;
+		x += Merge20DedBarWidths[i + 1] + Merge20DedBarGap;
 	}
 }
 
@@ -410,4 +435,18 @@ void CMerge20DedBar::SetZoomText(int nZoom)
 	m_nZoom = nZoom;
 	String sText = strutils::format(_T("%d%%"), nZoom / 10);
 	m_btnZoom.SetWindowText(sText.c_str());
+}
+
+/**
+ * @brief Show the current file name + (n/m) position (Merge20 Phase 4
+ * D3). A no-op when the text did not change, so the idle-time refresh
+ * does not flicker the label. The text itself is built by the frame
+ * (UpdateDedBar); the bar only displays it.
+ */
+void CMerge20DedBar::SetFileInfo(const String& sText)
+{
+	if (m_stFileInfo.GetSafeHwnd() == nullptr || sText == m_sFileInfo)
+		return;
+	m_sFileInfo = sText;
+	m_stFileInfo.SetWindowText(sText.c_str());
 }

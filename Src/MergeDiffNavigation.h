@@ -5,12 +5,29 @@
 #pragma once
 
 #include "MergeDoc.h"
+#include "OptionsDef.h"
+#include "OptionsMgr.h"
+#include "MergeApp.h"
 
 class CCmdUI;
 
 class CMergeDiffNavigation
 {
 public:
+	/**
+	 * @brief Merge20 (Phase 4 D3): whether the diff is skipped by
+	 * unreviewed-only patrol: TODO-only is on and the diff is already
+	 * resolved (Merge20IsDiffUnresolved is false). Without a merge
+	 * session every diff counts as unresolved, so the skip only bites
+	 * inside a merge session (see CMergeDoc::Merge20IsDiffUnresolved).
+	 */
+	template <typename View>
+	static bool IsDiffSkippedForTodoOnly(View* pView, int nDiff)
+	{
+		return GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY) &&
+			!pView->GetDocument()->Merge20IsDiffUnresolved(nDiff);
+	}
+
 	/**
 	 * @brief Find the first non-filtered diff
 	 * @return Index of first non-filtered diff, or -1 if none found
@@ -22,7 +39,7 @@ public:
 		int nDiff = pd->m_diffList.FirstSignificantDiff();
 		int lastDiff = pd->m_diffList.LastSignificantDiff();
 
-		while (nDiff >= 0 && nDiff <= lastDiff && pView->IsDiffFiltered(nDiff))
+		while (nDiff >= 0 && nDiff <= lastDiff && (pView->IsDiffFiltered(nDiff) || IsDiffSkippedForTodoOnly(pView, nDiff)))
 		{
 			if (nDiff < pd->m_diffList.GetSize() - 1)
 				nDiff = pd->m_diffList.NextSignificantDiff(nDiff);
@@ -44,7 +61,7 @@ public:
 		int nDiff = pd->m_diffList.LastSignificantDiff();
 		int firstDiff = pd->m_diffList.FirstSignificantDiff();
 
-		while (nDiff >= 0 && nDiff >= firstDiff && pView->IsDiffFiltered(nDiff))
+		while (nDiff >= 0 && nDiff >= firstDiff && (pView->IsDiffFiltered(nDiff) || IsDiffSkippedForTodoOnly(pView, nDiff)))
 		{
 			if (nDiff > 0)
 				nDiff = pd->m_diffList.PrevSignificantDiff(nDiff);
@@ -95,7 +112,7 @@ public:
 		}
 
 		// Skip filtered (hidden) diffs
-		while (nextDiff >= 0 && nextDiff <= lastDiff && pView->IsDiffFiltered(nextDiff))
+		while (nextDiff >= 0 && nextDiff <= lastDiff && (pView->IsDiffFiltered(nextDiff) || IsDiffSkippedForTodoOnly(pView, nextDiff)))
 		{
 			if (nextDiff < pd->m_diffList.GetSize() - 1)
 				nextDiff = pd->m_diffList.NextSignificantDiff(nextDiff);
@@ -146,7 +163,7 @@ public:
 		}
 
 		// Skip filtered (hidden) diffs
-		while (prevDiff >= 0 && prevDiff >= firstDiff && pView->IsDiffFiltered(prevDiff))
+		while (prevDiff >= 0 && prevDiff >= firstDiff && (pView->IsDiffFiltered(prevDiff) || IsDiffSkippedForTodoOnly(pView, prevDiff)))
 		{
 			if (prevDiff > 0)
 				prevDiff = pd->m_diffList.PrevSignificantDiff(prevDiff);
@@ -312,6 +329,18 @@ public:
 
 		if (nextDiff >= 0)
 			pView->SelectDiff(nextDiff, true, false);
+		// Merge20 (Phase 4 D3): with unreviewed-only patrol on, wrap
+		// around to the first unresolved diff instead of moving to
+		// the next file (spec section 4(g): "末尾で先頭へ回る"). When
+		// no unresolved diff exists in this file, stay: do not fall
+		// through to the next file (the patrol set is this file's
+		// unresolved diffs).
+		else if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+		{
+			nextDiff = FindFirstNonFilteredDiff(pView);
+			if (nextDiff >= 0)
+				pView->SelectDiff(nextDiff, true, false);
+		}
 		else if (IDirDoc *pDirDoc = pd->GetDirDoc())
 		{
 			if (pDirDoc->MoveableToNextDiff())
@@ -326,6 +355,15 @@ public:
 	static void OnUpdateNextdiff(View* pView, CCmdUI* pCmdUI)
 	{
 		CMergeDoc *pd = pView->GetDocument();
+		// Merge20 (Phase 4 D3): with unreviewed-only patrol on, Next
+		// wraps within the file, so it is enabled whenever any
+		// unresolved diff exists (even on the last one), and it never
+		// moves to the next file.
+		if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+		{
+			pCmdUI->Enable(FindFirstNonFilteredDiff(pView) >= 0);
+			return;
+		}
 		bool enabled = HasNextNonFilteredDiff(pView);
 
 		if (!enabled && pd->GetDirDoc())
@@ -361,6 +399,14 @@ public:
 
 		if (prevDiff >= 0)
 			pView->SelectDiff(prevDiff, true, false);
+		// Merge20 (Phase 4 D3): see OnNextdiff (wrap to the last
+		// unresolved diff instead of moving to the previous file).
+		else if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+		{
+			prevDiff = FindLastNonFilteredDiff(pView);
+			if (prevDiff >= 0)
+				pView->SelectDiff(prevDiff, true, false);
+		}
 		else if (IDirDoc *pDirDoc = pd->GetDirDoc())
 		{
 			if (pDirDoc->MoveableToPrevDiff())
@@ -375,6 +421,13 @@ public:
 	static void OnUpdatePrevdiff(View* pView, CCmdUI* pCmdUI)
 	{
 		CMergeDoc *pd = pView->GetDocument();
+		// Merge20 (Phase 4 D3): see OnUpdateNextdiff (wrap within the
+		// file: enabled whenever any unresolved diff exists).
+		if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+		{
+			pCmdUI->Enable(FindLastNonFilteredDiff(pView) >= 0);
+			return;
+		}
 		bool enabled = HasPrevNonFilteredDiff(pView);
 
 		if (!enabled && pd->GetDirDoc())

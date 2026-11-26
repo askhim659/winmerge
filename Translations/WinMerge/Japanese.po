@@ -11173,3 +11173,14 @@ msgstr "【Wiz】スナイパー"
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Back to Normal Mode"
 msgstr "【Wiz】通常モードへ戻る"
+
+#. Merge20 (D3): "no unreviewed file" display (CDirView patrol, CMergeEditFrame dedicated bar)
+#: Src/DirView.cpp
+#: Src/MergeEditFrm.cpp
+msgid "No unreviewed files"
+msgstr "æªç¢ºèªãã¡ã¤ã«ãããã¾ãã"
+
+#. Merge20 (D3): folder-compare status bar count with the unreviewed count (CDirView)
+#: Src/DirView.cpp
+msgid "%1 displayed, %2 checked, %3 unreviewed"
+msgstr "è¡¨ç¤º %1 ä»¶ä¸­ %2 ä»¶ãã§ãã¯ãæªç¢ºèª %3 ä»¶"

@@ -749,6 +749,31 @@ void CDirDoc::ApplyMerge20ReviewState(const PathContext& paths, ReviewState stat
 }
 
 /**
+ * @brief Merge20 (Phase 4 D3, IDirDoc): position of the file a merge
+ * doc shows in the folder-compare list, for the dedicated bar's file
+ * name + (n/m) display.
+ * @param [in] paths Merge doc's file paths.
+ * @param [out] nPos 1-based ordinal among the patrol set (0 when the
+ *              file is not in it).
+ * @param [out] nTotal Number of files in the patrol set.
+ * @param [in] bTodoOnly False counts all displayed files, true counts
+ *             only the unreviewed (TODO) files.
+ * @return False when there is no compare context, no folder view, or
+ *         the paths belong to no displayed file row.
+ */
+bool CDirDoc::GetMerge20FilePosition(const PathContext& paths, int& nPos, int& nTotal, bool bTodoOnly) const
+{
+	nPos = 0;
+	nTotal = 0;
+	if (m_pCtxt == nullptr || m_pDirView == nullptr)
+		return false;
+	DIFFITEM* pos = FindMerge20ItemFromPaths(*m_pCtxt, paths);
+	if (pos == nullptr)
+		return false;
+	return m_pDirView->Merge20GetFilePosition(*pos, nPos, nTotal, bTodoOnly);
+}
+
+/**
  * @brief Merge20 (S8): audit memo of one item, from the sidecar map.
  * @param [in] di Difference item.
  * @return Memo text, empty when the item has no entry yet (or when

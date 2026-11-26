@@ -24,6 +24,7 @@
 #include "OptionsDef.h"
 #include "OptionsMgr.h"
 #include "DarkModeLib.h"
+#include "paths.h"
 #include "SplitterPositions.h"
 
 #ifdef _DEBUG
@@ -521,7 +522,8 @@ void CMergeEditFrame::UpdateDedBar()
 		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_ZOOM, nZoom);
 	m_wndDedBar.SetZoomText(nZoom);
 	m_wndDedBar.SetPinned(GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED));
-	m_wndDedBar.SetTodoOnly(GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY));
+	const bool bTodoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
+	m_wndDedBar.SetTodoOnly(bTodoOnly);
 	m_wndDedBar.SetSniperOn(GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON));
 	IDirDoc* pDirDoc = m_pMergeDoc->GetDirDoc();
 	const bool bHasDirDoc = (pDirDoc != nullptr);
@@ -530,6 +532,33 @@ void CMergeEditFrame::UpdateDedBar()
 	m_wndDedBar.SetReviewEnabled(bHasDirDoc);
 	m_wndDedBar.SetReviewState(bHasDirDoc ?
 		pDirDoc->GetMerge20ReviewState(m_pMergeDoc->m_filePaths) : ReviewState::TODO);
+	// Merge20 (Phase 4 D3): file name + (n/m) position in the patrol
+	// set (spec section 5.2; D2 deferred this, see MERGE20_NOTES.md
+	// section 24.2 item 6). The denominator is the patrol set: all
+	// displayed files, or only the TODO files while unreviewed-only
+	// is on; the numerator is the 1-based ordinal among that set, 0
+	// when this file is not in it (e.g. TODO-only is on but the file
+	// is already reviewed). With no TODO file at all the label says
+	// so instead of "(0/0)".
+	int nPos = 0, nTotal = 0;
+	if (bHasDirDoc && pDirDoc->GetMerge20FilePosition(m_pMergeDoc->m_filePaths, nPos, nTotal, bTodoOnly))
+	{
+		if (bTodoOnly && nTotal == 0)
+		{
+			m_wndDedBar.SetFileInfo(_("No unreviewed files"));
+		}
+		else
+		{
+			const String sName = paths::FindFileName(m_pMergeDoc->m_filePaths.GetLeft());
+			m_wndDedBar.SetFileInfo(strutils::format(_T("%s (%d/%d)"), sName.c_str(), nPos, nTotal));
+		}
+	}
+	else
+	{
+		// No folder compare: show the file name without a position.
+		const String sName = paths::FindFileName(m_pMergeDoc->m_filePaths.GetLeft());
+		m_wndDedBar.SetFileInfo(sName);
+	}
 }
 
 /**

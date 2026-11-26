@@ -11,10 +11,13 @@
  * review-state buttons (TODO/DONE/HOLD/SPECIAL/KEEP, same effect as
  * the S2 keys 1-5), the pin toggle, the unreviewed-only and sniper
  * toggles (display + state only; D3/D6 add the behaviour), the zoom
- * display (click to reset to 75%), and the exit button. The bar
- * itself owns no state: button clicks are forwarded as WM_COMMAND
- * (ID_MERGE20_DED_*) to the parent frame, which applies them and
- * refreshes the button states through the setters below.
+ * display (click to reset to 75%), and the exit button. D3 adds the
+ * file-info label at the left end: the current file name and its
+ * position (n/m) in the patrol set (all files, or only the TODO files
+ * while unreviewed-only is on). The bar itself owns no state: button
+ * clicks are forwarded as WM_COMMAND (ID_MERGE20_DED_*) to the parent
+ * frame, which applies them and refreshes the button states through
+ * the setters below.
  */
 #pragma once
 
@@ -58,6 +61,7 @@ public:
 	void SetTodoOnly(bool bTodoOnly);
 	void SetSniperOn(bool bSniperOn);
 	void SetZoomText(int nZoom);
+	void SetFileInfo(const String& sText);
 
 	//{{AFX_MSG(CMerge20DedBar)
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
@@ -72,6 +76,11 @@ private:
 	void LayoutButtons();
 
 	HWND m_hwndFrame; //*< Frame window handle */
+	// File-info label, first in the bar (spec section 5.2, D3): the
+	// current file name and its (n/m) position in the patrol set.
+	// It is a label, not a button, so it is created and laid out
+	// separately from m_btn* in Merge20DedBar.cpp.
+	CStatic m_stFileInfo;
 	// Buttons, in bar order (spec section 5.2): Prev/Next file, the
 	// five review states, pin, unreviewed-only, sniper, zoom, exit.
 	CButton m_btnPrev;
@@ -84,4 +93,5 @@ private:
 	CButton m_btnExit;
 	ReviewState m_reviewState; /**< Last review state shown on the buttons */
 	int m_nZoom; /**< Last zoom (thousandths) shown on the zoom button */
+	String m_sFileInfo; /**< Last file-info text shown (avoids idle flicker) */
 };

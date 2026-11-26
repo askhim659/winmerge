@@ -138,6 +138,11 @@ public:
 	void OpenPrevFile();
 	bool IsFirstFile();
 	bool IsLastFile();
+	// Merge20 (Phase 4 D3): position of one file in the displayed list,
+	// for the dedicated bar's file name + (n/m) display (see
+	// IDirDoc::GetMerge20FilePosition). False when the item is not a
+	// displayed file row.
+	bool Merge20GetFilePosition(const DIFFITEM& di, int& nPos, int& nTotal, bool bTodoOnly) const;
 
 	void SetActivePane(int pane);
 
@@ -487,6 +492,10 @@ private:
 	void UpdateMerge20StatusCount();
 	String GetMerge20StatusCountText();
 	void Merge20CountDisplayedByReviewState(int counts[5]);
+	// Merge20 (Phase 4 D3): patrol targets over the displayed rows
+	// (true = file in the patrol set), and the Up/Down-key patrol move.
+	std::vector<bool> Merge20BuildPatrolTargets(bool bTodoOnly) const;
+	bool Merge20MoveFocusToTodo(int direction);
 	void Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include);
 	void Merge20SetOutputForAllFiles(bool include);
 	void ShowShellContextMenu(UINT id);

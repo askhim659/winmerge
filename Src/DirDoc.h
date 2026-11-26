@@ -111,6 +111,9 @@ public:
 	// dedicated-mode bar's review buttons use these.
 	ReviewState GetMerge20ReviewState(const PathContext& paths) const override;
 	void ApplyMerge20ReviewState(const PathContext& paths, ReviewState state) override;
+	// Merge20 (Phase 4 D3, IDirDoc): position of the merge doc's file
+	// in the folder-compare list (dedicated bar's file name + (n/m)).
+	bool GetMerge20FilePosition(const PathContext& paths, int& nPos, int& nTotal, bool bTodoOnly) const override;
 	// Merge20 (S4, IDirDoc): store the classification computed by a
 	// merge doc after a rescan (see IDirDoc::SetMerge20Classification).
 	void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) override;

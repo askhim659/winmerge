@@ -44,6 +44,7 @@
 #include "Merge20/Merge20MemoDlg.h"
 #include "Merge20/Merge20LearnDlg.h"
 #include "Merge20/Merge20Measure.h"
+#include "Merge20/Merge20Patrol.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
@@ -2548,6 +2549,14 @@ void CDirView::OpenFirstFile()
 
 bool CDirView::IsFirstFile()
 {
+	// Merge20 (Phase 4 D3): with unreviewed-only patrol on, "first"
+	// means "no patrol move backward exists": the patrol wraps, so a
+	// previous TODO file exists unless there is no TODO file at all,
+	// or the current file is the only TODO file. The dedicated bar's
+	// Prev button and the main frame's Prev/Next update handlers read
+	// this (and IsLastFile).
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+		return !Merge20HasOtherTarget(Merge20BuildPatrolTargets(true), GetFocusedItem());
 	int currentInd = GetFocusedItem();
 	int firstFileInd = 0;
 	while (firstFileInd <= currentInd)
@@ -2586,6 +2595,10 @@ void CDirView::OpenLastFile()
 
 bool CDirView::IsLastFile()
 {
+	// Merge20 (Phase 4 D3): see IsFirstFile. With unreviewed-only
+	// patrol on, "last" means "no patrol move forward exists".
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+		return !Merge20HasOtherTarget(Merge20BuildPatrolTargets(true), GetFocusedItem());
 	const int count = m_pList->GetItemCount();
 	int currentInd = GetFocusedItem();
 	int lastFileInd = count - 1;
@@ -2608,6 +2621,34 @@ void CDirView::OpenNextFile()
 {
 	const int count = m_pList->GetItemCount();
 	int currentInd = GetFocusedItem();
+	// Merge20 (Phase 4 D3, spec section 4(g), HTML navFile): with
+	// unreviewed-only patrol on, move to the next TODO file, wrapping
+	// around to the first one. This is the choke point for the
+	// dedicated bar's Next button, Ctrl+F8 and the menu (all go
+	// through CDirDoc::MoveToNextFile), so all of them patrol TODO
+	// files while the option is on, in dedicated mode and in normal
+	// mode alike.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+	{
+		if (currentInd < 0)
+			return;
+		const std::vector<bool> targets = Merge20BuildPatrolTargets(true);
+		const int nextInd = Merge20FindNextTarget(targets, currentInd, 1);
+		if (nextInd == -1)
+		{
+			// No unreviewed file at all: stay, and say so in the
+			// status bar (the S3 count also shows "0 unreviewed").
+			// No message box (D3 decision, see MERGE20_NOTES.md §25).
+			GetParentFrame()->SetStatus(_("No unreviewed files").c_str());
+			return;
+		}
+		if (nextInd == currentInd)
+			return; // The current file is the only unreviewed one.
+		MoveFocus(currentInd, nextInd, 1);
+		m_pList->EnsureVisible(nextInd, FALSE);
+		OpenSelection();
+		return;
+	}
 	int nextInd = currentInd + 1;
 	if (currentInd >= 0)
 	{
@@ -2628,6 +2669,26 @@ void CDirView::OpenNextFile()
 void CDirView::OpenPrevFile()
 {
 	int currentInd = GetFocusedItem();
+	// Merge20 (Phase 4 D3): see OpenNextFile. Previous TODO file,
+	// wrapping around to the last one.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+	{
+		if (currentInd < 0)
+			return;
+		const std::vector<bool> targets = Merge20BuildPatrolTargets(true);
+		const int prevInd = Merge20FindNextTarget(targets, currentInd, -1);
+		if (prevInd == -1)
+		{
+			GetParentFrame()->SetStatus(_("No unreviewed files").c_str());
+			return;
+		}
+		if (prevInd == currentInd)
+			return; // The current file is the only unreviewed one.
+		MoveFocus(currentInd, prevInd, 1);
+		m_pList->EnsureVisible(prevInd, FALSE);
+		OpenSelection();
+		return;
+	}
 	int prevInd = currentInd - 1;
 	if (currentInd >= 0)
 	{
@@ -2643,6 +2704,95 @@ void CDirView::OpenPrevFile()
 			prevInd--;
 		}
 	}
+}
+
+/**
+ * @brief Merge20 (Phase 4 D3): patrol targets over the displayed rows.
+ * @param [in] bTodoOnly False marks every displayed file row, true
+ *             marks only the unreviewed (TODO) file rows.
+ * @return One entry per list row (directories and the ".." parent row
+ *         are never targets), in list order, for Merge20Patrol.
+ */
+std::vector<bool> CDirView::Merge20BuildPatrolTargets(bool bTodoOnly) const
+{
+	const CDirDoc* pDoc = GetDocument();
+	const int n = m_pList->GetItemCount();
+	std::vector<bool> targets(static_cast<size_t>(n), false);
+	for (int i = 0; i < n; ++i)
+	{
+		DIFFITEM* pKey = GetItemKey(i);
+		if (pKey == nullptr || IsDiffItemSpecial(pKey))
+			continue;
+		const DIFFITEM& di = GetDiffItem(i);
+		if (di.diffcode.isDirectory())
+			continue;
+		targets[static_cast<size_t>(i)] = !bTodoOnly ||
+			pDoc->GetMerge20ReviewState(di) == ReviewState::TODO;
+	}
+	return targets;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D3): move the focus to the previous/next
+ * TODO file (Up/Down-key patrol in the folder list). The file is not
+ * opened: Up/Down move the selection, as they always did.
+ * @param [in] direction +1 for the next TODO file, -1 for the previous
+ *             one (wrapping around both ends).
+ * @return False when there is no TODO file at all, or the current
+ *         file is the only TODO file (the caller then shows
+ *         "No unreviewed files" in the status bar).
+ */
+bool CDirView::Merge20MoveFocusToTodo(int direction)
+{
+	const int currentInd = GetFocusedItem();
+	if (currentInd < 0)
+		return false;
+	const std::vector<bool> targets = Merge20BuildPatrolTargets(true);
+	const int nextInd = Merge20FindNextTarget(targets, currentInd, direction);
+	if (nextInd == -1 || nextInd == currentInd)
+		return false;
+	MoveFocus(currentInd, nextInd, GetSelectedCount());
+	m_pList->EnsureVisible(nextInd, FALSE);
+	return true;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D3): position of one file in the displayed
+ * list, for the dedicated bar's file name + (n/m) display (see
+ * IDirDoc::GetMerge20FilePosition). The row is matched by relative
+ * path (the same identity Merge20RestoreViewPosition uses).
+ * @param [in] di The file to locate.
+ * @param [out] nPos 1-based ordinal among the patrol set (0 when the
+ *              file is not in it, e.g. TODO-only is on but the file
+ *              is already reviewed).
+ * @param [out] nTotal Number of files in the patrol set.
+ * @param [in] bTodoOnly False counts all displayed files, true counts
+ *             only the unreviewed (TODO) files.
+ * @return False when the item is not a displayed file row.
+ */
+bool CDirView::Merge20GetFilePosition(const DIFFITEM& di, int& nPos, int& nTotal, bool bTodoOnly) const
+{
+	nPos = 0;
+	nTotal = 0;
+	const std::vector<bool> targets = Merge20BuildPatrolTargets(bTodoOnly);
+	nTotal = Merge20CountTargets(targets);
+	const String relPath = di.getItemRelativePath();
+	const int n = m_pList->GetItemCount();
+	for (int i = 0; i < n; ++i)
+	{
+		DIFFITEM* pKey = GetItemKey(i);
+		if (pKey == nullptr || IsDiffItemSpecial(pKey))
+			continue;
+		const DIFFITEM& row = GetDiffItem(i);
+		if (row.diffcode.isDirectory())
+			continue;
+		if (row.getItemRelativePath() == relPath)
+		{
+			nPos = Merge20OrdinalOfTarget(targets, i);
+			return true;
+		}
+	}
+	return false;
 }
 
 void CDirView::SetActivePane(int pane)
@@ -2931,6 +3081,28 @@ BOOL CDirView::PreTranslateMessage(MSG* pMsg)
 				if (pMsg->wParam == VK_MULTIPLY)
 				{
 					ExpandSubdir(sel, true);
+					return TRUE;
+				}
+				// Merge20 (Phase 4 D3, spec section 4(g)): with
+				// unreviewed-only patrol on, bare Up/Down move the
+				// focus to the previous/next TODO file (wrapping
+				// around), instead of the list's one-row step. The
+				// file is not opened: Up/Down move the selection in
+				// the folder list, as they always did (opening is
+				// Enter / double-click / the dedicated bar's Prev and
+				// Next buttons). Bare keys only, so Shift+Up/Down
+				// (extend the selection) keeps working; when the
+				// label is being edited, Up/Down are left alone
+				// (the IsLabelEdit() branch above).
+				if ((pMsg->wParam == VK_UP || pMsg->wParam == VK_DOWN) &&
+					(GetKeyState(VK_CONTROL) & 0x8000) == 0 &&
+					(GetKeyState(VK_MENU) & 0x8000) == 0 &&
+					(GetKeyState(VK_SHIFT) & 0x8000) == 0 &&
+					GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
+				{
+					if (Merge20MoveFocusToTodo(pMsg->wParam == VK_DOWN ? 1 : -1))
+						return TRUE;
+					GetParentFrame()->SetStatus(_("No unreviewed files").c_str());
 					return TRUE;
 				}
 				// Merge20 (S2, design section 3.2, spec section 4(b)):
@@ -3279,14 +3451,20 @@ void CDirView::OnTimer(UINT_PTR nIDEvent)
 /**
  * @brief Merge20 (S3, design section 3.2, spec section 5.1): text for the
  * "N displayed, M checked" status bar count.
- * @return e.g. "12 displayed, 5 checked". Directories and the ".." parent
- * row have no output flag and are not counted; the denominator is the
- * number of displayed file rows, so the current filter applies.
+ * @return e.g. "12 displayed, 5 checked, 3 unreviewed". Directories and
+ * the ".." parent row have no output flag and are not counted; the
+ * denominator is the number of displayed file rows, so the current
+ * filter applies. D3 adds the unreviewed count (design section 3.9:
+ * whether to show the patrol-target count is D3's decision): it is
+ * the persistent display of "no unreviewed files" (0 unreviewed),
+ * since a one-shot status message would be overwritten by the next
+ * status refresh (see CDirView::OnTimer).
  */
 String CDirView::GetMerge20StatusCountText()
 {
 	int displayed = 0;
 	int checked = 0;
+	int unreviewed = 0;
 	CDirDoc* pDoc = GetDocument();
 	const int n = m_pList->GetItemCount();
 	for (int i = 0; i < n; ++i)
@@ -3300,8 +3478,11 @@ String CDirView::GetMerge20StatusCountText()
 		++displayed;
 		if (pDoc->GetMerge20IncludeInOutput(di))
 			++checked;
+		if (pDoc->GetMerge20ReviewState(di) == ReviewState::TODO)
+			++unreviewed;
 	}
-	return strutils::format_string2(_("%1 displayed, %2 checked"), strutils::to_str(displayed), strutils::to_str(checked));
+	return strutils::format_string3(_("%1 displayed, %2 checked, %3 unreviewed"),
+		strutils::to_str(displayed), strutils::to_str(checked), strutils::to_str(unreviewed));
 }
 
 /**

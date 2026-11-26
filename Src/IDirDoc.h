@@ -37,6 +37,19 @@ struct IDirDoc
 	// existing IDirDoc users are unaffected; CDirDoc overrides them.
 	virtual ReviewState GetMerge20ReviewState(const PathContext& paths) const { return ReviewState::TODO; }
 	virtual void ApplyMerge20ReviewState(const PathContext& paths, ReviewState state) {}
+	// Merge20 (Phase 4 D3): position of the merge doc's file in the
+	// folder-compare list, for the dedicated bar's file name + (n/m)
+	// display. `paths` is the merge doc's file paths (same lookup as
+	// SetMerge20Classification). `bTodoOnly` selects the patrol set:
+	// false counts all displayed files, true counts only the
+	// unreviewed (TODO) files; `nPos` is then the 1-based ordinal
+	// among that set, or 0 when the file is not in it (e.g. TODO-only
+	// is on but the file is already reviewed). Returns false when
+	// there is no folder compare (a file compare opened on its own)
+	// or the file is not a displayed file row. Default implementation
+	// reports no position, so existing IDirDoc users are unaffected;
+	// CDirDoc overrides it.
+	virtual bool GetMerge20FilePosition(const PathContext& paths, int& nPos, int& nTotal, bool bTodoOnly) const { return false; }
 	virtual void ApplyDisplayRoot(int nIndex, String& sText) = 0;
 	virtual bool CompareFilesIfFilesAreLarge(int nFiles, const FileLocation ifileloc[]) = 0;
 	virtual bool MoveableToNextDiff() = 0;
