@@ -2865,7 +2865,7 @@ void CMainFrame::OnFileOpenProject()
 	// get the default projects path
 	String strProjectPath = GetOptionsMgr()->GetString(OPT_PROJECTS_PATH);
 	if (!SelectFile(GetSafeHwnd(), sFilepath, true, strProjectPath.c_str(), _T(""),
-			_("WinMerge Project Files (*.WinMerge)|*.WinMerge||")))
+			_("WizMerge Project Files (*.WinMerge)|*.WinMerge||")))
 		return;
 	
 	strProjectPath = paths::GetParentPath(sFilepath);
