@@ -3665,3 +3665,77 @@ PR #24。2026-11-26 に master 0aefc6dd（W1 マージ済み）へリベース�
   - 成果物 2件：WinMerge-x64.zip（26,305,164 バイト、ID 15083542142）と WinMerge-x64-Setup-x64.exe（39,729,525 バイト、ID 15083740604）、いずれも 2027-02-24 失効。
   - CI ログからの追加証拠：`Merge20Patrol.obj` が Merge.vcxproj（`.\..\BuildTmp\x64\Release\`）と UnitTests.vcxproj（`x64Release\`）の両方で生成されたこと。
   - 注：旧最終記録コミットの実行 45742900702（head 26b86d6c）はリベース後に success で完了したが、旧 head のため参考記録とする。
+
+## 28. Phase 4 D4（フォーカス詳細）— ブランチ `merge20/phase4-d4`
+
+PR #26。2026-11-26。master f0db9181（D3＝PR #24 マージ済み）から分岐。19ファイル、20コミット＋記録。設計書 §3.5・§5.2 D4・§3.3、仕様書 §3 (3/4)・§5.2・§4(g)。D3＝§27。
+
+### 28.1 変更一覧
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| b906e902 | Src/Merge20/Merge20Focus.h | 純粋モジュール（新規）。判定ボタン→ソースペイン写像 `Merge20FocusActionSrcPanes`／表示可否 `Merge20FocusActionVisible`／スクロールクランプ `Merge20FocusClampTopLine`。MFC 不使用 |
+| 2f2f5043 | Src/Merge20/Merge20Focus.cpp | 同実装。HTML 17_v17.15.html の setHunk 戦略を写像（旧挿入→{0}、不採用→寄与なし側、変更→新{1}／旧{0}／両方{0,1}） |
+| 1eebd909 | Testing/GoogleTest/Merge20/Merge20Focus_test.cpp | 同テスト 11件（g++ ハーネスで 51チェックを事前検証） |
+| 480bcda9 | Src/Merge.vcxproj | Merge20Focus 登録（pch.h グループ）＋ FocusResultView／FocusDock 登録（StdAfx.h グループ） |
+| b66762af | Src/Merge.vcxproj.filters | 同フィルタ登録 |
+| ea9f7982 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Merge20Focus＋テスト登録（FocusDock／FocusResultView は MFC 専用のため登録しない） |
+| fe62fc70 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同フィルタ登録 |
+| 2540955f | Src/Merge20/Merge20FocusResultView.h | 読み取り専用ビュー `CMerge20FocusResultView : CGhostTextView`（自前の `CGhostTextBuffer`）。`QueryEditable()` は false |
+| ec21b78d | Src/Merge20/Merge20FocusResultView.cpp | 同実装。`SetSegmentText()` は読取専用を外して詰め直し再アタッチ。`ScrollToSubLine` オーバーライドでドックへ同期通知 |
+| 0c56ee2c | Src/Merge20/Merge20FocusDock.h | コンテナ `CMerge20FocusDock : CWnd`（Diff Pane バーの唯一の子）。ヘッダ＋詳細スプリッタビュー＋結果セグメントビューを保持 |
+| 766c9a14 | Src/Merge20/Merge20FocusDock.cpp | 同実装。`ShowDiff`／`UpdateHeader`／`LayoutHeader`／`LayoutViews`／`SyncFocusFromDetail`／`SyncDetailFromFocus`／`OnButtonClicked`（`ON_CONTROL_RANGE`、新規 `ID_` コマンドなし） |
+| 565ffe0d | Src/resource.h | IDC 1758–1766 を割当て（フォーカスドック用）。`_APS_NEXT_CONTROL_VALUE` 1758→1767。D0 予約コメントを更新 |
+| c7ade2df | Src/MergeDoc.h | `CMerge20FocusDock` 前方宣言＋メンバ＋getter/setter、`Merge20GetFocusResultText`／`Merge20FocusApplyJudgment` 宣言 |
+| 7ff36b7e | Src/MergeDoc.cpp | ctor 初期化＋`SetCurrentDiff` 末尾でドックへ `ShowDiff(m_nCurDiff)` |
+| 74990273 | Src/MergeDocResultPane.cpp | `Merge20GetFocusResultText`（`GetResultSegmentByDiff`＋`GetResultBufferLinesText`）／`Merge20FocusApplyJudgment`（`ResultChooseSources`＋Phase 3 L2 学習記録）。`ResultChooseSources`／`BuildMergeResult` 末尾でドック更新（常に現在差分） |
+| 733cfab1 | Src/MergeEditFrm.h | 値メンバ `CMerge20FocusDock m_wndFocusDock` |
+| 7f96a369 | Src/MergeEditFrm.cpp | `OnCreateClient`：ドックを DetailBar の子として作成→詳細スプリッタビュー（親＝ドック）→結果ビュー（親＝ドック）→`SetViews`／`SetMergeDoc`／`ShowDiff(-1)`。`OnBarCheck` 再表示時と `UpdateResources` でドック更新 |
+| b904e515 | Src/MergeEditView.cpp | `ScrollToSubLine` 末尾（`m_bDetailView` のときのみ）：親を辿ってドックを探し `SyncFocusFromDetail` を呼ぶ |
+| 46258986 | Translations/WinMerge/Japanese.po | D4 新規 16 msgid の日本語訳（判定ボタン 7件は【Wiz】付き、ヘッダ／状態文言は D3 前例で【Wiz】なし）。ついでに D3 の 2項目（"No unreviewed files"、"%1 displayed, %2 checked, %3 unreviewed"）の二重エンコード UTF-8（文字化け）を正しい UTF-8 に修正 |
+| 7dd12e14 | Src/Merge20/Merge20FocusDock.cpp | `ScrollToLine` 呼び出し 2件を公開 `ScrollToSubLine` に変更（CI 失敗 C2248 の修正。§28.6） |
+
+### 28.2 設計判断（設計書 §3.5 の候補 (a)/(b)）
+
+- (b) を採用：結果ペインの該当行だけを抜き出して読み取り専用ビューに表示する。(a)（`CMergeResultView` を借りた 3段目）は不採用。理由：ドキュメントは `m_pMergeResultView` ポインタを単一として持ち、undo グループの起点と無効化に使う。2つ目のインスタンスが登録ビューになってドキュメント更新の宛先を奪う危険があるうえ、全バッファのスクロールモデルでは「該当差分だけ」を表示できない。
+- コンテナ方式：`CDiffViewBar` は `SCBS_SIZECHILD` で子を 1つしか持てないため、ドックがバーの唯一の子となり、ヘッダ（30px）＋詳細ビュー＋結果ビューを保持する。残り高さは 3:2 に分割。固定高さなし、バーの端ドラッグでリサイズ可能（T-4-7 代替）。
+- フレームがビューを作成し、ドックはホストのみ（`CCreateContext` をドックに通さない）。`m_pwndDetailMergeEditSplitterView` はフレーム保持のままなので `UpdateSplitter`／`FlipSplit` は無変更。
+- 判定ボタンは HTML と同じ文脈表示：旧のみ→旧挿入／不採用、変更→新／旧／両方、新のみ→不採用のみ。3-way 片側差分は判定ボタンなし（不採用が曖昧なため）。✂分割／↩戻すは表示のみで無効化（本体は D5）。
+- 判定は学習対象：`Merge20FocusApplyJudgment` は `ResultChooseSources`＋L2 学習記録（`OnMergeChooseSource` と同じ）。フォーカスドックの判定は明示的判定であり、バッチ／自動／復元は `ResultChooseSources` 直接で未記録のまま。
+- スクロール同期のチョークポイントは `ScrollToSubLine`。詳細ペインは既に現在差分にクランプされるため、差分先頭からのサブラインオフセットで同期する。再入防止フラグはドック側（`m_bSyncingScroll`）。ワードラップ OFF（既定）ではサブライン＝行で完全同期。ワードラップ ON ではずれる可能性あり（§28.5）。
+- 専用モード：ドックは DetailBar 内にあり、専用モードは DetailBar を隠すため表示されない（D1 との調整は不要、D6 スナイパーが専用モード側のフォーカス用途）。
+
+### 28.3 CI 結果（最終 head 7dd12e14）
+
+- 実行 ID：45752165310、結論：success。ジョブ 139682274203（build）success。
+- GoogleTest：627件全パス（616＋新規 11件）。全文ログ `[==========] 627 tests from 50 test suites ran. (1244 ms total)`／`[  PASSED  ] 627 tests.`。`[  FAILED  ]` は 0件。Merge20Focus の 11テストも全パス。CI の .po チェックも通過（"Merge20 strings present in the bundled Japanese.po."）。
+- 成果物：WinMerge-x64.zip（ID 15086960462、26,317,060 バイト）、WinMerge-x64-Setup-x64.exe（ID 15086423104、39,753,875 バイト）。両方とも失効日 2027-02-24T03:57:42Z、未失効。
+- エラー 0件（全文ログに `error C*`／`error LNK*`／`error MSB*` なし）。
+- 注：最終 head 一つ前（46258986）の実行 45751012497 は failure。原因は `Merge20FocusDock.cpp` の `ScrollToLine` 呼び出し 2件に対する error C2248（§28.6）。修正コミット 7dd12e14 で最終 head とし、再実行で success。46258986 以前の各プッシュに対する実行（b904e515 他）も同じ C2248 で failure。
+
+### 28.4 検証ゲート
+
+- (a) 仕様・設計：§5.2 D4 の 3要件（3段表示／スクロール連動／判定ボタンで状態変化）はコード上すべて実装。T-4-7 は標準リサイズ＋表示切替で代替。✂／↩ は表示のみ（設計どおり D5 へ）。
+- (b) 利用可否：差分選択→3段表示→スクロール連動→判定ボタンで結果ペインのセグメント状態が変わる流れは、通知点（`SetCurrentDiff`／`ResultChooseSources`／`BuildMergeResult`／再表示）と同期フックで網羅。実機での操作確認は未検証（チェックリストは §28.5）。
+- (c) 表示：日本語訳 16件を追加。ボタン幅は日本語ラベルに合わせて設定（旧挿入 108px 等）。狭いウィンドウでは右端のボタンがクリッピングされる（専用バーと同じ既知の挙動）。実機での表示確認は未検証。
+- (d) 回帰：既存のフォルダ比較・ファイル比較の経路は変更していない（DetailBar の子がドックに変わったのみで、詳細スプリッタビュー自体は同一）。実機での回帰確認は未検証。
+- 副産物：master の Japanese.po の D3 2項目が二重エンコード UTF-8（文字化け）だったことを発見し、同コミットで修正した。
+
+### 28.5 D5 への引き継ぎと残課題
+
+- ✂分割／↩戻すの本体（D5）。ボタンは表示済み・無効化済みで、`OnButtonClicked` は Split／Regroup を早期 return している。
+- ワードラップ ON 時のスクロールずれ：フォーカスビューはサブライン単位で同期していないため、折り返し行があると詳細ペインとずれる。実機で確認すること。
+- 結果ペインでの手編集は、次に差分が変わる／判定するまでドックに反映されない（`OnResultLineEdited` 経由の通知なし）。
+- 3-way 片側差分の判定ボタンなし（仕様として残すか D5 以降で検討）。
+- フォーカス結果ビューの構文ハイライト／セグメント状態の色分けは未実装（ヘッダの状態文言のみ）。
+- ドラッグ可能な区切り線は未実装（D11 候補）。`OPT_MERGE20_FOCUS_DOCK_HEIGHT`（D0 キー）は D4 では未使用。
+- テーブル比較モードでの動作は未検証（結果未構築時はプレースホルダ表示になる設計）。
+- 実機チェックリスト：(1) ファイル比較を開き Diff Pane が 3段（旧／新／結果）になっていること。(2) 差分を選択すると 3段ともその差分だけになること。(3) 旧／新ペインをスクロールすると結果段も連動すること（ワードラップ OFF／ON の両方）。(4) 旧のみ差分で「旧挿入」を押すと結果ペインのセグメントが旧内容になり、学習候補が付くこと。(5) 変更差分で 新／旧／両方 が状態を変えること。(6) 追加差分では不採用のみ表示されること。(7) ✂／↩ が無効化されていること。(8) Diff Pane を閉じて再度開くと表示が復旧すること。(9) 専用モードではドックが表示されないこと（DetailBar ごと隠れる）。(10) 日本語が文字化けせず表示されること（特にボタンとヘッダ）。
+
+### 28.6 教訓
+
+- `CCrystalTextView::ScrollToLine` は protected（`ccrystaltextview.h` の 400行付近は protected 区画。`public:` は 455行目から）。外部クラス（ドック）からは呼べない。公開されているのは `ScrollToSubLine` のオーバーライド（`CMergeEditView` で public、`CMerge20FocusResultView` で public）。ドックからのスクロールは `ScrollToSubLine` を使うこと。事前調査の「`ScrollToLine` は public」は誤りだった（§28.3 の初回 CI 失敗の原因）。
+- `commit_file.py` の 422 "Update is not a fast forward" は数秒待って再試行で回避できた（今回は発生せず）。
+- `resource.h` の `_APS_NEXT_CONTROL_VALUE` はコメント中にも出現するため、置換時は `#define` 行を狙うこと（最初のスクリプトはコメントに当たって失敗した）。
+- master の .po を編集するときは、末尾だけでなく全体を二重エンコード等の破損がないか走査すること（今回は D3 の 2項目を発見・修正）。
+- 新規ファイルの `Merge20FocusActions` 配列は FocusDock.cpp の無名名前空間にあり、純粋モジュール側にはない。`OnButtonClicked` の索引計算とボタンの ID 順・enum 順が一致していることが前提。
