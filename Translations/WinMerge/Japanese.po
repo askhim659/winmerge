@@ -11088,3 +11088,58 @@ msgstr "学習データをクリアしました"
 #: Src/Merge.rc
 msgid "Dedicated Compare Mode"
 msgstr "比較専用モード"
+
+#. Merge20 (D2): dedicated bar Prev button (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Prev"
+msgstr "前へ"
+
+#. Merge20 (D2): dedicated bar Next button (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Next"
+msgstr "次へ"
+
+#. Merge20 (D2): dedicated bar review-state buttons (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "TODO"
+msgstr "未確認"
+
+#. Merge20 (D2): dedicated bar review-state buttons (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "DONE"
+msgstr "済"
+
+#. Merge20 (D2): dedicated bar review-state buttons (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "HOLD"
+msgstr "保留"
+
+#. Merge20 (D2): dedicated bar review-state buttons (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "SPECIAL"
+msgstr "個別対応要"
+
+#. Merge20 (D2): dedicated bar review-state buttons (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "KEEP"
+msgstr "現状維持"
+
+#. Merge20 (D2): dedicated bar pin toggle (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Pin"
+msgstr "ピン固定"
+
+#. Merge20 (D2): dedicated bar unreviewed-only toggle (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Unreviewed only"
+msgstr "未確認のみ"
+
+#. Merge20 (D2): dedicated bar sniper toggle (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Sniper"
+msgstr "スナイパー"
+
+#. Merge20 (D2): dedicated bar exit button (Merge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Back to Normal Mode"
+msgstr "通常モードへ戻る"
