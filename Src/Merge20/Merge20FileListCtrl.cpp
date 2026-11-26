@@ -24,6 +24,7 @@
 
 #include "StdAfx.h"
 #include "Merge20/Merge20FileListCtrl.h"
+#include "Merge20/Merge20FileListFilter.h"
 #include "DiffContext.h"
 #include "DirViewColItems.h"
 
@@ -57,6 +58,8 @@ BEGIN_MESSAGE_MAP(CMerge20FileListCtrl, CListCtrl)
 	//{{AFX_MSG_MAP(CMerge20FileListCtrl)
 	ON_NOTIFY_REFLECT(LVN_GETDISPINFO, OnGetdispinfo)
 	ON_NOTIFY_REFLECT(NM_CUSTOMDRAW, OnCustomDraw)
+	ON_NOTIFY_REFLECT(NM_RCLICK, OnRClick)
+	ON_NOTIFY_REFLECT(NM_DBLCLK, OnDblclk)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -143,13 +146,17 @@ void CMerge20FileListCtrl::UpdateColumnHeaders()
  * The iteration is the flat depth-first walk (GetFirstDiffPosition /
  * GetNextDiffPosition), the same pattern CDirView uses to visit every
  * item: directory rows are included, in compare order, as in the
- * folder compare list. P2 adds the hierarchy (expand/collapse).
- * Every display value comes from the S6 wrappers, so the panel and
- * the folder list can never disagree.
+ * folder compare list. P2 adds the hierarchy (expand/collapse), the
+ * search and the action-category filter: Refresh() first enumerates
+ * all rows into m_allRows, then asks the pure module
+ * (Merge20ComputeFileListVisibility) which of them are displayed,
+ * and keeps only those in m_rows. Every display value comes from
+ * the S6 wrappers, so the panel and the folder list can never
+ * disagree.
  */
 void CMerge20FileListCtrl::Refresh()
 {
-	m_rows.clear();
+	m_allRows.clear();
 	if (m_pCtxt != nullptr)
 	{
 		for (DIFFITEM* p = m_pCtxt->GetFirstDiffPosition(); p != nullptr;)
@@ -164,13 +171,162 @@ void CMerge20FileListCtrl::Refresh()
 			row.review = Merge20CsvGetReviewText(m_pCtxt, di);
 			const String relPath = di.getItemRelativePath();
 			row.reviewState = m_pCtxt->GetMerge20ReviewState(relPath);
-			row.riskLevel = m_pCtxt->GetMerge20FileStates().GetState(relPath).risk;
+			const Merge20FileState& state = m_pCtxt->GetMerge20FileStates().GetState(relPath);
+			row.riskLevel = state.risk;
 			row.isDirectory = di.diffcode.isDirectory();
 			row.includeInOutput = m_pCtxt->GetMerge20IncludeInOutput(di);
-			m_rows.push_back(std::move(row));
+			// P2: the fields the visibility decision and the bar
+			// need (relPath keys the collapse set and resolves
+			// DIFFITEMs for the batch check; depth drives the
+			// collapse; action/classified drive the filter tabs).
+			row.relPath = relPath;
+			row.depth = di.GetDepth();
+			row.classified = state.classified;
+			row.actionCategory = state.action;
+			row.hasChildren = di.HasChildren();
+			// P2: fold markers on directory rows with children
+			// (U+25BE unfolded, U+25B8 folded), as the panel's own
+			// display prefix; the S6 wrapper value is untouched.
+			if (row.isDirectory && row.hasChildren)
+			{
+				const bool collapsed = m_collapsed.count(relPath) != 0;
+				row.fileName = (collapsed ? _T("\x25B8 ") : _T("\x25BE ")) + row.fileName;
+			}
+			m_allRows.push_back(std::move(row));
 		}
 	}
+	// P2: search / tab / collapse visibility is decided by the pure
+	// module (unit-tested in Merge20FileListFilter_test.cpp).
+	std::vector<Merge20FileListFilterRow> filterRows;
+	filterRows.reserve(m_allRows.size());
+	for (const Row& row : m_allRows)
+	{
+		Merge20FileListFilterRow filterRow;
+		filterRow.relPath = row.relPath;
+		filterRow.isDirectory = row.isDirectory;
+		filterRow.depth = row.depth;
+		filterRow.classified = row.classified;
+		filterRow.action = row.actionCategory;
+		filterRow.collapsed = m_collapsed.count(row.relPath) != 0;
+		filterRows.push_back(std::move(filterRow));
+	}
+	const std::vector<bool> visible =
+		Merge20ComputeFileListVisibility(filterRows, m_searchText, m_actionFilter);
+	m_rows.clear();
+	for (size_t i = 0; i < m_allRows.size(); ++i)
+	{
+		if (i < visible.size() && visible[i])
+			m_rows.push_back(m_allRows[i]);
+	}
 	SetItemCount(static_cast<int>(m_rows.size()));
+}
+
+/**
+ * @brief Count displayed files per review state (P2, for the
+ * batch-check dialog).
+ *
+ * Same definition as CDirView::Merge20CountDisplayedByReviewState
+ * (S3), but over the panel's displayed rows: a file hidden by the
+ * search, the filter tab or a collapsed folder is not counted, so
+ * the dialog's counts match what the panel shows.
+ */
+void CMerge20FileListCtrl::CountByReviewState(int counts[5]) const
+{
+	for (int i = 0; i < 5; ++i)
+		counts[i] = 0;
+	for (const Row& row : m_rows)
+	{
+		if (row.isDirectory)
+			continue;
+		++counts[static_cast<int>(row.reviewState)];
+	}
+}
+
+/**
+ * @brief Set the search text (P2, P-R4) and refresh.
+ *
+ * The raw text is stored; the filter module trims it and matches
+ * case-insensitively (HTML qFile definition). Saving and restoring
+ * the text is P4.
+ */
+void CMerge20FileListCtrl::SetSearchText(const String& searchText)
+{
+	if (m_searchText == searchText)
+		return;
+	m_searchText = searchText;
+	Refresh();
+}
+
+/**
+ * @brief Set the action-category filter (P2, P-R10) and refresh.
+ *
+ * -1 shows every category; otherwise the tab's ActionCategory.
+ * Saving and restoring the selected tab is P4.
+ */
+void CMerge20FileListCtrl::SetActionFilter(int actionFilter)
+{
+	if (m_actionFilter == actionFilter)
+		return;
+	m_actionFilter = actionFilter;
+	Refresh();
+}
+
+/**
+ * @brief Fold or unfold one directory row (P2, P-R5).
+ */
+void CMerge20FileListCtrl::SetCollapsed(const String& relPath, bool collapsed)
+{
+	if (collapsed)
+		m_collapsed.insert(relPath);
+	else
+		m_collapsed.erase(relPath);
+	Refresh();
+}
+
+/**
+ * @brief True when the displayed row is a folded directory.
+ */
+bool CMerge20FileListCtrl::IsRowCollapsed(int index) const
+{
+	const Row* pRow = GetDisplayedRow(index);
+	if (pRow == nullptr || !pRow->isDirectory)
+		return false;
+	return m_collapsed.count(pRow->relPath) != 0;
+}
+
+/**
+ * @brief Unfold every directory row (P2, "expand all").
+ */
+void CMerge20FileListCtrl::ExpandAll()
+{
+	if (m_collapsed.empty())
+		return;
+	m_collapsed.clear();
+	Refresh();
+}
+
+/**
+ * @brief Fold every directory row that has children (P2,
+ * "collapse all").
+ */
+void CMerge20FileListCtrl::CollapseAll()
+{
+	for (const Row& row : m_allRows)
+	{
+		if (row.isDirectory && row.hasChildren)
+			m_collapsed.insert(row.relPath);
+	}
+	Refresh();
+}
+
+/**
+ * @brief Displayed row by index (nullptr when out of range).
+ */
+const CMerge20FileListCtrl::Row* CMerge20FileListCtrl::GetDisplayedRow(int index) const
+{
+	if (index < 0 || index >= static_cast<int>(m_rows.size()))
+		return nullptr;
+	return &m_rows[static_cast<size_t>(index)];
 }
 
 /**
@@ -299,4 +455,44 @@ void CMerge20FileListCtrl::OnCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
 		if (lpC->iSubItem == COL_RISK && row.riskLevel == RiskLevel::HIGH)
 			lpC->clrText = Merge20FileListHighRiskText;
 	}
+}
+
+/**
+ * @brief Right-click on a row (P2): ask the bar to show the row
+ * context menu.
+ *
+ * The row under the cursor is selected first, so the menu acts on
+ * it. The bar owns the menu (it has the CDirDoc for the directory
+ * operations); the control only reports the row index, through
+ * WM_MERGE20_FILELIST_ROW_RCLICK to its parent.
+ */
+void CMerge20FileListCtrl::OnRClick(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	*pResult = 0;
+	LPNMITEMACTIVATE pNM = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	const int iItem = pNM->iItem;
+	if (iItem < 0 || iItem >= static_cast<int>(m_rows.size()))
+		return;
+	SetItemState(iItem, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+	CWnd* pParent = GetParent();
+	if (pParent != nullptr && pParent->GetSafeHwnd() != nullptr)
+		pParent->SendMessage(WM_MERGE20_FILELIST_ROW_RCLICK, static_cast<WPARAM>(iItem), 0);
+}
+
+/**
+ * @brief Double-click on a directory row (P2, P-R5): fold or
+ * unfold that folder only. File rows do nothing (single-click
+ * navigation is P3's, so the double-click is free for P2).
+ */
+void CMerge20FileListCtrl::OnDblclk(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	*pResult = 0;
+	LPNMITEMACTIVATE pNM = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+	const int iItem = pNM->iItem;
+	if (iItem < 0 || iItem >= static_cast<int>(m_rows.size()))
+		return;
+	const Row& row = m_rows[static_cast<size_t>(iItem)];
+	if (!row.isDirectory || !row.hasChildren)
+		return;
+	SetCollapsed(row.relPath, m_collapsed.count(row.relPath) == 0);
 }
