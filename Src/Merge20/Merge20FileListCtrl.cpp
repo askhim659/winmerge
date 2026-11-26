@@ -82,17 +82,18 @@ CMerge20FileListCtrl::~CMerge20FileListCtrl()
  */
 void CMerge20FileListCtrl::SetupColumns()
 {
-	// Narrow literals: _() takes the msgid as const char* (the
-	// msgids themselves are ASCII, so the table below is exact).
-	static const char* const headers[COL_COUNT] =
-	{
-		"Include in Output",
-		"Filename",
-		"Action Category",
-		"Risk",
-		"Old/Changed/New",
-		"Review State",
-	};
+	// Header texts reuse the folder compare list's msgids
+	// ("Include in Output", "Filename", "Action Category", "Risk",
+	// "Review State"), so the headers match the list exactly,
+	// including the [Wiz] mark W1 put on the Merge20 headers. The
+	// old/changed/new column is the exception: it has no folder-list
+	// counterpart yet (H-LIST), so it uses the new msgid
+	// "Old/Changed/New" ([Wiz] old/changed/new in Japanese).
+	// The headers are written as literal _() calls, not taken from
+	// a table of string pointers: the .pot generator
+	// (Translations/WinMerge/CreateMasterPotFile.js) only scans
+	// literal _()/N_()/NC_() arguments, so a variable argument
+	// would silently drop the msgid from the next regenerated .pot.
 	static const int formats[COL_COUNT] =
 	{
 		LVCFMT_CENTER,
@@ -102,11 +103,17 @@ void CMerge20FileListCtrl::SetupColumns()
 		LVCFMT_LEFT,
 		LVCFMT_LEFT,
 	};
-	for (int col = 0; col < COL_COUNT; ++col)
+	const String headers[COL_COUNT] =
 	{
-		String sHeader = _(headers[col]);
-		InsertColumn(col, sHeader.c_str(), formats[col], Merge20FileListColWidths[col]);
-	}
+		_("Include in Output"),
+		_("Filename"),
+		_("Action Category"),
+		_("Risk"),
+		_("Old/Changed/New"),
+		_("Review State"),
+	};
+	for (int col = 0; col < COL_COUNT; ++col)
+		InsertColumn(col, headers[col].c_str(), formats[col], Merge20FileListColWidths[col]);
 }
 
 /**
@@ -117,21 +124,22 @@ void CMerge20FileListCtrl::SetupColumns()
  */
 void CMerge20FileListCtrl::UpdateColumnHeaders()
 {
-	static const char* const headers[COL_COUNT] =
+	// Literal _() calls again (see SetupColumns): the .pot
+	// generator only scans literal arguments.
+	const String headers[COL_COUNT] =
 	{
-		"Include in Output",
-		"Filename",
-		"Action Category",
-		"Risk",
-		"Old/Changed/New",
-		"Review State",
+		_("Include in Output"),
+		_("Filename"),
+		_("Action Category"),
+		_("Risk"),
+		_("Old/Changed/New"),
+		_("Review State"),
 	};
 	for (int col = 0; col < COL_COUNT; ++col)
 	{
 		LVCOLUMN lvc = {};
 		lvc.mask = LVCF_TEXT;
-		String sHeader = _(headers[col]);
-		lvc.pszText = const_cast<LPTSTR>(sHeader.c_str());
+		lvc.pszText = const_cast<LPTSTR>(headers[col].c_str());
 		SetColumn(col, &lvc);
 	}
 }
