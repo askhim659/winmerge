@@ -248,7 +248,7 @@ TEST(Merge20FileListFilter, CollapsedSplitSkipsEmptyPieces)
 	// A leading, trailing or doubled line break makes no phantom
 	// empty path (a hand-edited or truncated value stays safe).
 	const std::set<String> paths = Merge20SplitCollapsedPaths(L"\nsrc\n\ntax\n");
-	ASSERT_EQ(paths.size(), 2u);
+	ASSERT_EQ(paths.size(), static_cast<size_t>(2));
 	EXPECT_TRUE(paths.count(L"src") != 0);
 	EXPECT_TRUE(paths.count(L"tax") != 0);
 }
