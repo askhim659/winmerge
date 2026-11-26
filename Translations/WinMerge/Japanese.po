@@ -11630,6 +11630,38 @@ msgstr "注：保存されていた比較オプション（%1）を適用し、�
 msgid "File List Panel"
 msgstr "【Wiz】ファイル一覧パネル"
 
+#. Merge20 (H-FILTER): filter deck menu item (Merge.rc) and bar caption (Merge20FilterDeckBar.cpp, DirFrame.cpp)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20FilterDeckBar.cpp
+#: Src/DirFrame.cpp
+msgid "Filter Deck"
+msgstr "【Wiz】フィルタデッキ"
+
+#. Merge20 (H-FILTER): filter deck existence group label (Merge20FilterDeckBar.cpp)
+#: Src/Merge20/Merge20FilterDeckBar.cpp
+msgid "Existence:"
+msgstr "【Wiz】存在区分："
+
+#. Merge20 (H-FILTER): filter deck action-category group label (Merge20FilterDeckBar.cpp)
+#: Src/Merge20/Merge20FilterDeckBar.cpp
+msgid "Action category:"
+msgstr "【Wiz】対応区分："
+
+#. Merge20 (H-FILTER): filter deck review-state group label (Merge20FilterDeckBar.cpp)
+#: Src/Merge20/Merge20FilterDeckBar.cpp
+msgid "Review state:"
+msgstr "【Wiz】確認内容："
+
+#. Merge20 (H-FILTER): filter deck preset button, HTML acPreset (Merge20FilterDeckBar.cpp)
+#: Src/Merge20/Merge20FilterDeckBar.cpp
+msgid "Only files needing action"
+msgstr "【Wiz】⚡ 要対応のみ抽出"
+
+#. Merge20 (H-FILTER): filter deck show-all button (Merge20FilterDeckBar.cpp)
+#: Src/Merge20/Merge20FilterDeckBar.cpp
+msgid "Show all"
+msgstr "【Wiz】すべて表示"
+
 #. Merge20 (Panel P0): empty state when the file compare was not opened from a folder compare (Merge20FileListBar)
 #: Src/Merge20/Merge20FileListBar.cpp
 msgid "No folder comparison"
