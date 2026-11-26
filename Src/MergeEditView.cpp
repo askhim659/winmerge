@@ -17,6 +17,7 @@
 #include "Merge.h"
 #include "LocationView.h"
 #include "MergeDoc.h"
+#include "Merge20/Merge20FocusDock.h"
 #include "MainFrm.h"
 #include "MergeLogger.h"
 #include "OptionsMgr.h"
@@ -4574,6 +4575,27 @@ void CMergeEditView::ScrollToSubLine(int nNewTopLine, bool bNoSmoothScroll /*= F
 			SetSelection(ptSelStart, ptSelEnd);
 	}
 	CCrystalTextView::ScrollToSubLine(nNewTopLine, bNoSmoothScroll, bTrackScrollBar);
+	if (m_bDetailView)
+	{
+		// Merge20 (Phase 4 D4): keep the focus dock's result segment
+		// scrolled with this pane (design section 3.3: explicit sync
+		// with a reentrancy flag in the dock). The offset is in
+		// sublines from the diff start; with word wrap off (the
+		// default) a subline is a line, so the result view shows the
+		// same rows as this pane. The walk up the parents finds the
+		// dock (pane -> splitter -> splitter view -> dock); before
+		// the dock exists there is nothing to sync.
+		CWnd* pParent = GetParent();
+		while (pParent != nullptr)
+		{
+			if (auto* pDock = dynamic_cast<CMerge20FocusDock*>(pParent))
+			{
+				pDock->SyncFocusFromDetail(GetTopLine() - GetSubLineIndex(m_lineBegin));
+				break;
+			}
+			pParent = pParent->GetParent();
+		}
+	}
 }
 
 void CMergeEditView::SetActivePane()
