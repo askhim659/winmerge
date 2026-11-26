@@ -29,6 +29,7 @@
 #include <optional>
 #include <set>
 #include "Merge20/Merge20Learn.h"
+#include "Merge20/Merge20Types.h"
 
 class CLineFilterHelperMenu;
 class CMainFrame;
@@ -395,6 +396,24 @@ public:
 	/** @brief Merge20 (Phase 4 D4): apply a focus-dock judgement (ResultChooseSources plus the
 	 * Phase 3 L2 learning record, like OnMergeChooseSource). Refreshes the focus dock. */
 	void Merge20FocusApplyJudgment(int nDiff, const std::vector<int>& srcPanes);
+	/** @brief Merge20 (Phase 4 D5): split groups of this merge doc (the original ranges that were split into per-row hunks). Cleared when the diff list is rebuilt (Rescan); persisted in the session file so a restore can re-apply the splits. */
+	const std::vector<Merge20SplitGroup>& Merge20GetSplitGroups() const { return m_merge20SplitGroups; }
+	/** @brief Merge20 (Phase 4 D5): can this diff be split into per-row hunks (a significant diff of at least two apparent rows, in a built merge session)? */
+	bool Merge20CanSplitDiff(int nDiff) const;
+	/** @brief Merge20 (Phase 4 D5): is this diff a row of a split group (so it can be regrouped)? */
+	bool Merge20CanRegroupDiff(int nDiff) const;
+	/** @brief Merge20 (Phase 4 D5): split one diff group into per-row hunks. The parent judgment (Chosen/Auto srcPanes) is carried to every row; the split itself is not recorded for learning (a split is not an explicit judgment). Refused (false) when the diff cannot be split or the result has hand-edited lines, which a rebuild would discard. */
+	bool Merge20SplitDiff(int nDiff);
+	/** @brief Merge20 (Phase 4 D5): regroup the split group containing this diff (from any of its rows). The first row's judgment is carried to the regrouped diff (HTML regroupHunk). Refused (false) when the diff is in no split group or the result has hand-edited lines. */
+	bool Merge20RegroupDiff(int nDiff);
+	/** @brief Merge20 (Phase 4 D5): re-apply saved split groups to the current (fresh) diff list, locating each parent by its range identity. Used by the session restore before the saved per-row judgments are applied. @return Number of groups re-applied. */
+	int Merge20ReapplySplitGroups(const std::vector<Merge20SplitGroup>& groups);
+	/** @brief Merge20 (Phase 4 D5): split the targeted diffs (result pane context menu). */
+	void OnMerge20SplitDiff();
+	void OnUpdateMerge20SplitDiff(CCmdUI* pCmdUI);
+	/** @brief Merge20 (Phase 4 D5): regroup the targeted split groups (result pane context menu). */
+	void OnMerge20RegroupDiff();
+	void OnUpdateMerge20RegroupDiff(CCmdUI* pCmdUI);
 	/** @brief Merge20 (Phase 3 L2): learning candidates for this doc (diff index -> candidate). Candidates never touch m_resultSegments: a diff with a candidate stays Unresolved/Conflict until a person accepts it (spec section 4(c)). */
 	std::map<int, Merge20LearnCandidate>& GetMerge20LearnCandidates() { return m_merge20LearnCandidates; }
 	/** @brief Merge20 (Phase 3 L2): read-only view of the learning candidates. */
@@ -429,6 +448,10 @@ private:
 	String BuildExpandedResultText() const;
 	bool AdjustResultSegmentsAfterLineDeletion(int nRemovedBegin, int nCount);
 	void EnsureNoLinesPlaceholder(int nSegment);
+	/** @brief Merge20 (Phase 4 D5): true when any result segment was hand-edited (a rebuild would discard those edits). */
+	bool HasEditedResultSegment() const;
+	/** @brief Merge20 (Phase 4 D5): find the split group containing nDiff. @param [out] nFirst Index of the group's first row. @param [out] nGroup Index of the group in m_merge20SplitGroups. @return False when nDiff is in no split group. */
+	bool FindSplitGroupFirstIndex(int nDiff, int& nFirst, size_t& nGroup) const;
 	std::unique_ptr<CMergeResultTextBuffer> m_ptResultBuf; /**< Merge result buffer (not part of the diff) */
 	CMergeResultView* m_pMergeResultView; /**< Merge result view, or nullptr */
 	CMerge20FocusDock* m_pMerge20FocusDock; /**< Merge20 (Phase 4 D4): focus dock, or nullptr */
@@ -436,6 +459,7 @@ private:
 	std::vector<int> m_resultDiffToSegment; /**< diff index -> segment index or -1 */
 	std::map<int, Merge20LearnCandidate> m_merge20LearnCandidates; /**< Merge20 (Phase 3 L2): learning candidate per diff index, kept apart from m_resultSegments so a candidate never changes the result (spec section 4(c)) */
 	std::set<String> m_merge20LearnDismissed; /**< Merge20 (Phase 3 L2): dismissed diff identities ("op:begin0-end0:begin1-end1"); a dismissed diff gets no candidate on recompute */
+	std::vector<Merge20SplitGroup> m_merge20SplitGroups; /**< Merge20 (Phase 4 D5): split groups (original ranges + row counts). Indices are never stored: groups are found again by their first row's identity. */
 	std::map<int, std::vector<MergeResultSegment>> m_resultSegUndo; /**< table before undo group (key: group start) */
 	std::map<int, std::vector<MergeResultSegment>> m_resultSegRedo; /**< table after undo group (key: group start) */
 	bool m_bResultBuilt; /**< Result buffer has been generated */
