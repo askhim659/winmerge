@@ -20,6 +20,7 @@
 #include "UnicodeString.h"
 #include "Merge20Types.h"
 #include "Merge20/Merge20Classify.h"
+#include "Merge20/Merge20BulkDiff.h"
 
 class CMergeDoc;
 
