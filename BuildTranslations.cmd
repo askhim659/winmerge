@@ -16,7 +16,11 @@ rem shipped .po is current. (ASCII msgids only, so findstr works on the
 rem UTF-8 file. The Wiz labels themselves are verified by inspecting the
 rem CI artifact ZIP, not here.)
 echo Checking bundled Japanese.po for Merge20 strings...
-for %%M in ("Review State" "Include in Output" "Action Category" "Risk" "Summary" "Memo") do (
+rem Merge20 (S0-F1): the excluded-lines column description and the two
+rem per-side breakdown tooltip wordings are also must-have msgids.
+rem NOTE: literal percent signs in msgids are written %% here, so
+rem that findstr searches for %1 / %2 / %3.
+for %%M in ("Review State" "Include in Output" "Action Category" "Risk" "Summary" "Memo" "Number of lines blanked by the prediffer (excluded lines) in the file. Shows the largest side count; hover over the cell for the per-side breakdown." "Excluded lines: old %%1, new %%2" "Excluded lines: left %%1, middle %%2, right %%3") do (
   findstr /C:%%M "Build\Translations\WinMerge\Japanese.po" > NUL || (
     echo ERROR: Merge20 msgid %%M is missing from the bundled Japanese.po.
     exit /b 1
