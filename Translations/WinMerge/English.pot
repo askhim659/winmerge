@@ -9811,14 +9811,6 @@ msgstr ""
 msgid "(pick a preset to fill in the field above)"
 msgstr ""
 
-#: ClipboardHistory.cpp:180
-msgid "32-bit WinMerge does not support Clipboard Compare"
-msgstr ""
-
-#: CrashLogger/CrashLogger.cpp:411
-msgid "WinMerge detected a previous crash. Please report this if possible."
-msgstr ""
-
 #: DirDoc.cpp:822
 #, c-format
 msgid "Old-only file (%1 lines)"
@@ -10047,15 +10039,6 @@ msgstr ""
 
 #: FilterErrorMessages.cpp:55 FilterErrorMessages.cpp:69
 msgid "at position"
-msgstr ""
-
-#: HexMergeDoc.cpp:240
-#, c-format
-msgid "Another application updated\n%1\nsince WinMerge loaded it.\n\nOverwrite?"
-msgstr ""
-
-#: MainFrm.cpp:2868
-msgid "WinMerge Project Files (*.WinMerge)|*.WinMerge||"
 msgstr ""
 
 #: Merge.cpp:706
@@ -10428,10 +10411,6 @@ msgstr ""
 #: Merge20/Merge20SessionDoc.cpp:476
 #, c-format
 msgid "Note: the saved compare options differ from the current ones and were not applied: %1."
-msgstr ""
-
-#: MergeApp.cpp:154
-msgid "WinMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
 msgstr ""
 
 #: MergeLogger.cpp:103
