@@ -1832,6 +1832,11 @@
 #define ID_MERGE20_DED_DIFFS_ONLY      38958
 #define ID_MERGE20_SLIM                38959
 #define ID_MERGE20_BULK_CLASSIFY       38960
+#define ID_MERGE20_SHOW_REVIEW_TODO    38961
+#define ID_MERGE20_SHOW_REVIEW_DONE    38962
+#define ID_MERGE20_SHOW_REVIEW_HOLD    38963
+#define ID_MERGE20_SHOW_REVIEW_SPECIAL 38964
+#define ID_MERGE20_SHOW_REVIEW_KEEP    38965
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2583,6 +2588,7 @@
 // control 1805 (dedicated-bar diffs-only button); D10 consumes
 // dialog 300 (bulk classify), controls 1806-1809 (progress, status,
 // stop, close) and command 38960 (bulk classify launch).
+// D11 consumes commands 38961-38965 (review-state filter toggles).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2594,7 +2600,7 @@
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
 //   diffs-only and slim commands;
-//   _APS_NEXT_COMMAND_VALUE is now 38960), free up to 38976
+//   _APS_NEXT_COMMAND_VALUE is now 38965), free up to 38976
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2604,7 +2610,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
-#define _APS_NEXT_COMMAND_VALUE         38961
+#define _APS_NEXT_COMMAND_VALUE         38966
 #define _APS_NEXT_CONTROL_VALUE         1810
 #define _APS_NEXT_SYMED_VALUE           134
 #endif

@@ -250,6 +250,9 @@ void Init(COptionsMgr *pOptions)
 	// search strings (at most 10, enforced by D7).
 	pOptions->InitOption(OPT_MERGE20_DED_MODE, false);
 	pOptions->InitOption(OPT_MERGE20_DED_PINNED, false);
+	// Merge20 (Phase 4 D11, D2 residual (c)): first-entry pin, true
+	// until the first dedicated-mode entry consumes it.
+	pOptions->InitOption(OPT_MERGE20_DED_PIN_FIRST, true);
 	pOptions->InitOption(OPT_MERGE20_DED_ZOOM, 750, 350, 2200);
 	pOptions->InitOption(OPT_MERGE20_TODO_ONLY, false);
 	pOptions->InitOption(OPT_MERGE20_SNIPER_ON, false);

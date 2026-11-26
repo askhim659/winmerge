@@ -7,6 +7,8 @@
 
 #include "stdafx.h"
 #include "DiffViewBar.h"
+#include "OptionsDef.h"
+#include "OptionsMgr.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -26,6 +28,27 @@ CDiffViewBar::CDiffViewBar()
 
 CDiffViewBar::~CDiffViewBar()
 {
+}
+
+/**
+ * @brief Merge20 (Phase 4 D11, design section 4.1(a)): restore the
+ * saved focus-dock height after the base LoadState reads the
+ * persisted size. The base LoadState reads the persisted sizeHorzCY
+ * (and the frame calls LoadState after OnCreate, so a constructor
+ * value would be overwritten); the saved height wins over it when
+ * present, clamped to 60-2000px. A value of 0 (never saved, or an
+ * old profile) leaves the persisted size alone.
+ */
+void CDiffViewBar::LoadState(LPCTSTR lpszProfileName)
+{
+	TViewBarBase::LoadState(lpszProfileName);
+	const int nHeight = GetOptionsMgr()->GetInt(OPT_MERGE20_FOCUS_DOCK_HEIGHT);
+	if (nHeight > 0)
+	{
+		const int nClamped = (std::max)(60, (std::min)(nHeight, 2000));
+		m_szHorz.cy = nClamped;
+		m_szFloat.cy = nClamped;
+	}
 }
 
 

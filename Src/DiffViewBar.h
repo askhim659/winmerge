@@ -31,6 +31,10 @@ public:
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CDiffViewBar)
 public:
+	// Merge20 (Phase 4 D11): restore the saved focus-dock height
+	// (OPT_MERGE20_FOCUS_DOCK_HEIGHT) after the persisted size is
+	// read, like CMerge20DedBar does for its fixed height.
+	virtual void LoadState(LPCTSTR lpszProfileName) override;
 	//}}AFX_VIRTUAL
 
 

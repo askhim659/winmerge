@@ -150,6 +150,24 @@ struct Merge20SessionDisplay
 	bool treeMode = false;
 	/** @brief Review-state filter initial values (OPT_MERGE20_SHOW_REVIEW_*). */
 	bool reviewFilter[5] = { true, true, true, true, true };
+	/** @brief Dedicated compare mode was on when saved (design
+	 * section 4.1(b), D11). Restored into OPT_MERGE20_DED_MODE, so
+	 * the next file compare opens dedicated again. */
+	bool dedMode = false;
+	/** @brief Dedicated bar was pinned (design section 4.1(b), D11). */
+	bool dedPinned = false;
+	/** @brief Unreviewed-only tour was on (design section 4.1(b), D11). */
+	bool todoOnly = false;
+	/** @brief Dedicated-mode zoom (OPT_MERGE20_DED_ZOOM, design
+	 * section 4.1(b), D11). 0 means not stored (sessions saved
+	 * before D11); restore then leaves the zoom alone. */
+	int dedZoom = 0;
+	/** @brief Slim list was on (design section 4.1(b), D11). */
+	bool slim = false;
+	/** @brief Most recent Grep search string (design section 4.1(b),
+	 * D11): the head of OPT_MERGE20_GREP_HISTORY at save time.
+	 * Empty when no search was ever run. */
+	String grepText;
 	/** @brief Opaque column-order string (DirViewColItems::SaveColumnOrders). */
 	String columnOrders;
 	/** @brief Opaque column-width string (DirViewColItems::SaveColumnWidths). */

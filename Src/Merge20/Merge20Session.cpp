@@ -1029,6 +1029,15 @@ bool Merge20SessionToJson(const Merge20Session& session, std::string& outUtf8)
 			{ L"showEmptyFolders", Merge20JsonBool(session.display.showEmptyFolders) },
 			{ L"treeMode", Merge20JsonBool(session.display.treeMode) },
 			{ L"reviewFilter", Merge20JsonArray(std::move(reviewFilter)) },
+			// Merge20 (Phase 4 D11, design section 4.1(b)): dedicated
+			// mode, pin, unreviewed-only tour, dedicated zoom, slim
+			// list and the latest Grep search string.
+			{ L"dedMode", Merge20JsonBool(session.display.dedMode) },
+			{ L"dedPinned", Merge20JsonBool(session.display.dedPinned) },
+			{ L"todoOnly", Merge20JsonBool(session.display.todoOnly) },
+			{ L"dedZoom", Merge20JsonInt(session.display.dedZoom) },
+			{ L"slim", Merge20JsonBool(session.display.slim) },
+			{ L"grepText", Merge20JsonText(session.display.grepText) },
 			{ L"columnOrders", Merge20JsonText(session.display.columnOrders) },
 			{ L"columnWidths", Merge20JsonText(session.display.columnWidths) },
 			{ L"hiddenItems", Merge20JsonArray(std::move(hiddenItems)) },
@@ -1143,6 +1152,27 @@ bool Merge20SessionFromJson(const std::string& utf8, Merge20Session& out, std::s
 		if (!GetBoolField(*display, L"showEmptyFolders", session.display.showEmptyFolders))
 			return false;
 		if (!GetBoolField(*display, L"treeMode", session.display.treeMode))
+			return false;
+		// Merge20 (Phase 4 D11, design section 4.1(b)): absent in
+		// files saved before D11, so the Get*Field helpers leave the
+		// defaults (false / 0 / empty) and nothing is forced. A
+		// dedZoom outside the option range (350-2200) fails the load,
+		// like topIndex does.
+		if (!GetBoolField(*display, L"dedMode", session.display.dedMode))
+			return false;
+		if (!GetBoolField(*display, L"dedPinned", session.display.dedPinned))
+			return false;
+		if (!GetBoolField(*display, L"todoOnly", session.display.todoOnly))
+			return false;
+		int64_t dedZoom = 0;
+		if (!GetIntField(*display, L"dedZoom", dedZoom, 0, 2200))
+			return false;
+		if (dedZoom != 0 && dedZoom < 350)
+			return false;
+		session.display.dedZoom = static_cast<int>(dedZoom);
+		if (!GetBoolField(*display, L"slim", session.display.slim))
+			return false;
+		if (!GetTextField(*display, L"grepText", session.display.grepText))
 			return false;
 		if (!GetTextField(*display, L"columnOrders", session.display.columnOrders))
 			return false;

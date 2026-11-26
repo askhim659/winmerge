@@ -30,6 +30,13 @@ namespace
 		session.display.showIdentical = false;
 		session.display.treeMode = true;
 		session.display.reviewFilter[1] = false;
+		// Merge20 (Phase 4 D11, design section 4.1(b)).
+		session.display.dedMode = true;
+		session.display.dedPinned = true;
+		session.display.todoOnly = true;
+		session.display.dedZoom = 1500;
+		session.display.slim = true;
+		session.display.grepText = L"TODO";
 		session.display.columnOrders = L"0,1,2";
 		session.display.columnWidths = L"100,200";
 		session.display.hiddenItems = { L"src\\.git", L"bin" };
@@ -191,6 +198,13 @@ TEST(Merge20Session, SessionRoundTrip)
 	EXPECT_FALSE(back.display.showIdentical);
 	EXPECT_TRUE(back.display.treeMode);
 	EXPECT_FALSE(back.display.reviewFilter[1]);
+	// Merge20 (Phase 4 D11, design section 4.1(b)).
+	EXPECT_TRUE(back.display.dedMode);
+	EXPECT_TRUE(back.display.dedPinned);
+	EXPECT_TRUE(back.display.todoOnly);
+	EXPECT_EQ(back.display.dedZoom, 1500);
+	EXPECT_TRUE(back.display.slim);
+	EXPECT_EQ(back.display.grepText, L"TODO");
 	EXPECT_EQ(back.display.columnOrders, L"0,1,2");
 	ASSERT_EQ(back.display.hiddenItems.size(), 2u);
 	EXPECT_EQ(back.display.focusedPath, L"src\\foo.cpp");
@@ -290,6 +304,59 @@ TEST(Merge20Session, SplitsRoundTrip)
 	ASSERT_EQ(back.files.size(), 1u);
 	ASSERT_EQ(back.files[0].splits.size(), 1u);
 	EXPECT_EQ(back.files[0].splits[0].rows, 5);
+}
+
+TEST(Merge20Session, DisplayFieldsBackwardCompat)
+{
+	// Merge20 (Phase 4 D11, design section 4.1(b)): a file saved
+	// before D11 has none of the new display fields and still loads,
+	// with the new fields at their defaults (nothing is forced).
+	Merge20Session back;
+	std::string err;
+	int skipped = -1;
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"showIdentical\":false,\"treeMode\":true}}",
+		back, err, skipped));
+	EXPECT_TRUE(err.empty());
+	EXPECT_FALSE(back.display.showIdentical);
+	EXPECT_TRUE(back.display.treeMode);
+	EXPECT_FALSE(back.display.dedMode);
+	EXPECT_FALSE(back.display.dedPinned);
+	EXPECT_FALSE(back.display.todoOnly);
+	EXPECT_EQ(back.display.dedZoom, 0);
+	EXPECT_FALSE(back.display.slim);
+	EXPECT_TRUE(back.display.grepText.empty());
+	// A dedZoom outside the option range (350-2200) fails the load,
+	// like a bad topIndex does. 0 (not stored) is accepted.
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"dedZoom\":0}}",
+		back, err, skipped));
+	EXPECT_EQ(back.display.dedZoom, 0);
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"dedZoom\":350}}",
+		back, err, skipped));
+	EXPECT_EQ(back.display.dedZoom, 350);
+	EXPECT_FALSE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"dedZoom\":100}}",
+		back, err, skipped));
+	EXPECT_FALSE(err.empty());
+	EXPECT_FALSE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"dedMode\":\"yes\"}}",
+		back, err, skipped));
+	EXPECT_FALSE(err.empty());
+	// A file that has the new fields keeps them after a round trip
+	// through ToJson/FromJson.
+	Merge20Session session = MakeSession();
+	session.display.dedZoom = 2200;
+	std::string json;
+	ASSERT_TRUE(Merge20SessionToJson(session, json));
+	ASSERT_TRUE(Merge20SessionFromJson(json, back, err, skipped));
+	EXPECT_EQ(back.display.dedZoom, 2200);
 }
 
 TEST(Merge20Session, SessionFormatErrors)

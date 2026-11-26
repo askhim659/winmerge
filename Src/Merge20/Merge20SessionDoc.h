@@ -41,6 +41,17 @@ struct Merge20SessionRestoreResult
 	int diffsRestored = 0; /**< Diff judgments stored into the sidecar for restore into merge docs */
 	/** @brief Saved compare options that differ from the current ones (display names, for the restore report). */
 	std::vector<String> optionsDiffer;
+	/** @brief Saved compare options that were applied by this restore
+	 * (Phase 4 D11): the same display names as optionsDiffer. When
+	 * non-empty, the folders were compared again after applying
+	 * them; see `deferred`. */
+	std::vector<String> optionsApplied;
+	/** @brief True when the file-state part of this restore is still
+	 * pending: the saved compare options were applied and a rescan
+	 * started, and the states are applied by
+	 * Merge20SessionApplyPending once the rescan completes. The
+	 * counts above are 0 until then. */
+	bool deferred = false;
 };
 
 /** @brief Session file path for the folder pair of a compare context. */
@@ -84,8 +95,37 @@ bool Merge20SessionLoadForDoc(CDirDoc& doc, const String& filePath, Merge20Sessi
  * or diff counts changed since the save are reset to unreviewed (their
  * memo is kept); the others get their review state, output checkbox,
  * classification, memo and diff judgments back.
+ *
+ * Merge20 (Phase 4 D11, design section 5.2/D11): when the saved
+ * compare options differ from the current ones, they are applied
+ * (written to the options manager and the global file filter) and
+ * the folders are compared again; the file states are then applied
+ * by Merge20SessionApplyPending once that rescan completes, and the
+ * returned result has `deferred` set with the counts still 0. The
+ * caller shows the interim message from
+ * Merge20SessionFormatDeferredMessage in that case, and the final
+ * report only after the pending apply. When a rescan cannot start
+ * (a compare is already running), the S8 behaviour is kept: the
+ * states are applied against the current list and the differing
+ * options are only named in the report (`optionsDiffer`).
+ * @param [in] skippedFiles Entries skipped while loading the session
+ * (kept for the deferred final report).
  */
-Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20Session& session);
+Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20Session& session, int skippedFiles = 0);
+/**
+ * @brief Apply a session stashed by Merge20SessionApplyToDoc after
+ * its rescan completed (called from CDirView::OnUpdateUIMessage on
+ * EVENT_COMPARE_COMPLETED, before the restore offer). Verifies the
+ * session still belongs to this folder pair; on mismatch the stash
+ * is dropped and false is returned. The result counts are filled
+ * as in Merge20SessionApplyToDoc.
+ * @param [out] result Restore counts (including `optionsApplied`).
+ * @param [out] skippedFiles Entries skipped while loading the session.
+ * @return false when no session was stashed, or it no longer matches.
+ */
+bool Merge20SessionApplyPending(CDirDoc& doc, Merge20SessionRestoreResult& result, int& skippedFiles);
+/** @brief Interim message for a deferred restore (see Merge20SessionApplyToDoc). */
+String Merge20SessionFormatDeferredMessage(const Merge20SessionRestoreResult& result);
 /**
  * @brief Offer the restore once per document (called from
  * CDirView::OnUpdateUIMessage after a compare completes): when a session

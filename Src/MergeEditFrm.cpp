@@ -376,6 +376,13 @@ int CMergeEditFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	if (GetOptionsMgr()->GetBool(OPT_MERGE20_DED_MODE))
 		PostMessage(WM_COMMAND, ID_VIEW_MERGE20_DEDICATED_MODE);
 
+	// Merge20 (Phase 4 D11, design section 4.1(a)): restore the
+	// focus dock's hidden state saved by OnBarCheck/SavePosition.
+	// Only hide when the key says so; a false key never forces the
+	// bar visible, so a LoadState result is respected.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_DOCK_HIDDEN))
+		ShowControlBar(&m_wndDetailBar, FALSE, FALSE);
+
 	return 0;
 }
 
@@ -396,6 +403,14 @@ BOOL CMergeEditFrame::OnBarCheck(UINT nID)
 	// its close button, which does not come through here)
 	if (nID == ID_VIEW_MERGE_RESULT_BAR)
 		GetMainFrame()->UpdateToolbar();
+	// Merge20 (Phase 4 D11, design section 4.1(a)): persist the
+	// focus dock's hidden state. The bar's close button also comes
+	// through here; dedicated mode hides the bar with
+	// ShowControlBar, not through here, and DestroyWindow restores
+	// the normal layout before SavePosition, so a dedicated-mode
+	// hide never leaks into the saved state.
+	if (nID == ID_VIEW_DETAIL_BAR)
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_DOCK_HIDDEN, !m_wndDetailBar.IsWindowVisible());
 	return result;
 }
 
@@ -434,6 +449,18 @@ void CMergeEditFrame::SetDedicatedMode(bool bEnable)
  */
 void CMergeEditFrame::EnterDedicatedMode()
 {
+	// Merge20 (Phase 4 D11, D2 residual (c)): pin the dedicated bar
+	// on the first entry, so the auto-hide does not take the bar away
+	// before a first-time user has found the pin. The key is cleared
+	// after the first entry, so the HTML default (unpinned,
+	// auto-hide) applies from the second entry on. UpdateDedBar
+	// syncs the pin button from the key, so setting the key is
+	// enough.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PIN_FIRST))
+	{
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, true);
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PIN_FIRST, false);
+	}
 	// Remember the current layout so exiting restores it exactly.
 	m_bDedFilePathBarVisible = !!m_wndFilePathBar.IsWindowVisible();
 	m_bDedLocationBarVisible = !!m_wndLocationBar.IsWindowVisible();
@@ -886,6 +913,20 @@ void CMergeEditFrame::SavePosition()
 	m_wndDedBar.SaveState(_T("Settings"));
 	if (m_wndResultBar.m_hWnd != nullptr)
 		m_wndResultBar.SaveState(_T("Settings"));
+
+	// Merge20 (Phase 4 D11, design section 4.1(a)): persist the
+	// focus dock's hidden state and height. DestroyWindow restores
+	// the normal layout before SavePosition (D1), so a
+	// dedicated-mode hide never leaks into the saved state. The
+	// height is saved only while docked: a floating bar's rect
+	// includes its caption, which would restore too tall.
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DOCK_HIDDEN, !m_wndDetailBar.IsWindowVisible());
+	if (m_wndDetailBar.m_hWnd != nullptr && !m_wndDetailBar.IsFloating())
+	{
+		CRect rc;
+		m_wndDetailBar.GetWindowRect(&rc);
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_FOCUS_DOCK_HEIGHT, rc.Height());
+	}
 
 	// Save splitter positions
 	SaveOptions();

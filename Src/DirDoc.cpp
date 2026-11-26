@@ -810,6 +810,39 @@ void CDirDoc::RefreshMerge20DiffJudgments()
 }
 
 /**
+ * @brief Merge20 (Phase 4 D11): stash a session for apply after the
+ * rescan that applied its saved compare options (see
+ * Merge20SessionApplyToDoc). Overwrites any earlier stash: a newer
+ * restore replaces the pending one.
+ */
+void CDirDoc::Merge20SetPendingSession(const Merge20Session& session, int skippedFiles, const std::vector<String>& optionsApplied)
+{
+	m_merge20PendingSession = session;
+	m_merge20PendingSkippedFiles = skippedFiles;
+	m_merge20PendingOptionsApplied = optionsApplied;
+	m_bMerge20HasPendingSession = true;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D11): move the stashed session out and
+ * clear the stash, so a later compare completion does not apply it
+ * twice. Returns false when nothing was stashed.
+ */
+bool CDirDoc::Merge20TakePendingSession(Merge20Session& session, int& skippedFiles, std::vector<String>& optionsApplied)
+{
+	if (!m_bMerge20HasPendingSession)
+		return false;
+	session = std::move(m_merge20PendingSession);
+	skippedFiles = m_merge20PendingSkippedFiles;
+	optionsApplied = std::move(m_merge20PendingOptionsApplied);
+	m_merge20PendingSession = Merge20Session();
+	m_merge20PendingSkippedFiles = 0;
+	m_merge20PendingOptionsApplied.clear();
+	m_bMerge20HasPendingSession = false;
+	return true;
+}
+
+/**
  * @brief Merge20 (S4, IDirDoc): store the classification computed by a
  * merge doc after a rescan.
  * @param [in] paths Merge doc's file paths, used to find the folder

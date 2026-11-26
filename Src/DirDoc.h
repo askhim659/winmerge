@@ -19,6 +19,7 @@
 #include "IMDITab.h"
 #include "IDirDoc.h"
 #include "Merge20/Merge20Types.h"
+#include "Merge20/Merge20Session.h"
 
 class CDirView;
 struct IMergeDoc;
@@ -127,6 +128,15 @@ public:
 	// this document (the offer is made once, after the first compare).
 	bool Merge20SessionAsked() const { return m_bMerge20SessionAsked; }
 	void SetMerge20SessionAsked() { m_bMerge20SessionAsked = true; }
+	// Merge20 (Phase 4 D11): a session stashed while its saved
+	// compare options are applied and the folders are compared again.
+	// TakePendingSession moves it out (and clears the stash) once
+	// the rescan completes, so the states are applied to the new
+	// list; the applied option names travel with it for the final
+	// restore report.
+	bool Merge20HasPendingSession() const { return m_bMerge20HasPendingSession; }
+	void Merge20SetPendingSession(const Merge20Session& session, int skippedFiles, const std::vector<String>& optionsApplied);
+	bool Merge20TakePendingSession(Merge20Session& session, int& skippedFiles, std::vector<String>& optionsApplied);
 	void Redisplay();
 	virtual ~CDirDoc();
 	void SetDirView( CDirView *newView ); // TODO Perry
@@ -193,6 +203,10 @@ private:
 	bool m_bMarkedRescan; /**< If `true` next rescan scans only marked items */
 	bool m_bGeneratingReport;
 	bool m_bMerge20SessionAsked = false; /**< Merge20 (S8): session-restore offer already shown for this document */
+	bool m_bMerge20HasPendingSession = false; /**< Merge20 (Phase 4 D11): a session is stashed for apply after the rescan that applied its compare options */
+	Merge20Session m_merge20PendingSession; /**< Merge20 (Phase 4 D11): the stashed session */
+	int m_merge20PendingSkippedFiles = 0; /**< Merge20 (Phase 4 D11): entries skipped while loading the stashed session */
+	std::vector<String> m_merge20PendingOptionsApplied; /**< Merge20 (Phase 4 D11): compare options applied by the stashed session, for the final report */
 	std::unique_ptr<DirCmpReport> m_pReport;
 	FileFilterHelper m_fileHelper; /**< File filter helper */
 	clock_t m_compareStart; /**< Starting process time of the compare */

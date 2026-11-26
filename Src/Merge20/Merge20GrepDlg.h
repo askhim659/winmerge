@@ -56,6 +56,11 @@ public:
 	void ShowGrep(CDirView* pDirView);
 	/** @brief Hide the dialog and stop a running scan. */
 	void CloseGrep();
+	/** @brief Merge20 (Phase 4 D11, design section 4.1(b)): put a
+	 * saved search string back at the head of the search history
+	 * (and into the combo, when the dialog is open). An empty
+	 * string is a no-op. */
+	void RestoreSearchText(const String& text);
 	/** @brief True while the dialog is shown. */
 	bool IsOpen() const { return m_hWnd != nullptr && !!IsWindowVisible(); }
 	/** @brief Stop a running scan and wait for the worker to end (idempotent). */

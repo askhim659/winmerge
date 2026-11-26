@@ -404,6 +404,9 @@ protected:
 	afx_msg void OnMerge20Master();
 	// Merge20 (Phase 4 D9): slim list toggle
 	afx_msg void OnMerge20Slim();
+	// Merge20 (Phase 4 D11): review-state filter toggle (command range
+	// ID_MERGE20_SHOW_REVIEW_TODO..ID_MERGE20_SHOW_REVIEW_KEEP)
+	afx_msg void OnMerge20ShowReview(UINT nID);
 	// Merge20 (S8): session save/restore, audit-memo editor
 	afx_msg void OnMerge20SessionSave();
 	afx_msg void OnMerge20SessionRestore();
@@ -548,6 +551,10 @@ public:
 	void Merge20SetDisplayFilter(const Merge20SessionDisplay& display);
 	void Merge20ApplyColumnSettings(const String& orders, const String& widths);
 	void Merge20RestoreViewPosition(const String& focusedPath, int topIndex);
+	// Merge20 (Phase 4 D11, design section 4.1(b)): put the saved
+	// Grep search string back at the head of the search history (and
+	// into the open Grep dialog, if any). An empty string is a no-op.
+	void Merge20RestoreGrepText(const String& text);
 	DirItemIterator Begin() const { return DirItemIterator(m_pIList.get()); }
 	DirItemIterator End() const { return DirItemIterator(); }
 	DirItemIterator RevBegin() const { return DirItemIterator(m_pIList.get(), -1, false, true); }

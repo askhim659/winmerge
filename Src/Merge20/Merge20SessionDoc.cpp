@@ -8,6 +8,8 @@
 #include "StdAfx.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "Merge20/Merge20Session.h"
+#include "Merge20/Merge20Grep.h"
+#include "Merge.h"
 #include "DirDoc.h"
 #include "MergeDoc.h"
 #include "DiffContext.h"
@@ -221,6 +223,17 @@ bool Merge20SessionBuildFromDoc(CDirDoc& doc, Merge20Session& session)
 	fresh.display.hiddenItems = doc.GetHiddenItems();
 	if (CDirView* pView = doc.GetMainView())
 		pView->Merge20GetDisplaySettings(fresh.display);
+	// Merge20 (Phase 4 D11, design section 4.1(b)): dedicated mode,
+	// pin, unreviewed-only tour and dedicated zoom are global option
+	// keys (D0); the slim flag is read by Merge20GetDisplaySettings
+	// above, and the Grep string is the head of the search history.
+	fresh.display.dedMode = GetOptionsMgr()->GetBool(OPT_MERGE20_DED_MODE);
+	fresh.display.dedPinned = GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED);
+	fresh.display.todoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
+	fresh.display.dedZoom = GetOptionsMgr()->GetInt(OPT_MERGE20_DED_ZOOM);
+	const std::vector<String> grepHistory = Merge20GrepParseHistory(
+		GetOptionsMgr()->GetString(OPT_MERGE20_GREP_HISTORY));
+	fresh.display.grepText = grepHistory.empty() ? String() : grepHistory.front();
 
 	for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)
 	{
@@ -350,36 +363,80 @@ bool Merge20SessionLoadForDoc(CDirDoc& doc, const String& filePath, Merge20Sessi
 	return true;
 }
 
-Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20Session& session)
+namespace
 {
-	Merge20SessionRestoreResult result;
-	if (!doc.HasDiffs())
-		return result;
-	CDiffContext& ctxt = doc.GetDiffContext();
 
-	// Compare options are saved but NOT applied in v1: applying them
-	// needs a rescan. Differing options are listed in the result so
-	// the restore report can name them (design section 3.6).
-	if (session.compareOptions.recursive != ctxt.m_bRecursive)
-		result.optionsDiffer.push_back(_("Recursive"));
-	if (session.compareOptions.fileFilter != GetOptionsMgr()->GetString(OPT_FILEFILTER_CURRENT))
-		result.optionsDiffer.push_back(_("File filter"));
-	if (session.compareOptions.compareMethod != ctxt.GetCompareMethod())
-		result.optionsDiffer.push_back(_("Compare method"));
-	if (const DIFFOPTIONS* pOpts = ctxt.GetOptions())
+	// Merge20 (Phase 4 D11): names of the saved compare options that
+	// differ from the current ones, for the restore report. The
+	// display names are the S8 ones, so a report names the same
+	// options before and after D11.
+	void SessionOptionsDiffer(CDirDoc& doc, const Merge20Session& session, std::vector<String>& differ)
 	{
-		if (session.compareOptions.ignoreWhitespace != pOpts->nIgnoreWhitespace)
-			result.optionsDiffer.push_back(_("Ignore whitespace"));
-		if (session.compareOptions.ignoreCase != pOpts->bIgnoreCase)
-			result.optionsDiffer.push_back(_("Ignore case"));
-		if (session.compareOptions.ignoreBlankLines != pOpts->bIgnoreBlankLines)
-			result.optionsDiffer.push_back(_("Ignore blank lines"));
-		if (session.compareOptions.ignoreEol != pOpts->bIgnoreEol)
-			result.optionsDiffer.push_back(_("Ignore EOL differences"));
+		CDiffContext& ctxt = doc.GetDiffContext();
+		if (session.compareOptions.recursive != ctxt.m_bRecursive)
+			differ.push_back(_("Recursive"));
+		if (session.compareOptions.fileFilter != GetOptionsMgr()->GetString(OPT_FILEFILTER_CURRENT))
+			differ.push_back(_("File filter"));
+		if (session.compareOptions.compareMethod != ctxt.GetCompareMethod())
+			differ.push_back(_("Compare method"));
+		if (const DIFFOPTIONS* pOpts = ctxt.GetOptions())
+		{
+			if (session.compareOptions.ignoreWhitespace != pOpts->nIgnoreWhitespace)
+				differ.push_back(_("Ignore whitespace"));
+			if (session.compareOptions.ignoreCase != pOpts->bIgnoreCase)
+				differ.push_back(_("Ignore case"));
+			if (session.compareOptions.ignoreBlankLines != pOpts->bIgnoreBlankLines)
+				differ.push_back(_("Ignore blank lines"));
+			if (session.compareOptions.ignoreEol != pOpts->bIgnoreEol)
+				differ.push_back(_("Ignore EOL differences"));
+		}
 	}
 
-	// Index the current files by relative path.
-	std::map<String, const DIFFITEM*> byRelPath;
+	// Merge20 (Phase 4 D11): write the saved compare options back
+	// to the global options (and the global file filter) so the
+	// rescan's InitDiffContext picks them up. The recursive flag is
+	// refreshed through RefreshOptions (InitDiffContext does not set
+	// m_bRecursive; the compare thread reads it from the context).
+	// The saved file filter is the mask/expression the Filters dialog
+	// stores (see CMainFrame::OnToolsFilters); SetMaskOrExpression
+	// round-trips it, including a named filter (pf:...) whose file is
+	// gone (then it is treated as a literal mask).
+	void ApplySessionCompareOptions(CDirDoc& doc, const Merge20Session& session)
+	{
+		COptionsMgr* pOptions = GetOptionsMgr();
+		CDiffContext& ctxt = doc.GetDiffContext();
+		if (session.compareOptions.recursive != ctxt.m_bRecursive)
+			pOptions->SaveOption(OPT_CMP_INCLUDE_SUBDIRS, session.compareOptions.recursive);
+		if (session.compareOptions.fileFilter != pOptions->GetString(OPT_FILEFILTER_CURRENT))
+		{
+			theApp.GetGlobalFileFilter()->SetMaskOrExpression(session.compareOptions.fileFilter);
+			pOptions->SaveOption(OPT_FILEFILTER_CURRENT, session.compareOptions.fileFilter);
+		}
+		if (session.compareOptions.compareMethod != ctxt.GetCompareMethod())
+			pOptions->SaveOption(OPT_CMP_METHOD, session.compareOptions.compareMethod);
+		DIFFOPTIONS opts{};
+		if (const DIFFOPTIONS* pOpts = ctxt.GetOptions())
+			opts = *pOpts;
+		else
+			Options::DiffOptions::Load(pOptions, opts);
+		opts.nIgnoreWhitespace = session.compareOptions.ignoreWhitespace;
+		opts.bIgnoreCase = session.compareOptions.ignoreCase;
+		opts.bIgnoreBlankLines = session.compareOptions.ignoreBlankLines;
+		opts.bIgnoreEol = session.compareOptions.ignoreEol;
+		Options::DiffOptions::Save(pOptions, opts);
+		doc.RefreshOptions();
+	}
+
+	// Merge20 (S8, D11): apply the per-file states and the display
+	// settings of a session to the current (already compared) list.
+	// This is the synchronous half of Merge20SessionApplyToDoc; the
+	// deferred half (Merge20SessionApplyPending) calls it after the
+	// rescan that applied the saved compare options.
+	void ApplySessionStates(CDirDoc& doc, const Merge20Session& session, Merge20SessionRestoreResult& result)
+	{
+		CDiffContext& ctxt = doc.GetDiffContext();
+		// Index the current files by relative path.
+		std::map<String, const DIFFITEM*> byRelPath;
 	for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)
 	{
 		const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
@@ -436,8 +493,87 @@ Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20
 		pView->Merge20SetDisplayFilter(session.display);
 		pView->Merge20ApplyColumnSettings(session.display.columnOrders, session.display.columnWidths);
 		pView->Merge20RestoreViewPosition(session.display.focusedPath, session.display.topIndex);
+		// Merge20 (Phase 4 D11, design section 4.1(b)): the Grep
+		// search string goes back to the head of the search history
+		// (and into the open Grep dialog, if any).
+		pView->Merge20RestoreGrepText(session.display.grepText);
 	}
+	// Merge20 (Phase 4 D11, design section 4.1(b)): dedicated mode,
+	// pin, unreviewed-only tour and dedicated zoom are global option
+	// keys; restoring them makes the next file compare open the way
+	// the saved session left it. Open file compares are not forced
+	// into dedicated mode by a restore.
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_MODE, session.display.dedMode);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, session.display.dedPinned);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_TODO_ONLY, session.display.todoOnly);
+	if (session.display.dedZoom > 0)
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_ZOOM, session.display.dedZoom);
+}
+
+} // namespace
+
+Merge20SessionRestoreResult Merge20SessionApplyToDoc(CDirDoc& doc, const Merge20Session& session, int skippedFiles)
+{
+	Merge20SessionRestoreResult result;
+	if (!doc.HasDiffs())
+		return result;
+	// Merge20 (Phase 4 D11, design section 5.2/D11): differing
+	// compare options are applied now (S8 only noted them). Applying
+	// them needs a rescan, so the file states wait until that rescan
+	// completes (Merge20SessionApplyPending); the caller shows the
+	// interim message until then.
+	SessionOptionsDiffer(doc, session, result.optionsDiffer);
+	if (!result.optionsDiffer.empty() &&
+		doc.m_diffThread.GetThreadState() != CDiffThread::THREAD_COMPARING)
+	{
+		result.optionsApplied = result.optionsDiffer;
+		result.optionsDiffer.clear();
+		result.deferred = true;
+		ApplySessionCompareOptions(doc, session);
+		doc.Merge20SetPendingSession(session, skippedFiles, result.optionsApplied);
+		doc.Rescan();
+		return result;
+	}
+	// No option change, or a compare is already running (then the S8
+	// behaviour is kept: the states are applied against the current
+	// list and the differing options are only named in the report).
+	ApplySessionStates(doc, session, result);
 	return result;
+}
+
+bool Merge20SessionApplyPending(CDirDoc& doc, Merge20SessionRestoreResult& result, int& skippedFiles)
+{
+	result = Merge20SessionRestoreResult();
+	skippedFiles = 0;
+	Merge20Session session;
+	std::vector<String> optionsApplied;
+	if (!doc.Merge20TakePendingSession(session, skippedFiles, optionsApplied))
+		return false;
+	if (!doc.HasDiffs())
+		return false;
+	// The folders may have changed while the rescan ran (a header-bar
+	// folder switch starts a new compare); never apply a session to
+	// another folder pair.
+	const CDiffContext& ctxt = doc.GetDiffContext();
+	const int nDirs = ctxt.GetCompareDirs();
+	const String left = ctxt.GetNormalizedPath(0);
+	const String right = nDirs > 1 ? ctxt.GetNormalizedPath(1) : String();
+	const String third = nDirs > 2 ? ctxt.GetNormalizedPath(2) : String();
+	if (strutils::makelower(session.leftPath) != strutils::makelower(left) ||
+		strutils::makelower(session.rightPath) != strutils::makelower(right) ||
+		strutils::makelower(session.thirdPath) != strutils::makelower(third))
+		return false;
+	result.optionsApplied = optionsApplied;
+	ApplySessionStates(doc, session, result);
+	return true;
+}
+
+String Merge20SessionFormatDeferredMessage(const Merge20SessionRestoreResult& result)
+{
+	const String names = strutils::join(result.optionsApplied.begin(), result.optionsApplied.end(), String(_T(", ")));
+	return strutils::format_string1(
+		_("The saved compare options were applied and the folders are being compared again: %1.\n\nThe review states, output checks, memos and merge judgments will be restored when the compare finishes."),
+		names);
 }
 
 void Merge20SessionOfferRestore(CDirDoc& doc)
@@ -464,7 +600,15 @@ void Merge20SessionOfferRestore(CDirDoc& doc)
 		msg += _T("\n") + strutils::format_string1(_("%1 saved entries could not be read and will be ignored."), strutils::to_str(skippedFiles));
 	if (AfxMessageBox(msg.c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
 		return;
-	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(doc, session);
+	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(doc, session, skippedFiles);
+	if (result.deferred)
+	{
+		// Merge20 (Phase 4 D11): the saved compare options were
+		// applied and a rescan started; the final report comes after
+		// the pending apply (CDirView::OnUpdateUIMessage).
+		AfxMessageBox(Merge20SessionFormatDeferredMessage(result).c_str(), MB_ICONINFORMATION);
+		return;
+	}
 	AfxMessageBox(Merge20SessionFormatRestoreReport(result, skippedFiles).c_str(), MB_ICONINFORMATION);
 }
 
@@ -477,6 +621,11 @@ String Merge20SessionFormatRestoreReport(const Merge20SessionRestoreResult& resu
 		report += _T("\n") + strutils::format_string1(_("%1 saved entries could not be read and will be ignored."), strutils::to_str(skippedFiles));
 	if (result.skipped > 0)
 		report += _T("\n") + strutils::format_string1(_("%1 saved files no longer exist in this comparison."), strutils::to_str(result.skipped));
+	if (!result.optionsApplied.empty())
+	{
+		const String names = strutils::join(result.optionsApplied.begin(), result.optionsApplied.end(), String(_T(", ")));
+		report += _T("\n") + strutils::format_string1(_("Note: the saved compare options were applied and the folders were compared again: %1."), names);
+	}
 	if (!result.optionsDiffer.empty())
 	{
 		const String names = strutils::join(result.optionsDiffer.begin(), result.optionsDiffer.end(), String(_T(", ")));

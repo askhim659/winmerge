@@ -11599,3 +11599,23 @@ msgstr "【Wiz】完了：%1 件を分類しました（簡易 %2 件）、%3 �
 #: Src/DirViewColItems.cpp
 msgid "Simple"
 msgstr "簡易"
+
+#. Merge20 (D11): Review-state filter submenu title (CDirView)
+#: Src/DirView.cpp
+msgid "Show review states"
+msgstr "【Wiz】確認内容で表示"
+
+#. Merge20 (D11): Interim message while the saved compare options are applied and the folders are compared again (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "The saved compare options were applied and the folders are being compared again: %1.\n\nThe review states, output checks, memos and merge judgments will be restored when the compare finishes."
+msgstr "保存されていた比較オプション（%1）を適用し、フォルダを再比較しています。\n\n再比較が終わったら確認内容、出力チェック、メモ、マージ判断を復元します。"
+
+#. Merge20 (D11): Pending session no longer matches the folders (CDirView)
+#: Src/DirView.cpp
+msgid "The saved session no longer matches these folders, so it was not applied."
+msgstr "保存されたセッションは現在のフォルダと一致しないため、適用しませんでした。"
+
+#. Merge20 (D11): Restore report line when the saved compare options were applied (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Note: the saved compare options were applied and the folders were compared again: %1."
+msgstr "注：保存されていた比較オプション（%1）を適用し、フォルダを再比較しました。"
