@@ -50,6 +50,7 @@
 #include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20Patrol.h"
 #include "Merge20/Merge20SessionDoc.h"
+#include "Merge20/Merge20Slim.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
@@ -163,6 +164,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_LEARN, OnMerge20Learn)
 	ON_COMMAND(ID_MERGE20_GREP, OnMerge20Grep)
 	ON_COMMAND(ID_MERGE20_MASTER, OnMerge20Master)
+	ON_COMMAND(ID_MERGE20_SLIM, OnMerge20Slim)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
@@ -517,6 +519,12 @@ void CDirView::OnInitialUpdate()
 	// Display column headers (in appropriate order)
 	ReloadColumns();
 
+	// Merge20 (Phase 4 D9): restore the slim list when the option
+	// says so. The full layout was just loaded from the options
+	// above, so SetMerge20Slim remembers it before hiding columns.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_SLIM))
+		SetMerge20Slim(true);
+
 	// Show selection across entire row.u
 	// Also allow user to rearrange columns via drag&drop of headers.
 	// Also enable infotips.
@@ -594,6 +602,11 @@ void CDirView::ReloadColumns()
 		GetOptionsMgr()->GetString(GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_WIDTHS : OPT_DIRVIEW3_COLUMN_WIDTHS),
 		std::bind(&CListCtrl::SetColumnWidth, m_pList, _1, _2), GetDefColumnWidth());
 	SetColAlignments();
+	// Merge20 (Phase 4 D9): re-apply the slim column widths (see
+	// ApplyMerge20SlimColumnWidths). ReloadColumns loads widths from
+	// the saved full layout, which would otherwise assign the
+	// Path/Status widths to the slim columns.
+	ApplyMerge20SlimColumnWidths();
 
 	m_pList->SetRedraw(TRUE);	// Turn updating back on
 
@@ -930,6 +943,13 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// Master management (exclude words, highlight, risk keywords). Always offered.
 	String sMerge20Master = _("Master Management...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_MASTER, sMerge20Master.c_str());
+	// Merge20 (Phase 4 D9, design section 5.2/D9, spec sections 3
+	// (4/4) and 5.1): slim list. Always offered; the check shows
+	// the current state (the menu is rebuilt on every popup, as for
+	// the other Merge20 items, so no update handler is needed).
+	String sMerge20Slim = _("Slim List");
+	pPopup->AppendMenu(MF_STRING | (GetOptionsMgr()->GetBool(OPT_MERGE20_SLIM) ? MF_CHECKED : 0),
+		ID_MERGE20_SLIM, sMerge20Slim.c_str());
 	// Merge20 (S8, design section 3.6, spec section 6.1): session
 	// save/restore, next to the batch check and CSV export. Always offered.
 	String sMerge20SessionSave = _("Save session");
@@ -1453,12 +1473,29 @@ void CDirView::OnDestroy()
 
 	{
 		const String keyname = GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_ORDERS : OPT_DIRVIEW3_COLUMN_ORDERS;
-		GetOptionsMgr()->SaveOption(keyname, m_pColItems->SaveColumnOrders());
+		// Merge20 (Phase 4 D9): while slim is on, the live orders are
+		// the slim preset, not the user's layout. Save the remembered
+		// full orders instead; if they were never stored, keep the
+		// previously saved value by skipping the save.
+		if (m_bMerge20Slim)
+		{
+			if (!m_sMerge20FullColumnOrders.empty())
+				GetOptionsMgr()->SaveOption(keyname, m_sMerge20FullColumnOrders);
+		}
+		else
+			GetOptionsMgr()->SaveOption(keyname, m_pColItems->SaveColumnOrders());
 	}
 	{
 		const String keyname = GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_WIDTHS : OPT_DIRVIEW3_COLUMN_WIDTHS;
-		GetOptionsMgr()->SaveOption(keyname,
-			m_pColItems->SaveColumnWidths(std::bind(&CListCtrl::GetColumnWidth, m_pList, _1)));
+		// Merge20 (Phase 4 D9): same guard as the orders above.
+		if (m_bMerge20Slim)
+		{
+			if (!m_sMerge20FullColumnWidths.empty())
+				GetOptionsMgr()->SaveOption(keyname, m_sMerge20FullColumnWidths);
+		}
+		else
+			GetOptionsMgr()->SaveOption(keyname,
+				m_pColItems->SaveColumnWidths(std::bind(&CListCtrl::GetColumnWidth, m_pList, _1)));
 	}
 
 	__super::OnDestroy();
@@ -3431,6 +3468,9 @@ void CDirView::OnTimer(UINT_PTR nIDEvent)
 		m_pColItems->LoadColumnWidths(
 			GetOptionsMgr()->GetString(GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_WIDTHS : OPT_DIRVIEW3_COLUMN_WIDTHS),
 			std::bind(&CListCtrl::SetColumnWidth, m_pList, _1, _2), GetDefColumnWidth());
+		// Merge20 (Phase 4 D9): a header drag-and-drop reorder also
+		// reloads the full-layout widths; fix the slim widths again.
+		ApplyMerge20SlimColumnWidths();
 		Redisplay();
 	}
 	else if (nIDEvent == TIMER_ID_STATUSBAR_UPDATE)
@@ -3720,6 +3760,197 @@ void CDirView::OnMerge20Master()
 }
 
 /**
+ * @brief Merge20 (Phase 4 D9): slim-list toggle (folder-list context
+ * menu). Switches between the full column layout and the slim preset.
+ */
+void CDirView::OnMerge20Slim()
+{
+	SetMerge20Slim(!m_bMerge20Slim);
+}
+
+/**
+ * @brief Merge20 (Phase 4 D9, design sections 3.10 and 5.2/D9, spec
+ * sections 3 (4/4) and 5.1): apply or leave the slim list.
+ *
+ * Slim shows only the file name, the output check and the review
+ * state (HTML `tgSlim()`: check box + file name + review tag).
+ * Everything else is hidden: the action category, the risk, the
+ * summary (which carries the old/changed/new counts, the HTML
+ * "old/changed/new" column), and all stock columns. The review
+ * column is 126px wide and its tag wraps (see OnCustomDraw).
+ *
+ * The full layout is remembered on entry (orders + widths) and
+ * restored on exit, and the slim orders/widths are never written
+ * to the options: the saved layout is always the full one (see the
+ * guards in OnDestroy, Merge20GetDisplaySettings and
+ * Merge20ApplyColumnSettings). Re-entering slim while already slim
+ * re-applies the preset, which is how a session restore refreshes
+ * the remembered full layout without leaving slim mode.
+ *
+ * Redraw cost (T-4-8): the toggle is ReloadColumns (header rebuild
+ * over ~40 columns) + Redisplay (O(N) item bookkeeping for the
+ * virtual list, no per-item text fetch: text is supplied on paint
+ * for visible rows only) + one repaint of the visible rows. The
+ * custom-draw wrap adds one DrawText per review cell per paint.
+ * Nothing in the path is proportional to the file contents, so a
+ * 1000-file list toggles in well under a second; the exact time on
+ * a real machine is a D9 real-machine check item.
+ */
+void CDirView::SetMerge20Slim(bool bSlim)
+{
+	if (m_pColItems == nullptr || m_pList == nullptr)
+		return;
+	if (bSlim)
+	{
+		const bool bFirstEntry = !m_bMerge20Slim;
+		if (bFirstEntry)
+		{
+			m_sMerge20FullColumnOrders = m_pColItems->SaveColumnOrders();
+			m_sMerge20FullColumnWidths = m_pColItems->SaveColumnWidths(std::bind(&CListCtrl::GetColumnWidth, m_pList, _1));
+		}
+		m_bMerge20Slim = true;
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_SLIM, true);
+		const std::string sOrders = Merge20Slim::ColumnOrders();
+		m_pColItems->LoadColumnOrders(String(sOrders.begin(), sOrders.end()));
+		ReloadColumns();
+		if (bFirstEntry)
+			BuildMerge20SlimImageList();
+		Redisplay();
+	}
+	else
+	{
+		if (!m_bMerge20Slim)
+			return;
+		m_bMerge20Slim = false;
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_SLIM, false);
+		if (!m_sMerge20FullColumnOrders.empty())
+			m_pColItems->LoadColumnOrders(m_sMerge20FullColumnOrders);
+		else
+			m_pColItems->ResetColumnOrdering();
+		ReloadColumns();
+		RestoreMerge20SlimImageList();
+		Redisplay();
+	}
+}
+
+/**
+ * @brief Merge20 (Phase 4 D9): fix the slim column widths after any
+ * width reload. ReloadColumns() (and the column-reorder timer) load
+ * widths from the saved full layout, which assigns the Path/Status
+ * widths to the slim columns. The physical indexes are looked up on
+ * every call, so a header drag-and-drop reorder can never leave a
+ * stale index behind.
+ */
+void CDirView::ApplyMerge20SlimColumnWidths()
+{
+	if (!m_bMerge20Slim || m_pList == nullptr)
+		return;
+	const int physOutput = GetMerge20SlimColumnPhys(_T("Soutput"));
+	if (physOutput >= 0)
+		m_pList->SetColumnWidth(physOutput, Merge20Slim::kOutputColumnWidth);
+	const int physReview = GetMerge20SlimColumnPhys(_T("Sreview"));
+	if (physReview >= 0)
+		m_pList->SetColumnWidth(physReview, Merge20Slim::kReviewColumnWidth);
+}
+
+/**
+ * @brief Merge20 (Phase 4 D9): logical column index of a regName,
+ * or -1 when the column does not exist in this table (2-way/3-way).
+ */
+int CDirView::GetMerge20SlimColumnLog(const tchar_t* regName) const
+{
+	if (m_pColItems == nullptr)
+		return -1;
+	for (int log = 0; log < m_pColItems->GetColCount(); ++log)
+	{
+		const DirColInfo* pInfo = m_pColItems->GetDirColInfo(log);
+		if (pInfo != nullptr && pInfo->regName != nullptr && String(pInfo->regName) == regName)
+			return log;
+	}
+	return -1;
+}
+
+/**
+ * @brief Merge20 (Phase 4 D9): physical (display) column index of a
+ * regName, or -1 when the column is hidden or does not exist.
+ */
+int CDirView::GetMerge20SlimColumnPhys(const tchar_t* regName) const
+{
+	const int log = GetMerge20SlimColumnLog(regName);
+	return log < 0 ? -1 : m_pColItems->ColLogToPhys(log);
+}
+
+/**
+ * @brief Merge20 (Phase 4 D9): build the taller small-icon list
+ * that gives slim rows two text lines, so the wrapped review tag
+ * has room. The icons are the same resource icons as
+ * `m_imageList` (see DiffImageListUtils), copied in order, so the
+ * image indexes stay valid; the list is all-or-nothing (any
+ * extraction failure keeps the original list). When the icons are
+ * already at least two lines tall, no swap is needed. Restored by
+ * RestoreMerge20SlimImageList on leaving slim mode.
+ */
+void CDirView::BuildMerge20SlimImageList()
+{
+	if (m_merge20SlimImageList.GetSafeHandle() != nullptr)
+		return;
+	IMAGEINFO info;
+	if (m_imageList.GetSafeHandle() == nullptr || !m_imageList.GetImageInfo(0, &info))
+		return;
+	const int cx = info.rcImage.right - info.rcImage.left;
+	const int cy = info.rcImage.bottom - info.rcImage.top;
+	CClientDC dc(m_pList);
+	CFont* pFont = m_pList->GetFont();
+	CFont* pOldFont = dc.SelectObject(pFont);
+	TEXTMETRIC tm;
+	dc.GetTextMetrics(&tm);
+	dc.SelectObject(pOldFont);
+	const int nNeed = 2 * tm.tmHeight + 4;
+	if (nNeed <= cy)
+		return;
+	CImageList slim;
+	if (!slim.Create(cx, nNeed, ILC_COLOR32 | ILC_MASK, m_imageList.GetImageCount(), 1))
+		return;
+	std::vector<HICON> icons;
+	bool bOk = true;
+	for (int i = 0; i < m_imageList.GetImageCount(); ++i)
+	{
+		HICON hIcon = m_imageList.ExtractIcon(i);
+		if (hIcon == nullptr)
+		{
+			bOk = false;
+			break;
+		}
+		icons.push_back(hIcon);
+	}
+	if (!bOk)
+	{
+		for (HICON hIcon : icons)
+			::DestroyIcon(hIcon);
+		return;
+	}
+	for (HICON hIcon : icons)
+	{
+		slim.Add(hIcon);
+		::DestroyIcon(hIcon);
+	}
+	m_merge20SlimImageList.Attach(slim.Detach());
+	m_pList->SetImageList(&m_merge20SlimImageList, LVSIL_SMALL);
+}
+
+/**
+ * @brief Merge20 (Phase 4 D9): restore the original small-icon list
+ * and drop the taller slim list.
+ */
+void CDirView::RestoreMerge20SlimImageList()
+{
+	if (m_merge20SlimImageList.GetSafeHandle() == nullptr)
+		return;
+	m_pList->SetImageList(&m_imageList, LVSIL_SMALL);
+	m_merge20SlimImageList.DeleteImageList();
+}
+
+/**
  * @brief Merge20 (Phase 4 D7): all compared files for the Grep
  * scan, in folder-list order (depth-first tree walk, the same
  * order the list shows). Directories are skipped; one-sided
@@ -3929,8 +4160,13 @@ void CDirView::Merge20GetDisplaySettings(Merge20SessionDisplay& display)
 	display.reviewFilter[2] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_HOLD);
 	display.reviewFilter[3] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_SPECIAL);
 	display.reviewFilter[4] = GetOptionsMgr()->GetBool(OPT_MERGE20_SHOW_REVIEW_KEEP);
-	display.columnOrders = m_pColItems->SaveColumnOrders();
-	display.columnWidths = m_pColItems->SaveColumnWidths(std::bind(&CListCtrl::GetColumnWidth, m_pList, _1));
+	// Merge20 (Phase 4 D9): while slim is on, the session stores
+	// the remembered full layout, not the slim preset (D11 saves the
+	// slim flag itself; the preset is rebuilt from it on restore).
+	display.columnOrders = (m_bMerge20Slim && !m_sMerge20FullColumnOrders.empty()) ?
+		m_sMerge20FullColumnOrders : m_pColItems->SaveColumnOrders();
+	display.columnWidths = (m_bMerge20Slim && !m_sMerge20FullColumnWidths.empty()) ?
+		m_sMerge20FullColumnWidths : m_pColItems->SaveColumnWidths(std::bind(&CListCtrl::GetColumnWidth, m_pList, _1));
 	const int focused = GetFocusedItem();
 	if (focused >= 0)
 	{
@@ -3995,6 +4231,16 @@ void CDirView::Merge20ApplyColumnSettings(const String& orders, const String& wi
 	const String widthsKey = GetDocument()->m_nDirs < 3 ? OPT_DIRVIEW_COLUMN_WIDTHS : OPT_DIRVIEW3_COLUMN_WIDTHS;
 	GetOptionsMgr()->SaveOption(ordersKey, orders);
 	GetOptionsMgr()->SaveOption(widthsKey, widths);
+	// Merge20 (Phase 4 D9): the restored orders/widths are the full
+	// layout. While slim is on they become the remembered full layout
+	// and the slim preset is re-applied on top, so the view stays slim.
+	if (m_bMerge20Slim)
+	{
+		m_sMerge20FullColumnOrders = orders;
+		m_sMerge20FullColumnWidths = widths;
+		SetMerge20Slim(true);
+		return;
+	}
 	m_pColItems->LoadColumnOrders(orders);
 	ReloadColumns();
 }
@@ -5847,6 +6093,46 @@ void CDirView::OnCustomDraw(NMHDR* pNMHDR, LRESULT* pResult)
 	{
 		LPNMLVCUSTOMDRAW lpC = (LPNMLVCUSTOMDRAW)pNMHDR;
 
+		// Merge20 (Phase 4 D9): in slim mode the review-state tag is
+		// drawn wrapped (DT_WORDBREAK) in its 126px column (HTML
+		// tgSlim), so a long tag is never clipped. The two-line rows
+		// come from the taller slim image list
+		// (BuildMerge20SlimImageList). Only the review subitem of an
+		// unselected row is custom-drawn: selected rows keep the stock
+		// selection highlight, and every other subitem keeps the color
+		// handling below. Gated on m_bUseColors like the rest of this
+		// function (list colors are on by default).
+		if (m_bMerge20Slim &&
+			(lpC->nmcd.dwDrawStage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM) ||
+			 lpC->nmcd.dwDrawStage == (CDDS_ITEMPOSTPAINT | CDDS_SUBITEM)) &&
+			lpC->iSubItem == GetMerge20SlimColumnPhys(_T("Sreview")))
+		{
+			const int nRow = static_cast<int>(lpC->nmcd.dwItemSpec);
+			if ((m_pList->GetItemState(nRow, LVIS_SELECTED) & LVIS_SELECTED) == 0)
+			{
+				if (lpC->nmcd.dwDrawStage == (CDDS_ITEMPREPAINT | CDDS_SUBITEM))
+				{
+					*pResult = CDRF_NOTIFYPOSTPAINT;
+					return;
+				}
+				CDC* pDC = CDC::FromHandle(lpC->nmcd.hdc);
+				CRect rc(lpC->nmcd.rc);
+				COLORREF clrBk = 0, clrText = 0;
+				GetColors(nRow, lpC->iSubItem, clrBk, clrText);
+				pDC->FillSolidRect(&rc, clrBk);
+				const DIFFITEM& di = GetDiffItem(nRow);
+				const String sText = m_pColItems->ColGetTextToDisplay(&GetDiffContext(), GetMerge20SlimColumnLog(_T("Sreview")), di);
+				CFont* pOldFont = pDC->SelectObject(m_pList->GetFont());
+				pDC->SetBkMode(TRANSPARENT);
+				pDC->SetTextColor(clrText);
+				rc.DeflateRect(2, 2, 2, 2);
+				pDC->DrawText(sText.c_str(), &rc, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+				pDC->SelectObject(pOldFont);
+				*pResult = CDRF_SKIPDEFAULT;
+				return;
+			}
+		}
+
 		if (lpC->nmcd.dwDrawStage == CDDS_PREPAINT)
 		{
 			*pResult =  CDRF_NOTIFYITEMDRAW;
@@ -6206,6 +6492,11 @@ void CDirView::ReflectGetdispinfo(NMLVDISPINFO *pParam)
  */
 void CDirView::OnEditColumns()
 {
+	// Merge20 (Phase 4 D9): the column dialog edits the full layout.
+	// Leave slim mode first so the dialog shows, and saves, the
+	// user's real columns instead of the 3-column slim preset.
+	if (m_bMerge20Slim)
+		SetMerge20Slim(false);
 	bool bReset = false;
 	CDirColsDlg::ColumnArray cols;
 
