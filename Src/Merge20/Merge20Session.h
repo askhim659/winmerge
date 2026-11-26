@@ -178,6 +178,11 @@ struct Merge20SessionFile
 	String summary;
 	String memo;
 	std::vector<Merge20DiffJudgment> diffs;
+	/** @brief Split diff groups of the merge result pane (D5): the
+	 * original ranges that were split, so a restore can re-apply
+	 * the splits before restoring the per-row judgments. Absent
+	 * (empty) in files saved before D5. */
+	std::vector<Merge20SplitGroup> splits;
 	/** @brief File size in bytes per side, -1 when the side does not exist. */
 	int64_t leftSize = -1;
 	int64_t rightSize = -1;
