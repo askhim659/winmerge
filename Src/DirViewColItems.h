@@ -94,6 +94,7 @@ public:
 	String ResetColumnWidths(int defcolwidth);
 	void LoadColumnOrders(const String& colOrders);
 	String SaveColumnOrders();
+	bool MigrateMerge20Columns(); // W1 (D1.5)
 	const std::vector<String>& GetAdditionalPropertyNames() const { return m_additionalPropertyNames; }
 	void SetAdditionalPropertyNames(const std::vector<String>& propertyNames);
 
