@@ -1058,6 +1058,7 @@
     <ClInclude Include="Merge20\Merge20Master.h" />
     <ClInclude Include="Merge20\Merge20MasterDoc.h" />
     <ClInclude Include="Merge20\Merge20MasterDlg.h" />
+    <ClInclude Include="Merge20\Merge20Slim.h" />
     <ClInclude Include="Merge20\Merge20FocusDock.h" />
     <ClInclude Include="Merge20\Merge20FocusResultView.h" />
     <ClInclude Include="Merge20\Merge20SniperDlg.h" />
@@ -1399,6 +1400,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20Master.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20Slim.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
