@@ -188,13 +188,17 @@ public:
 	 *
 	 * @param filepath : [in, out] Most plugins change this filename
 	 * @param handler : unpacking handler, to keep to pack again
+	 * @param pExcludedLines : [out, optional] When not null, the number
+	 * of lines the BUFFER_PREDIFF plugins blanked for this file is
+	 * added to it (Merge20 S0-F1: the true excluded-line count).
+	 * FILE_PREDIFF plugins and filter expressions are not counted.
 	 *
 	 * @return Tells if WinMerge handles this file
 	 *
 	 * @note Event FILE_PREDIFF BUFFER_PREDIFF
 	 * Apply only the first correct handler
 	 */
-	bool Prediffing(int target, String & filepath, bool bMayOverwrite, const PluginPipelineContext& context);
+	bool Prediffing(int target, String & filepath, bool bMayOverwrite, const PluginPipelineContext& context, int * pExcludedLines = nullptr);
 
 	bool Validate(String& errorMessage) const override;
 };
