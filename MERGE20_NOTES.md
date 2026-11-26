@@ -4098,3 +4098,27 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 - 横ドラッグの水平スクロール（HTML は scrollLeft も動かす）は実装していない。パネル幅を超える長い行の横スクロールはマウスホイール／スクロールバーで行うこと。
 - D4 からの残課題は変わらず：ワードラップ ON 時のスクロールずれ、結果ペインでの手編集のドック反映遅れ、3-way 片側差分の判定ボタンなし、フォーカス結果ビューの構文ハイライト未実装。
 - スナイパーのフォントは theApp.m_lfDiff を元にポイントサイズから LOGFONT を作り直している（HiDPI では GetDeviceCaps(LOGPIXELSY) で補正）。高 DPI 環境での表示は実機で確認すること。
+
+## §32 再開手順（無料プラン上限による中断に備えて、2026-11-26）
+
+### 背景
+- Muse は無料プラン（課金しない）。週間上限に達すると親・コーディネーター・子エージェントを含むすべての作業が止まる。リセットは 2026-11-27 10:10 JST。親側で 2026-11-27 10:15 JST に自動再開の予約を入れる。リセット後に親がコーディネーターの状態を確認し、中断していれば再開・立て直しする。
+- アカウント切り替えは中止された（2026-11-26 15:36 JST）。このアカウントで続ける。
+
+### 再開時の確認手順（この順で行うこと）
+1. master head を確認する（API `GET /repos/askhim659/winmerge/branches/master`）。本節時点の master head は `8964c14d`（D6 マージコミット）。
+2. 開いている PR を確認する（API `GET /repos/askhim659/winmerge/pulls?state=open`）。本節時点では D7（PR 未発行、ブランチ `merge20/phase4-d7`）が進行中のはず。
+3. 進行中の子エージェントの状態を `subagent.list` で確認する。完了報告済みなら PR を検証してマージする。未完了なら子に続きを指示する。子が消滅していれば、ブランチの head を API で確認し、コミット済みの内容から新しい子を起動して続きを任せる。未コミットの作業は残らないことを原則とする（各子はコミット単位でプッシュする）。
+4. 計画ファイル `~/workspace/goals/muse-merge-rebuild-competing-with-gemini-neon/hidden_files/merge20-complete-plan.md` の末尾を読んで進行を確認する。本 NOTES.md の最新節も確認すること。
+5. マージコミット CI のポーリングスクリプト（`~/workspace/.coord/poll_*_merge_ci.sh`）は VM 再起動で消える可能性がある。再開時は API で直接確認すること（`~/workspace/.coord/check_master_run.py <フル SHA>`、`~/workspace/.coord/verify_*.py` の要領で使うこと）。
+6. 中断時の master head から D7 以降のスライスを順に進める（D7→D8→D9→D10→D11）。S5／S7 は U-0-2 の実機確認待ちのまま。
+
+### 状態保存の場所一覧
+- GitHub（最優先）：本 NOTES.md（master、本節時点で §32 まで）、各 PR・ブランチ、CI 実行・成果物。
+- ローカル計画ファイル：`hidden_files/merge20-complete-plan.md`（D6 マージまで記録済み）。
+- ローカル検証スクリプト・CI ログ：`~/workspace/.coord/`（`verify_*.py`、`full_log.py`、`check_master_run.py`、`d*_final_log.txt`）。
+- 仕様書 PDF・設計書 3 冊・カバレッジ行列・FORM 設計・監査はゴールの hidden_files 配下にある。
+
+### 注意
+- このアカウントの無料プラン上限は、上限に達した時点での作業を止めること。中途の未コミット作業を残さないことを、各子エージェントの指示に含めること。
+- 【Wiz】→【Wiz】Merge のユーザー確認はまだ取れていない。確認が取れるまで【Wiz】のまま進め、後で一括置換できる形にすること。
