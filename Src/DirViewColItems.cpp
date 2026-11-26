@@ -76,6 +76,9 @@ const char *COLHDR_ACTION       = N_("Action Category");
 const char *COLHDR_RISK         = N_("Risk");
 const char *COLHDR_SUMMARY      = N_("Summary");
 const char *COLHDR_MEMO         = N_("Memo");
+const char *COLHDR_MISSING      = N_("Missing lines");
+const char *COLHDR_MODIFIED     = N_("Changed lines");
+const char *COLHDR_ADDED        = N_("Added lines");
 const char *COLHDR_NSDIFFS      = N_("Differences");
 const char *COLHDR_BINARY       = NC_("DirView|ColumnHeader", "Binary");
 const char *COLHDR_UNPACKER     = N_("Unpacker");
@@ -137,6 +140,9 @@ const char *COLDESC_ACTION      = N_("Action category of the file, derived from 
 const char *COLDESC_RISK        = N_("Risk level of the file: None, Medium, or High. One attention point (missing lines, changed lines, or an important keyword in the diff) means Medium; several overlapping points mean High.");
 const char *COLDESC_SUMMARY     = N_("Rule-based summary of the file: missing / changed / added line counts, detected changes (rounding, SQL, deleted if guard, condition/boundary, constants) and the affected functions. This is a deterministic pattern match, not generated AI: the same input always returns the same summary.");
 const char *COLDESC_MEMO        = N_("Audit memo for the file (free text for the reviewer's notes). The memo is included in the diff-list CSV and saved in the session file; edit it from the folder list context menu.");
+const char *COLDESC_MISSING     = N_("Number of lines missing in the new file (deleted lines). Shown only after the file has been opened; unopened files show Not calculated.");
+const char *COLDESC_MODIFIED    = N_("Number of changed lines in the file. Shown only after the file has been opened; unopened files show Not calculated.");
+const char *COLDESC_ADDED       = N_("Number of lines added in the new file. Shown only after the file has been opened; unopened files show Not calculated.");
 const char *COLDESC_NSDIFFS     = N_("Number of differences in file (excluding ignored).");
 const char *COLDESC_BINARY      = N_("Shows an asterisk (*) if the file is binary.");
 const char *COLDESC_UNPACKER    = N_("Unpacker plugin name or pipeline.");
@@ -924,6 +930,153 @@ static int ColMemoSort(const CDiffContext *pCtxt, const void *p, const void *q, 
 	return ls.memo.compare(rs.memo);
 }
 
+/**
+ * @brief Format Missing-lines column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return Display string for the missing-in-new (deleted) line count.
+ * Directory rows show nothing; files that have never been opened show
+ * "Not calculated", like the other S4 columns. The number uses
+ * locality::NumToLocaleStr, the same formatting as the counts prefix
+ * of the summary text, so this column agrees with the Summary column
+ * and with the matching column of the diff-list CSV (which reads the
+ * same field as a bare number).
+ *
+ * Merge20 (H-LIST, coverage matrix H-27/H-LIST).
+ */
+static String ColMissingGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	return locality::NumToLocaleStr(st.nMissing);
+}
+/**
+ * @brief Compare ColMissing column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by nMissing count (ascending);
+ * unclassified (never opened) files sort last, after every
+ * classified file.
+ */
+static int ColMissingSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	if (!ls.classified && !rs.classified)
+		return 0;
+	if (!ls.classified)
+		return 1;
+	if (!rs.classified)
+		return -1;
+	if (ls.nMissing == rs.nMissing)
+		return 0;
+	return ls.nMissing < rs.nMissing ? -1 : 1;
+}
+/**
+ * @brief Format Changed-lines column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return Display string for the changed line count.
+ * Directory rows show nothing; files that have never been opened show
+ * "Not calculated", like the other S4 columns. The number uses
+ * locality::NumToLocaleStr, the same formatting as the counts prefix
+ * of the summary text, so this column agrees with the Summary column
+ * and with the matching column of the diff-list CSV (which reads the
+ * same field as a bare number).
+ *
+ * Merge20 (H-LIST, coverage matrix H-27/H-LIST).
+ */
+static String ColModifiedGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	return locality::NumToLocaleStr(st.nModified);
+}
+/**
+ * @brief Compare ColModified column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by nModified count (ascending);
+ * unclassified (never opened) files sort last, after every
+ * classified file.
+ */
+static int ColModifiedSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	if (!ls.classified && !rs.classified)
+		return 0;
+	if (!ls.classified)
+		return 1;
+	if (!rs.classified)
+		return -1;
+	if (ls.nModified == rs.nModified)
+		return 0;
+	return ls.nModified < rs.nModified ? -1 : 1;
+}
+/**
+ * @brief Format Added-lines column data.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to DIFFITEM.
+ * @return Display string for the newly added line count.
+ * Directory rows show nothing; files that have never been opened show
+ * "Not calculated", like the other S4 columns. The number uses
+ * locality::NumToLocaleStr, the same formatting as the counts prefix
+ * of the summary text, so this column agrees with the Summary column
+ * and with the matching column of the diff-list CSV (which reads the
+ * same field as a bare number).
+ *
+ * Merge20 (H-LIST, coverage matrix H-27/H-LIST).
+ */
+static String ColAddedGet(const CDiffContext *pCtxt, const void *p, int)
+{
+	const DIFFITEM &di = *static_cast<const DIFFITEM*>(p);
+	if (di.diffcode.isDirectory())
+		return String();
+	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+	if (!st.classified)
+		return _("Not calculated");
+	return locality::NumToLocaleStr(st.nAdded);
+}
+/**
+ * @brief Compare ColAdded column values.
+ * @param [in] pCtxt Pointer to compare context (holds the Merge20 sidecar map).
+ * @param [in] p Pointer to first DIFFITEM.
+ * @param [in] q Pointer to second DIFFITEM.
+ * @return Compare result, by nAdded count (ascending);
+ * unclassified (never opened) files sort last, after every
+ * classified file.
+ */
+static int ColAddedSort(const CDiffContext *pCtxt, const void *p, const void *q, int)
+{
+	const DIFFITEM &ldi = *static_cast<const DIFFITEM*>(p);
+	const DIFFITEM &rdi = *static_cast<const DIFFITEM*>(q);
+	const Merge20FileState& ls = pCtxt->GetMerge20FileStates().GetState(ldi.getItemRelativePath());
+	const Merge20FileState& rs = pCtxt->GetMerge20FileStates().GetState(rdi.getItemRelativePath());
+	if (!ls.classified && !rs.classified)
+		return 0;
+	if (!ls.classified)
+		return 1;
+	if (!rs.classified)
+		return -1;
+	if (ls.nAdded == rs.nAdded)
+		return 0;
+	return ls.nAdded < rs.nAdded ? -1 : 1;
+}
 // Merge20 (S6): CSV text wrappers, forwarding to the static column
 // getters above so the CSV shows exactly what the list shows.
 String Merge20CsvGetFileNameText(const CDiffContext* pCtxt, const DIFFITEM& di)
@@ -972,27 +1125,28 @@ String Merge20CsvGetOutputText(const CDiffContext* pCtxt, const DIFFITEM& di)
 	return ColOutputCheckGet(pCtxt, &di, 0);
 }
 
-// Merge20 (Panel P1, design section 12.3 P-R1): provisional single
-// column for the old/changed/new counts, until H-LIST adds the three
-// separate columns (coverage matrix section 4). The counts are the
-// same fields (nMissing / nModified / nAdded) and the same format
-// msgid ("Missing: %1 lines / Changed: %2 lines / Added: %3 lines")
-// as the prefix of the summary text (Merge20FormatSummary), so the
-// values agree with the folder compare list's Summary column.
-// Directory rows show nothing and never-opened files show
-// "Not calculated", exactly like the other S4 columns.
-String Merge20CsvGetOldChangedNewText(const CDiffContext* pCtxt, const DIFFITEM& di)
+// Merge20 (H-LIST, coverage matrix H-27/H-LIST): the three
+// old/changed/new count columns. They forward to the same getters
+// the folder compare list uses, so the panel shows exactly what the
+// list shows. They replace the P1 provisional single column
+// (Merge20CsvGetOldChangedNewText, removed with its header msgid
+// "Old/Changed/New"): one column per count, each a locale-formatted
+// number (or "Not calculated" for never-opened files, empty for
+// directory rows), exactly like the folder compare list's new
+// columns.
+String Merge20CsvGetMissingText(const CDiffContext* pCtxt, const DIFFITEM& di)
 {
-	if (di.diffcode.isDirectory())
-		return String();
-	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
-	if (!st.classified)
-		return _("Not calculated");
-	return strutils::format_string3(
-		_("Missing: %1 lines / Changed: %2 lines / Added: %3 lines"),
-		locality::NumToLocaleStr(st.nMissing),
-		locality::NumToLocaleStr(st.nModified),
-		locality::NumToLocaleStr(st.nAdded));
+	return ColMissingGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetModifiedText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColModifiedGet(pCtxt, &di, 0);
+}
+
+String Merge20CsvGetAddedText(const CDiffContext* pCtxt, const DIFFITEM& di)
+{
+	return ColAddedGet(pCtxt, &di, 0);
 }
 
 /**
@@ -2004,6 +2158,20 @@ static DirColInfo f_cols[] =
 	// yet, so the column would be empty; it is shown from the column
 	// dialog, and its values (once memos exist) appear in the CSV.
 	{ _T("Smemo"), nullptr, COLHDR_MEMO, COLDESC_MEMO, &ColMemoGet, &ColMemoSort, 0, -1, true, DirColInfo::ALIGN_LEFT },
+	// Merge20 (H-LIST, coverage matrix H-27/H-LIST): old/changed/new
+	// breakdown columns, same end-of-table note as the review column
+	// above. Hidden by default (order -1): the three counts are
+	// already inside the Summary column, and the list is wide enough
+	// already; they are shown from the column dialog. The headers
+	// reuse the diff-list CSV msgids ("Missing lines" / "Changed
+	// lines" / "Added lines"), so the list headers and the CSV
+	// headers always match. No [Wiz] mark is added to those msgids:
+	// the same msgids render the CSV header line, so a mark would
+	// leak into exported CSVs. Numbers are right-aligned and sort
+	// descending by default, like the other diff-count columns.
+	{ _T("Smissing"), nullptr, COLHDR_MISSING, COLDESC_MISSING, &ColMissingGet, &ColMissingSort, 0, -1, false, DirColInfo::ALIGN_RIGHT },
+	{ _T("Smodified"), nullptr, COLHDR_MODIFIED, COLDESC_MODIFIED, &ColModifiedGet, &ColModifiedSort, 0, -1, false, DirColInfo::ALIGN_RIGHT },
+	{ _T("Sadded"), nullptr, COLHDR_ADDED, COLDESC_ADDED, &ColAddedGet, &ColAddedSort, 0, -1, false, DirColInfo::ALIGN_RIGHT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
@@ -2079,6 +2247,12 @@ static DirColInfo f_cols3[] =
 	// Merge20 (S6): memo column for 3-way compares, same note as in
 	// f_cols above. Hidden by default (order -1).
 	{ _T("Smemo"), nullptr, COLHDR_MEMO, COLDESC_MEMO, &ColMemoGet, &ColMemoSort, 0, -1, true, DirColInfo::ALIGN_LEFT },
+	// Merge20 (H-LIST): old/changed/new breakdown columns, 3-way
+	// table. Same note as in f_cols above; hidden by default
+	// (order -1).
+	{ _T("Smissing"), nullptr, COLHDR_MISSING, COLDESC_MISSING, &ColMissingGet, &ColMissingSort, 0, -1, false, DirColInfo::ALIGN_RIGHT },
+	{ _T("Smodified"), nullptr, COLHDR_MODIFIED, COLDESC_MODIFIED, &ColModifiedGet, &ColModifiedSort, 0, -1, false, DirColInfo::ALIGN_RIGHT },
+	{ _T("Sadded"), nullptr, COLHDR_ADDED, COLDESC_ADDED, &ColAddedGet, &ColAddedSort, 0, -1, false, DirColInfo::ALIGN_RIGHT },
 #ifdef SHOW_DIFFITEM_DEBUG_INFO
 	{ _T("diffcode"), nullptr, COLHDR_DEBUG_DIFFCODE, COLDESC_DEBUG_DIFFCODE, &ColDebugDiffCodeGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
 	{ _T("customFlags"), nullptr, COLHDR_DEBUG_CUSTOMFLAGS, COLDESC_DEBUG_CUSTOMFLAGS, &ColDebugCustomFlagsGet, 0, 0, -1, true, DirColInfo::ALIGN_LEFT },
