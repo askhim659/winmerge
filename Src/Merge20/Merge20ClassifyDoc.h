@@ -25,15 +25,42 @@
 class CMergeDoc;
 
 /**
+ * @brief True when the opened 2-way doc exceeds the simple-compare threshold (H-SIMPLE).
+ * @param [in] doc Opened merge doc (2-way; other buffer counts return false).
+ * @param [in] options Compare options (whitespace / case / threshold), the same ones the bulk path uses.
+ * @return True when the trimmed-middle line counts of the two text
+ * buffers satisfy n*m > threshold (HTML `lcs`, via
+ * Merge20BulkIsSimple), i.e. the bulk classifier would have used
+ * the positional fallback for this file.
+ *
+ * The lines are read from the text buffers (ghost lines skipped
+ * when counting), so the check works both before the diff passes
+ * (Rescan computes it early to skip the heavy post-passes) and at
+ * the classification hook afterwards. The caller passes the
+ * result into Merge20ClassifyFromMergeDoc, so the bulk path and
+ * the opened-file path agree and the [Simple] badge survives
+ * opening. The opened diff itself stays the full diffutils diff;
+ * the engine is not replaced (see MERGE20_NOTES.md §45).
+ */
+bool Merge20ClassifyIsSimpleCompare(const CMergeDoc& doc, const Merge20BulkDiffOptions& options);
+
+/**
  * @brief Classify one open (2-way) merge doc into a per-file state.
  * @param [in] doc Merge doc whose diff list was just computed by Rescan.
  * @param [in] riskKeywords Risk keywords from the
  * OPT_MERGE20_RISK_KEYWORDS option (see Merge20ParseRiskKeywords).
+ * @param [in] simpleCompare Whether the file exceeds the
+ * simple-compare threshold (Merge20ClassifyIsSimpleCompare,
+ * computed by the caller). Stored as-is in the returned state, so
+ * the folder list keeps the [Simple] badge after the file is
+ * opened; the classification itself still comes from the full
+ * diffutils diff list.
  * @return Per-file state with classified=true, action, risk, counts,
  * summary and encodings filled in. The review state and output flag
  * are left default; the caller (CDirDoc) preserves the stored ones.
  */
-Merge20FileState Merge20ClassifyFromMergeDoc(const CMergeDoc& doc, const std::vector<String>& riskKeywords);
+Merge20FileState Merge20ClassifyFromMergeDoc(const CMergeDoc& doc, const std::vector<String>& riskKeywords,
+	bool simpleCompare);
 
 /**
  * @brief Classify one file from bulk-diff ranges and in-memory lines (D10).
