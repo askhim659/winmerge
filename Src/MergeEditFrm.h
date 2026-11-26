@@ -18,6 +18,7 @@
 #include "DiffViewBar.h"
 #include "Merge20/Merge20FocusDock.h"
 #include "Merge20/Merge20DedBar.h"
+#include "Merge20/Merge20FileListBar.h"
 #include "Merge20/Merge20SniperDlg.h"
 #include "MergeResultBar.h"
 #include "LocationBar.h"
@@ -63,6 +64,7 @@ protected:
 	CDiffViewBar m_wndDetailBar;
 	CMerge20FocusDock m_wndFocusDock; /**< Focus dock (Merge20 Phase 4 D4): the Diff Pane's single child, holding the header strip, the detail splitter view and the result-segment view */
 	CMerge20DedBar m_wndDedBar; /**< Dedicated-mode bar (Merge20 Phase 4 D1) */
+	CMerge20FileListBar m_wndFileListBar; /**< Persistent file-list panel (Merge20 Panel P0) */
 	CMerge20SniperDlg m_wndSniper; /**< Auto sniper overlay (Merge20 Phase 4 D6): modeless, created on first use, hidden on close */
 	CMergeEditSplitterView *m_pwndDetailMergeEditSplitterView;
 	CMergeResultBar m_wndResultBar;
@@ -138,6 +140,7 @@ private:
 	afx_msg void OnMerge20DedDiffsOnly();
 	afx_msg void OnMerge20DedZoomReset();
 	afx_msg LRESULT OnStorePaneSizes(WPARAM wParam, LPARAM lParam);
+	afx_msg LRESULT OnMerge20FileListRefresh(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnIdleUpdateCmdUI();
 	afx_msg void OnViewDisplayFilterBar();
