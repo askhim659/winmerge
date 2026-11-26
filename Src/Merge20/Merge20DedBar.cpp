@@ -7,7 +7,7 @@
  * Merge20 (Phase 4 D1/D2): the dedicated compare mode bar, following
  * the CDiffViewBar precedent. D2 adds the buttons (Prev/Next file,
  * five review-state buttons, pin, unreviewed-only and sniper toggles,
- * zoom display, exit) in a single row. D3 adds the file-info label at
+ * the zoom display, exit) in a single row; D9 adds the diffs-only toggle button after the sniper toggle. D3 adds the file-info label at
  * the left end (current file name + (n/m) position in the patrol set).
  * The bar owns no state: clicks are forwarded as WM_COMMAND
  * (ID_MERGE20_DED_*) to the parent frame, which applies them and
@@ -56,6 +56,7 @@ namespace
 		60, // Pin
 		110, // Unreviewed only
 		84, // Sniper
+		84, // Diffs only
 		76, // Zoom
 		150, // Exit
 	};
@@ -73,6 +74,7 @@ namespace
 		IDC_MERGE20_DED_PIN,
 		IDC_MERGE20_DED_TODO_ONLY,
 		IDC_MERGE20_DED_SNIPER,
+		IDC_MERGE20_DED_DIFFS_ONLY,
 		IDC_MERGE20_DED_ZOOM,
 		IDC_MERGE20_DED_EXIT,
 	};
@@ -122,6 +124,9 @@ BEGIN_MESSAGE_MAP(CMerge20DedBar, CSizingControlBarCF)
 	ON_WM_WINDOWPOSCHANGED()
 	ON_WM_SIZE()
 	ON_CONTROL_RANGE(BN_CLICKED, IDC_MERGE20_DED_EXIT, IDC_MERGE20_DED_ZOOM, OnButtonClicked)
+	// Merge20 (Phase 4 D9): the diffs-only button (IDC 1805) is outside
+	// the contiguous 1745-1756 range above, so it gets its own range.
+	ON_CONTROL_RANGE(BN_CLICKED, IDC_MERGE20_DED_DIFFS_ONLY, IDC_MERGE20_DED_DIFFS_ONLY, OnButtonClicked)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -184,14 +189,14 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	{
 		&m_btnPrev, &m_btnNext,
 		&m_btnReview[0], &m_btnReview[1], &m_btnReview[2], &m_btnReview[3], &m_btnReview[4],
-		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnZoom, &m_btnExit,
+		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnDiffsOnly, &m_btnZoom, &m_btnExit,
 	};
 	for (size_t i = 0; i < std::size(pButtons); ++i)
 	{
-		// Toggle buttons are the five review states, pin, unreviewed-only
-		// and sniper (indexes 2-9); Prev/Next, the zoom display and exit
-		// (indexes 0, 1, 10, 11) are plain push buttons.
-		const DWORD dwStyle = (i >= 2 && i <= 9) ? dwToggleStyle : dwPushStyle;
+		// Toggle buttons are the five review states, pin, unreviewed-only,
+		// sniper and diffs-only (indexes 2-10); Prev/Next, the zoom display
+		// and exit (indexes 0, 1, 11, 12) are plain push buttons.
+		const DWORD dwStyle = (i >= 2 && i <= 10) ? dwToggleStyle : dwPushStyle;
 		if (!pButtons[i]->Create(_T(""), dwStyle, rc, this, Merge20DedBarControlIDs[i]))
 		{
 			TRACE0("Failed to create Merge20DedBar button\n");
@@ -311,7 +316,7 @@ void CMerge20DedBar::LayoutButtons()
 	{
 		&m_btnPrev, &m_btnNext,
 		&m_btnReview[0], &m_btnReview[1], &m_btnReview[2], &m_btnReview[3], &m_btnReview[4],
-		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnZoom, &m_btnExit,
+		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnDiffsOnly, &m_btnZoom, &m_btnExit,
 	};
 	for (size_t i = 0; i < std::size(pButtons); ++i)
 	{
@@ -329,6 +334,15 @@ void CMerge20DedBar::LayoutButtons()
  */
 void CMerge20DedBar::OnButtonClicked(UINT nID)
 {
+	// Merge20 (Phase 4 D9): the diffs-only button (IDC 1805) is outside
+	// the contiguous 1745-1756 range the table below indexes, so it is
+	// forwarded explicitly instead of through the table.
+	if (nID == IDC_MERGE20_DED_DIFFS_ONLY)
+	{
+		if (CWnd* pParent = GetParent())
+			pParent->PostMessage(WM_COMMAND, ID_MERGE20_DED_DIFFS_ONLY);
+		return;
+	}
 	const size_t idx = static_cast<size_t>(nID) - IDC_MERGE20_DED_EXIT;
 	if (idx >= std::size(Merge20DedBarCommands))
 		return;
@@ -377,6 +391,8 @@ void CMerge20DedBar::UpdateResources()
 	m_btnTodoOnly.SetWindowText(sText.c_str());
 	sText = _("Sniper");
 	m_btnSniper.SetWindowText(sText.c_str());
+	sText = _("Diffs only");
+	m_btnDiffsOnly.SetWindowText(sText.c_str());
 	sText = _("Back to Normal Mode");
 	m_btnExit.SetWindowText(sText.c_str());
 	SetZoomText(m_nZoom);
@@ -426,6 +442,18 @@ void CMerge20DedBar::SetSniperOn(bool bSniperOn)
 	if (m_btnSniper.GetSafeHwnd() == nullptr)
 		return;
 	m_btnSniper.SetCheck(bSniperOn ? BST_CHECKED : BST_UNCHECKED);
+}
+
+/**
+ * @brief Show the diffs-only state on the toggle button (Merge20
+ * Phase 4 D9). As with SetPinned, the check is set by the frame;
+ * the button never toggles itself.
+ */
+void CMerge20DedBar::SetDiffsOnly(bool bDiffsOnly)
+{
+	if (m_btnDiffsOnly.GetSafeHwnd() == nullptr)
+		return;
+	m_btnDiffsOnly.SetCheck(bDiffsOnly ? BST_CHECKED : BST_UNCHECKED);
 }
 
 void CMerge20DedBar::SetZoomText(int nZoom)
