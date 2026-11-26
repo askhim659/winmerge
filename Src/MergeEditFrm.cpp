@@ -66,6 +66,8 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	ON_COMMAND(ID_MERGE20_DED_PIN, OnMerge20DedPin)
 	ON_COMMAND(ID_MERGE20_DED_TODO_ONLY, OnMerge20DedTodoOnly)
 	ON_COMMAND(ID_MERGE20_DED_SNIPER, OnMerge20DedSniper)
+	// Merge20 (Phase 4 D9): diffs-only toggle (dedicated-bar button + F key).
+	ON_COMMAND(ID_MERGE20_DED_DIFFS_ONLY, OnMerge20DedDiffsOnly)
 	ON_COMMAND(ID_MERGE20_DED_ZOOM_RESET, OnMerge20DedZoomReset)
 	ON_COMMAND(ID_VIEW_SPLITVERTICALLY, OnViewSplitVertically)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_SPLITVERTICALLY, OnUpdateViewSplitVertically)
@@ -564,6 +566,10 @@ void CMergeEditFrame::UpdateDedBar()
 	const bool bTodoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
 	m_wndDedBar.SetTodoOnly(bTodoOnly);
 	m_wndDedBar.SetSniperOn(GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON));
+	// Merge20 (Phase 4 D9): the diffs-only check follows the live diff
+	// context (0 = diffs only). OPT_DIFF_CONTEXT is saved by
+	// CMergeDoc::OnDiffContext on every change, so it always agrees.
+	m_wndDedBar.SetDiffsOnly(GetOptionsMgr()->GetInt(OPT_DIFF_CONTEXT) == 0);
 	IDirDoc* pDirDoc = m_pMergeDoc->GetDirDoc();
 	const bool bHasDirDoc = (pDirDoc != nullptr);
 	m_wndDedBar.SetPrevNextEnabled(bHasDirDoc && !pDirDoc->IsFirstFile(),
@@ -722,6 +728,32 @@ void CMergeEditFrame::OnMerge20DedZoomReset()
 }
 
 /**
+ * @brief Dedicated-bar diffs-only button, and the F key: toggle
+ * between showing all lines and showing diffs only (0 context
+ * lines).
+ *
+ * Merge20 (Phase 4 D9, spec section 4(g), design section 5.2/D9):
+ * the existing diff-context mechanism (`CMergeDoc::OnDiffContext`,
+ * `OPT_DIFF_CONTEXT`) is reused, not a new display mode: 0 means
+ * diffs only, -1 means all lines. The toggle is explicit (all <->
+ * 0) rather than `ID_VIEW_DIFFCONTEXT_TOGGLE` (`-m-1`), which
+ * remembers the last N and would go all -> N instead of all ->
+ * diffs only. Dedicated mode only: this handler is reachable only
+ * from the dedicated bar and the dedicated-mode F key below.
+ * `FlushAndRescan(true)` inside OnDiffContext refreshes the views.
+ */
+void CMergeEditFrame::OnMerge20DedDiffsOnly()
+{
+	if (!m_bDedicatedMode)
+		return;
+	if (GetOptionsMgr()->GetInt(OPT_DIFF_CONTEXT) >= 0)
+		PostMessage(WM_COMMAND, ID_VIEW_DIFFCONTEXT_ALL);
+	else
+		PostMessage(WM_COMMAND, ID_VIEW_DIFFCONTEXT_0);
+	FlashDedBar();
+}
+
+/**
  * @brief Bare R key in dedicated mode: reset the zoom to 75%.
  *
  * Merge20 (Phase 4 D2, spec section 4(g)): R is a dedicated-mode-only
@@ -755,6 +787,28 @@ BOOL CMergeEditFrame::PreTranslateMessage(MSG* pMsg)
 			(m_wndDedBar.GetSafeHwnd() != nullptr && ::IsChild(m_wndDedBar.GetSafeHwnd(), hFocus)))
 		{
 			PostMessage(WM_COMMAND, ID_MERGE20_DED_ZOOM_RESET);
+			return TRUE;
+		}
+	}
+	// Merge20 (Phase 4 D9, spec section 4(g)): bare F key in
+	// dedicated mode: toggle diffs-only display. Same focus rule as
+	// R above (frame or dedicated bar only): in an editable compare
+	// view 'f' is text input, so the key is left alone there. In
+	// normal mode the key is not handled here at all, so ordinary
+	// typing and the Ctrl+F / Ctrl+Shift+F find shortcuts are
+	// untouched. 'F' and 'f' share a virtual-key code ('F'), so
+	// both cases are covered without a case check.
+	if (m_bDedicatedMode && pMsg->message == WM_KEYDOWN &&
+		pMsg->wParam == 'F' &&
+		(GetKeyState(VK_CONTROL) & 0x8000) == 0 &&
+		(GetKeyState(VK_MENU) & 0x8000) == 0 &&
+		(GetKeyState(VK_SHIFT) & 0x8000) == 0)
+	{
+		HWND hFocus = ::GetFocus();
+		if (hFocus == GetSafeHwnd() || hFocus == m_wndDedBar.GetSafeHwnd() ||
+			(m_wndDedBar.GetSafeHwnd() != nullptr && ::IsChild(m_wndDedBar.GetSafeHwnd(), hFocus)))
+		{
+			PostMessage(WM_COMMAND, ID_MERGE20_DED_DIFFS_ONLY);
 			return TRUE;
 		}
 	}

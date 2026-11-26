@@ -11,7 +11,7 @@
  * review-state buttons (TODO/DONE/HOLD/SPECIAL/KEEP, same effect as
  * the S2 keys 1-5), the pin toggle, the unreviewed-only and sniper
  * toggles (display + state only; D3/D6 add the behaviour), the zoom
- * display (click to reset to 75%), and the exit button. D3 adds the
+ * display (click to reset to 75%), and the exit button. D9 adds the diffs-only toggle button (F key; same effect as View > Diff Context > 0 Lines). D3 adds the
  * file-info label at the left end: the current file name and its
  * position (n/m) in the patrol set (all files, or only the TODO files
  * while unreviewed-only is on). The bar itself owns no state: button
@@ -60,6 +60,7 @@ public:
 	void SetPinned(bool bPinned);
 	void SetTodoOnly(bool bTodoOnly);
 	void SetSniperOn(bool bSniperOn);
+	void SetDiffsOnly(bool bDiffsOnly);
 	void SetZoomText(int nZoom);
 	void SetFileInfo(const String& sText);
 
@@ -89,6 +90,7 @@ private:
 	CButton m_btnPin;
 	CButton m_btnTodoOnly;
 	CButton m_btnSniper;
+	CButton m_btnDiffsOnly;
 	CButton m_btnZoom;
 	CButton m_btnExit;
 	ReviewState m_reviewState; /**< Last review state shown on the buttons */

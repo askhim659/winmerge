@@ -858,6 +858,7 @@
 #define IDC_MERGE20_MASTER_BTN_EXPORT   1802
 #define IDC_MERGE20_MASTER_BTN_IMPORT   1803
 #define IDC_MERGE20_MASTER_HINT         1804
+#define IDC_MERGE20_DED_DIFFS_ONLY      1805
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1823,6 +1824,8 @@
 #define ID_MERGE20_REGROUP_DIFF      38955
 #define ID_MERGE20_GREP                38956
 #define ID_MERGE20_MASTER              38957
+#define ID_MERGE20_DED_DIFFS_ONLY      38958
+#define ID_MERGE20_SLIM                38959
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2569,18 +2572,21 @@
 // 1778-1784 (Grep search box, buttons, list, labels) and command
 // 38956 (Grep launch); D8 consumes dialog 299 (master dialog),
 // controls 1785-1804 (master select, list, editor, buttons) and
-// command 38957 (master dialog launch); D9 allocates from these ranges.
+// command 38957 (master dialog launch); D9 consumes commands
+// 38958-38959 (dedicated-bar diffs-only toggle, slim list) and
+// control 1805 (dedicated-bar diffs-only button).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
 //   (IDR_LOGO), 310 (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already
 //   taken; dialog IDs must skip those values.
-// - controls (IDC_*): from 1805 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1806 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603).
-// - commands (ID_*): from 38958 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
+// - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
-//   are the D5 split/regroup commands;
-//   _APS_NEXT_COMMAND_VALUE is now 38958), free up to 38976
+//   are the D5 split/regroup commands; 38958-38959 are the D9
+//   diffs-only and slim commands;
+//   _APS_NEXT_COMMAND_VALUE is now 38960), free up to 38976
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2590,8 +2596,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        300
-#define _APS_NEXT_COMMAND_VALUE         38958
-#define _APS_NEXT_CONTROL_VALUE         1805
+#define _APS_NEXT_COMMAND_VALUE         38960
+#define _APS_NEXT_CONTROL_VALUE         1806
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif

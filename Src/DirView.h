@@ -264,6 +264,15 @@ protected:
 	int m_nActivePane;
 	CMerge20GrepDlg m_wndGrep; /**< Grep dialog (Merge20 Phase 4 D7): modeless, created on first use, hidden on close */
 
+	// Merge20 (Phase 4 D9): slim list state. The full (non-slim)
+	// column orders/widths are remembered while slim is on, so
+	// toggling back restores the user's layout exactly and the
+	// slim orders/widths are never saved to the options.
+	bool m_bMerge20Slim = false;
+	String m_sMerge20FullColumnOrders;
+	String m_sMerge20FullColumnWidths;
+	CImageList m_merge20SlimImageList; /**< Taller rows for the wrapped review tag */
+
 	// Generated message map functions
 	afx_msg void OnColumnClick(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnContextMenu(CWnd*, CPoint point);
@@ -387,6 +396,8 @@ protected:
 	afx_msg void OnMerge20Grep();
 	// Merge20 (Phase 4 D8): master management dialog
 	afx_msg void OnMerge20Master();
+	// Merge20 (Phase 4 D9): slim list toggle
+	afx_msg void OnMerge20Slim();
 	// Merge20 (S8): session save/restore, audit-memo editor
 	afx_msg void OnMerge20SessionSave();
 	afx_msg void OnMerge20SessionRestore();
@@ -511,6 +522,14 @@ private:
 	void ShowShellContextMenu(UINT id);
 	CShellContextMenu* GetCorrespondingShellContextMenu(HMENU hMenu) const;
 	void ReloadColumns();
+	// Merge20 (Phase 4 D9): slim list (design section 5.2/D9).
+	bool IsMerge20Slim() const { return m_bMerge20Slim; }
+	void SetMerge20Slim(bool bSlim);
+	void ApplyMerge20SlimColumnWidths();
+	int GetMerge20SlimColumnLog(const tchar_t* regName) const;
+	int GetMerge20SlimColumnPhys(const tchar_t* regName) const;
+	void BuildMerge20SlimImageList();
+	void RestoreMerge20SlimImageList();
 	bool IsLabelEdit() const;
 	void CollapseSubdir(int sel);
 	void ExpandSubdir(int sel, bool bRecursive = false);

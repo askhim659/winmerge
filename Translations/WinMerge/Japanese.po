@@ -11549,3 +11549,13 @@ msgstr "【Wiz】マスタデータを保存できませんでした：シリア
 #: Src/Merge20/Merge20MasterDlg.cpp
 msgid "Kind"
 msgstr "【Wiz】種類"
+
+#. Merge20 (D9): Slim list toggle (CDirView)
+#: Src/DirView.cpp
+msgid "Slim List"
+msgstr "【Wiz】スリムリスト"
+
+#. Merge20 (D9): Diffs-only display toggle (CMerge20DedBar)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Diffs only"
+msgstr "【Wiz】差分のみ"
