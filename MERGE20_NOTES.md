@@ -3557,3 +3557,107 @@ PR #22。master 94149386 から分岐。D2（PR #21）が先にマージされ �
   文字列を削除する変更では .po の項目も一緒に消すこと（26.2 参照）。
 - 監査子エージェントが別途 Phase 1〜4 の監査を行っている。W1 の修正内容
   は本節が W1 自身の検証レポートである。
+
+## 27. Phase 4 D3（未確認のみ巡回）— ブランチ `merge20/phase4-d3`
+
+PR #24。2026-11-26 に master 0aefc6dd（W1 マージ済み）へリベースした（§27.8）。リベース前は master fc0e24b3（PR #21＝D2 マージ済み）から分岐し、25コミット＋記録コミット＋マージコミット（W2 対応）＋訂正コミット＋最終記録コミットで進んでいたが、リベースで 1ファイル＝1コミットの 20コミット＋記録コミット 1件に載せ直した。21ファイル。設計書 §3.9・§5.2 D3、仕様書 §4(g)・§5.4。W1＝§26、W2＝§25。
+
+### 27.1 変更一覧
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| bd61feba45 | Src/Merge20/Merge20Patrol.h | 純粋モジュール（新規）。`Merge20FindNextTarget`／`Merge20HasOtherTarget`／`Merge20CountTargets`／`Merge20OrdinalOfTarget`。MFC 不使用・ASCII のみ・`vector<bool>` API |
+| 69ae7e304d | Src/Merge20/Merge20Patrol.cpp | 同実装。両端で折り返す。唯一の対象は自分自身を返す。対象なしは -1。範囲外の現在位置は -1 扱い。方向が ±1 以外は -1 |
+| 7082ff0f69 | Testing/GoogleTest/Merge20/Merge20Patrol_test.cpp | 同テスト 8件（後述の Node 真値で期待値を照合） |
+| 9aeec3c698 | Src/Merge.vcxproj | Merge20Patrol 登録（pch.h グループ） |
+| 77238c640d | Src/Merge.vcxproj.filters | 同フィルタ登録 |
+| 82f88e51e4 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Merge20Patrol＋テスト登録 |
+| 1018e265ff | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同フィルタ登録 |
+| 4bbf335e82 | Src/resource.h | `IDC_MERGE20_DED_FILE_INFO` = 1757 を割当て（全 define を値でソートして空きを確認。`_APS_NEXT_CONTROL_VALUE` のプレースホルダだけが 1757 を持っていた）。`_APS_NEXT_CONTROL_VALUE` を 1757→1758 へ。D0 予約コメントを更新。resource.h は行末が混在（D0 コメント部は LF、他は CRLF）しており、最初の編集失敗の原因（§27.7）。リベース前の空コミット 27b9a659 はリベースで削除した（内容がなかったため） |
+| b5c7499396 | Src/Merge20/Merge20DedBar.h | 専用バーのファイル情報ラベル `CStatic m_stFileInfo`（バーの先頭、幅 300px、`SS_LEFTNOWORDWRAP | SS_ENDELLIPSIS | SS_CENTERIMAGE`） |
+| 9492b2a0a8 | Src/Merge20/Merge20DedBar.cpp | `SetFileInfo()`（同一文言なら何もしない）。バー全幅は約 1310px（D2 で指摘済みの狭いウィンドウでの右端クリッピングは残る） |
+| e75999fdef | Src/IDirDoc.h | `GetMerge20FilePosition(const PathContext& paths, int& nPos, int& nTotal, bool bTodoOnly)`（既定実装は false）。`paths` 引数は CI 失敗の修正で追加（§27.4・§27.7） |
+| bbf9af2891 | Src/DirDoc.h | 同 override 宣言 |
+| 219af9e198 | Src/DirView.h | 巡回ヘルパー宣言＋`Merge20GetFilePosition` 宣言 |
+| ab4f16df36 | Src/DirDoc.cpp | 同 override 実装（`FindMerge20ItemFromPaths` で行を特定し `CDirView::Merge20GetFilePosition` へ委譲） |
+| 42d5aeecca | Src/DirView.cpp | **ファイル巡回の本体**：`OpenNextFile`／`OpenPrevFile` で TODO のみ巡回（両端で折り返し）。フォルダ一覧の素の ↑／↓ は選択だけを次／前 TODO へ移動（ファイルは開かない。開くのは Enter／ダブルクリック／専用バーボタンのまま）。Shift+↑／↓（選択拡張）は無変更。`IsFirstFile`／`IsLastFile` は TODO-only 対応（`!Merge20HasOtherTarget(...)`）。TODO なし時はキーを飲み込みステータスバーに表示。S3 ステータス文言を `"%1 displayed, %2 checked, %3 unreviewed"` へ（`strutils::format_string3` 使用）。リベースで W1 の列移行呼び出し（`MigrateMerge20Columns`）を保持（§27.8） |
+| 645b9e6e25 | Src/MergeEditFrm.cpp | `UpdateDedBar` でファイル名＋(n/m) を専用バーに表示（`#include "paths.h"` 追加）。TODO 計 0 のときは「No unreviewed files」。フォルダ比較なしのときはファイル名のみ。呼出側で `m_pMergeDoc->m_filePaths` を渡す（CI 失敗の修正） |
+| 96573085eb | Src/MergeDoc.h | `bool Merge20IsDiffUnresolved(int nDiff) const;` を宣言（`GetResultSegmentByDiff` 近傍） |
+| 8ebb03ae83 | Src/MergeDocResultPane.cpp | 同実装：セグメントなし OR Unresolved OR Conflict のとき true。`IsResultDiffPending` と違いセグメントなしを未確認扱いにする |
+| 58d6b1c69d | Src/MergeDiffNavigation.h | **差分巡回の本体**：`IsDiffSkippedForTodoOnly`（TODO-only ON かつ解決済み差分をスキップ）を `FindFirst`／`FindLast`／`FindNext`／`FindPrevNonFilteredDiff` のスキップ条件へ追加。`OnNextdiff`／`OnPrevdiff` で TODO-only 時は次ファイルへ行かずファイル内で折り返し（未解決差分がなければ留まる）。`OnUpdateNextdiff`／`OnUpdatePrevdiff` は TODO-only 時は未解決差分の有無で有効化。`#include "OptionsDef.h"`／`"OptionsMgr.h"`／`"MergeApp.h"` を追加（`GetOptionsMgr()` の宣言は MergeApp.h） |
+| 43eeca05e3 | Translations/WinMerge/Japanese.po | 新規 msgid 2件（末尾へ追加。D2 形式の `#. Merge20 (D3)` コメント＋ `#: Src/...` 参照付き）。`"No unreviewed files"` → 「未確認ファイルがありません」（設計書 §6 の文言を採用。HTML のトースト「未確認のファイルはありません」とは「の」1字違う。§27.2）、`"%1 displayed, %2 checked, %3 unreviewed"` → 「表示 %1 件中 %2 件チェック、未確認 %3 件」。既存の `"%1 displayed, %2 checked"` はコードで使われなくなったが.po には残した（W1 の再生成で落ちる想定）。リベースで W1 の修正（Wiz 48件＋欠落 6件＋誤訳 1件、付与を含む）を保持し、D3 の 2件を末尾へ追加（§27.8）。D3 の 2件の訳文には付けていない（状態文のため。§27.2） |
+
+### 27.2 設計・仕様との食い違いと判断理由
+
+- **ファイル巡回のチョークポイント**：`CDirView::OpenNextFile`／`OpenPrevFile` が TODO-only 巡回の唯一の入口。専用バーの Prev／Next、Ctrl+F8、メニューの次／前ファイル移動はすべて `CDirDoc::MoveToNextFile` → `OpenNextFile` 経由のため、専用モードでも通常モードでも同じ挙動になる（設計書 §3.9 の「専用モード専用にしない」方針どおり）。
+- **フォルダ一覧の ↑／↓ は選択のみ移動**：HTML の `navFile` はファイルを開くが、フォルダ一覧の ↑／↓ で毎回ファイル比較を開くと一覧操作が重くなるため、選択移動だけにとどめた。開く操作（Enter／ダブルクリック／専用バーボタン）は従来どおり。
+- **`IsFirstFile`／`IsLastFile` の副作用**：TODO-only 時に `!Merge20HasOtherTarget(...)` を返すため、Prev／Next の有効化（専用バー＋`CMainFrame::OnUpdateNextFile`／`OnUpdatePrevFile`）は折り返しを反映する。代わりに「最初／最後のファイル」ボタンは TODO-only 時も有効のままになる（仕様外の副作用として記録）。
+- **差分巡回の述語**：`Merge20IsDiffUnresolved` はセグメントなしを未確認扱いにする。既存 `IsResultDiffPending` はセグメントなしで false を返すため別関数にした。**制限**：結果セグメントはマージセッション中にしか存在しない（`BuildMergeResult` は `StartMergeSession` からしか呼ばれない。`MergeDocResultPane.cpp:166`）。マージセッション外では全差分が未確認扱いになり、TODO-only 差分巡回は通常の差分順＋折り返しと等しくなる。マージ結果ペインでの解決（採用／却下）だけが巡回対象を変える。
+- **TODO なし時の表示はメッセージボックスなし（D3 の判断）**：フォルダ比較では (a) S3 ステータス文言に未確認件数を常駐表示（`"%1 displayed, %2 checked, %3 unreviewed"`。一発の `SetStatus` は次のステータス更新（`CDirView::OnTimer`、`TIMER_ID_STATUSBAR_UPDATE`）で上書きされるため）、(b) 巡回失敗時のみ一過性の `SetStatus(_("No unreviewed files"))`。専用バーでは TODO 計 0 のときファイル情報ラベルに同文言を表示。タスク指示の「メッセージボックスで代替」は採用しなかった（作業を中断させないため）。設計書 §6 の表示文言「未確認ファイルがありません」を msgstr に採用した。
+- **(n/m) の意味（D2 §24.2-6 で先送りした決定）**：OFF → 表示中全ファイル中の順序／全件数。ON → TODO ファイル中の順序／TODO 件数。現在のファイルが巡回対象外なら分子は 0（例 `(0/5)`）。HTML の `dedIdx` は常に `filtFiles` 内の位置を示すため、HTML とは定義が違う（記録のみ）。
+- **3-way 差分ナビゲーションは未変更**：`OnNext3wayDiff` 等の独自スキップループには TODO-only を入れていない（3-way マージは D3 の範囲外）。
+- **D2 の残課題 (c)（可視ホバーストリップ／初回ピン固定）は D3 では未実施**：ストリップは新規 UI 要素かフレーム描画が必要で D3 の範囲を超える。初回ピン固定は仕様の自動非表示既定と矛盾する。いずれも D11 候補として §27.6 に記録する。
+- **永続化は D0 のオプションキーのみ**：`OPT_MERGE20_TODO_ONLY`（`Merge20/TodoOnly`、既定 false）を読み書きするだけ。セッション保存への配線は D11 の範囲。確認内容の変更は即座に巡回対象へ反映される（巡回移動のたびにサイドカーをライブで読む。キャッシュなし）。
+- **`OnUpdateNextdiff`／`OnUpdatePrevdiff` の走査コスト**：TODO-only 時、アイドル更新のたびに `FindFirst`／`FindLastNonFilteredDiff` が先頭（末尾）から未解決差分を走査する。差分数が通常は数百以下で各ステップは安価なため許容とした（記録のみ）。
+- **純粋モジュールの真値**：`Merge20Patrol` の期待値は HTML `17_v17.15.html` の `navFile` TODO 分岐（1420–1429行）を Node で実行した結果と照合し、18ケース全一致（`/tmp/d3work/patrol_truth.js`）。GoogleTest は 8件。
+
+
+### 27.3 Windows 実機での確認手順（D3 受け入れテスト）
+
+1. フォルダ比較を開き、確認内容が TODO のファイルが複数ある状態にする。専用バー（表示 → 比較専用モード）の「未確認のみ」トグルを ON にする。専用バーの「次へ ▶」を押すたびに TODO のファイルだけが順に開くこと。最後の TODO で「次へ」を押すと最初の TODO に戻ること（折り返し）。「◀ 前へ」も逆向きに折り返すこと。
+2. フォルダ一覧にフォーカスを置き、素の ↑／↓ キーで選択だけが TODO のファイルへ移動すること（ファイル比較は開かない）。Enter でそのファイルが開くこと。Shift+↑／↓ は従来どおり選択を拡張すること。
+3. TODO のファイルが 1件だけの状態で「次へ」を押すと、同じファイルに留まること（自分自身への折り返し）。TODO が 0件の状態で「次へ」／↑↓ を押すと、ステータスバーに「未確認のファイルはありません」（または英語表示。§27.5 の .po 注意参照）と出ること。メッセージボックスが出ないこと。ステータスバーの件数表示が「表示 N 件中 M 件チェック、未確認 0 件」になっていること。
+4. トグルを OFF にすると、Prev／Next・↑↓ が従来どおり全ファイルを表示順に巡回すること（折り返しなしで端で止まる／次ファイルへ行く従来挙動）。
+5. 専用バーのファイル名＋(n/m) 表示：TODO-only OFF で「ファイル名 (n/m)」（m＝表示ファイル数）。ON で m＝TODO 件数に変わること。TODO-only ON の状態で既に確認済みのファイルを開くと分子が 0 になること（例 `(0/5)`）。TODO 計 0 のときラベルが「未確認のファイルはありません」になること。
+6. 確認内容の変更が即座に反映されること：TODO のファイルを開き、確認内容を「済」に変えてから「次へ」を押すと、そのファイルが飛ばされること。逆に「済」を TODO に戻すと巡回対象に復帰すること。
+7. 差分巡回：ファイル比較でマージセッションを開始し、一部の差分をマージ結果ペインで解決（採用／却下）した状態で、TODO-only ON のまま F7／F8 を押すと、解決済みの差分を飛ばして未解決の差分だけを巡回し、最後の未解決差分で先頭へ折り返すこと（次ファイルへは行かない）。マージセッションを開始していないファイル比較では、TODO-only ON でも全差分が巡回対象になること（§27.2 の制限どおり）。
+8. 回帰：TODO-only OFF のフォルダ比較・ファイル比較の巡回（次／前ファイル、F7／F8、↑↓）が従来どおり動くこと。
+
+
+### 27.4 CI 結果（PR #24）
+
+リベース前の実行（旧 head 群。リベースで無効になった）：
+- 実行 45737714355（head ca8bedbf、PR #24 の初回 head）：**failure**。ビルドジョブ 139634870553 の "Build failure" ステップで失敗。
+ - 原因：`Src/DirDoc.cpp(769)` で `error C2882: 'paths': illegal use of namespace identifier in expression` と `error C2660: 'FindMerge20ItemFromPaths': function does not take 1 arguments`。`GetMerge20FilePosition` の宣言・定義・呼出のいずれにも `paths` 引数がなく、実装だけが存在しない識別子 `paths` を使っていたため、`paths` 名前空間と解釈された。D3 実装時の見落とし（宣言と実装の不一致を手元で検出できなかった）。
+ - 修正：`GetMerge20FilePosition` に `const PathContext& paths` 引数を追加（旧 07aadb81 IDirDoc.h／8569afef DirDoc.h／75e0b072 DirDoc.cpp／9774657a MergeEditFrm.cpp）。中間の 3 head は宣言・定義・呼出が揃っていないため CI は当然失敗する（実行 45738924493／45738946977／45738974917、いずれも failure）。リベース後のコミットには修正込みの内容が入っている（§27.1）。
+- 実行 45738999523（head 9774657a22、修正後の head）：**success**。ジョブ 139639086423 build success。GoogleTest **616 テスト全パス**（D2 ベースライン 608 ＋ D3 新規 8）。成果物 2件：WinMerge-x64.zip（26,203,517 バイト、ID 15080164714）と WinMerge-x64-Setup-x64.exe（39,704,651 バイト、ID 15080861405）、いずれも 2027-02-24 失効。ログ中の "FAILED" は IDS_FILESAVE_FAILED／IDS_MERGE_RESULT_SAVE_FAILED の翻訳文字列 ID のみ。`error C*`／`error LNK*` は 0件。`Merge20Patrol.obj` の生成を確認済み。
+- 実行 45741585765（マージ head 933bff0e、W2 マージ後）：**success**。
+- 実行 45741691888（head b48732c9、記録のみの訂正コミットを含む旧最終 head）：**success**（ジョブ 139647990603 build success）。GoogleTest **616 テスト全パス**。成果物 2件：WinMerge-x64.zip（26,194,822 バイト、ID 15082061982）と WinMerge-x64-Setup-x64.exe（39,683,207 バイト、ID 15082340036）、いずれも 2027-02-24 失効。
+- 実行 45742900702（head 26b86d6c、旧最終記録コミット）：リベース開始時点で in_progress のまま残った。リベースで head が置き換わったため結果は追わない（記録のみのコミットでコードは b48732c9 と同一）。
+
+リベース後の実行（新 head 群。§27.8 末尾に追記する）：
+- （記録コミットの CI 実行待ち）
+
+### 27.5 検証レポート（検証ゲート (a)–(d)）
+
+- (a) 仕様・設計の条項照合：仕様書 §4(g)（Prev／Next・↑↓ は未確認のみ巡回し両端で折り返す）→ ファイル巡回・差分巡回とも実装済み（コード配線確認＋純粋モジュール単体テスト）。仕様書 §5.4（専用バー内容）→ ファイル名＋(n/m) 表示を追加（D2 先送り分の解消）。設計書 §5.2 D3 の受け入れ条件（TODO なし時の表示、OFF で通常巡回に戻る、確認内容の変更が即座に反映される）→ 表示は実装済み、OFF 時の復帰はコード配線確認済み、即時反映はサイドカーのライブ読み取りによる（実機での最終確認は §27.3 手順 3・4・6）。
+- (b) 利用可否：トグル ON／OFF、巡回、折り返し、TODO なし時の表示はコードの配線で確認済み。巡回の核心（折り返し・唯一の対象・対象なし・範囲外・不正な方向）は純粋モジュールとして GoogleTest 8件で裏付け済み（HTML 真値との 18ケース照合を含む）。MFC 側の配線（DirView／DirDoc／MergeDiffNavigation）は単体テストがなく、コンパイル＋実機手順での確認に依存する（§27.6）。
+- (c) 表示：新規 UI 文字列 2件は repo の Japanese.po に訳あり（§27.1）。**ただし出荷 .po の書き直し問題（監査 F-1、W1 で修正中）のため、今回のビルドでは英語表示になる可能性が高い。**W1 修正後に日本語表示の再確認が必要。専用バーのファイル情報ラベルは幅 300px で右端クリッピングの懸念は D2 から継続（§27.2）。
+- (d) 回帰：TODO-only OFF 時の巡回は既存コードパスをそのまま通る（`GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY)` が false のとき分岐しない）。GoogleTest 616 全パスで既存テストの退行なし。フォルダ比較・ファイル比較の通常巡回は実機で §27.3 手順 8 により確認すること。
+
+
+### 27.6 未検証（実機確認が必要）・残課題
+
+- 未検証：§27.3 の全手順（専用バー・フォルダ一覧・差分巡回の実機挙動、(n/m) 表示、TODO なし時の表示、即時反映、回帰）。Linux VM では WinMerge を実行できないため、表示の最終確認は実機に依存する。
+- D4 への引き継ぎ：巡回インフラ（`Merge20Patrol` 純粋モジュール、`CMergeDoc::Merge20IsDiffUnresolved`）は D4 以降でも流用できる。既知の制限として、マージセッション外では全差分が未確認扱いになること（§27.2）、3-way 差分ナビゲーションは TODO-only 未対応であること、TODO-only 時に「最初／最後のファイル」ボタンが有効のままになることを D4 の設計に反映すること。
+- D2 の残課題 (c) は D11 候補へ：可視ホバーストリップ（新規 UI 要素かフレーム描画が必要）と初回ピン固定（自動非表示既定と矛盾）を D3 では実施しなかった。D11（セッション保存・UI 微調整）で検討すること。
+- 専用バーの右端クリッピング（全幅約 1310px）は D2 から継続。ファイル情報ラベル追加で悪化する可能性があるため、実機で狭いウィンドウでの表示を確認すること。
+
+
+### 27.7 作業中のミスと修正の記録
+
+- **空コミット 27b9a659（リベースで削除）**：`Src/resource.h` への編集スクリプトがコメント文言の不一致（resource.h の行末混在が原因）で失敗したのに、そのままコミットを実行してしまい、内容のないコミットが履歴に残った。直後の d8175ec6 で実変更を入れた。PR #24 の説明にも明記した。リベース（§27.8）で 1ファイル＝1コミットに載せ直した際に空コミットは削除した（内容がなかったため）。教訓：コミット前に変更の有無を確認すること。
+- **CI 失敗と `paths` 引数の欠落（§27.4）**：`GetMerge20FilePosition` の設計時に、行の特定に必要なマージ文書のファイルパスを引数として渡す設計にしていなかった。実装だけが `paths` を参照する形で書き進めてしまい、宣言・定義・呼出の不一致を手元で検出できなかった。CI のコンパイルエラーで発覚し、4コミットで修正した。リベース後のコミットには修正込みの内容が入っている。教訓：IDirDoc のようなインターフェース追加時は、宣言・定義・呼出の 3か所を 1つの差分として並べて確認すること。
+- **ファイル数の誤記（18→21）**：旧 §26 冒頭の「18ファイル」は誤りで、正しくは 21ファイルだった。記録コミット後に数え直して発覚し、旧 b48732c9 で訂正した。リベース後の本節では 21ファイルと正しく記載している。
+- **旧マージコミット 933bff0e（W2 対応）**：W2 マージ後に PR がコンフリクトしたためマージコミットで解消した（旧 §26.8）。リベース（§27.8）でマージコミットは削除し、W2・W1 の変更は master 0aefc6dd 経由で取り込んだ。
+
+### 27.8 リベース（master 0aefc6dd へ。W1 マージ対応）
+
+- W1（PR #23）が master へマージされた（master head 0aefc6dd）。D3 ブランチは fc0e24b3 から分岐していたため、最終 CI の前にリベースした。リベース前の旧 head 群の CI 結果は §27.4 参照（いずれもリベースで無効）。
+- 方法：Git Database API のみでリベースした（ローカルクローンは使わなかった。クローン直後のセキュリティチェックで実行リスクが指摘されたため。後述）。手順：(1) API で base（fc0e24b3）／旧ブランチ先端（26b86d6c）／新 master（0aefc6dd）の 3版を全 D3 ファイルについて取得。(2) W1 と重なる 3ファイル（`Src/DirView.cpp`、`Translations/WinMerge/Japanese.po`、`MERGE20_NOTES.md`）を 3方向マージし、他の 18ファイルは新 master と base が同一であることを確認して旧ブランチ版をそのまま採用。(3) 1ファイル＝1コミットの 20コミットを新 master の上に API で連鎖作成（各コミットの親は直前のコミット）。(4) 記録コミット（本節）を追加。(5) ブランチ ref を force で新先端へ移動し、直後に PR の state を確認する。
+- `Src/DirView.cpp`：diff3 でクリーンマージ。旧ブランチ版との差分は W1 の列移行呼び出し（`OnInitialUpdate` での `MigrateMerge20Columns`、15行）のみ、新 master 版との差分は D3 の変更（189行）のみであることを確認済み。
+- `Translations/WinMerge/Japanese.po`：diff3 では 24か所が競合と判定されたが、内容は W1・W2 の両方が同じ WinMerge→WizMerge 改名をした箇所と、末尾の D2 訳文への付与だった。解決は「新 master 版＋D3 の 2件を末尾へ追加」とした（新 master には W2 の改名も W1 の修正も含まれているため）。検証：マージ結果と新 master 版の差分は D3 の 2件のみ。D3 の 2件の msgid は重複なし（各 1件）。D3 の 2件の訳文には付けていない。W1 の付与は機能ラベル（ボタン／メニュー／列名）が対象で、D3 の 2件は状態文（「未確認ファイルがありません」「表示 %1 件中 %2 件チェック、未確認 %3 件」）のため。なお機能ラベルをとするかとするかはユーザー未確認のまま（§27.2）。
+- `MERGE20_NOTES.md`：旧 §26（D3）と W1 の §26 が衝突したため、D3 の記録を §27 に付け替えた（§27 はリベース時点で空き。W2 フォローアップが §27 を使う場合はさらに付け替える）。旧 §26.8（W2 マージの記録）は本 §27.8 に置き換えた。
+- リベースで削除したもの：空コミット 27b9a659（内容なし）、マージコミット 933bff0e（W2 対応。W2・W1 の変更は master 経由で取り込み済み）、修正コミットの分割（4件の修正は各ファイルのコミットに畳み込み）。旧コミット SHA はすべて無効になったため、本節の表（§27.1）が正である。
+- セキュリティに関する注記：当初はローカルクローンで `git rebase` を行う予定だったが、クローン直後の実行でシステムのセキュリティチェックが失敗し、クローン内容の実行・展開・git 操作が禁止されたため中止した。クローンは削除し、API のみ（ファイル内容の取得と Git Database API によるコミット作成）でリベースをやり直した。API 経由のファイル内容はテキストとしてのみ扱い、リポジトリのコードはローカルで実行していない。CI でのビルドは GitHub 上の通常の CI 実行である。
+- リベース後の CI 結果：（実行待ち。確認後にここへ追記する）
