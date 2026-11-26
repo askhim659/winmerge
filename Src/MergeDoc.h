@@ -438,8 +438,12 @@ public:
 	void OnResultUndone(int nUndoPos);
 	void OnResultRedone(int nUndoPos);
 	void OnResultUndoStackCleared();
-private:
+	/** @brief Merge20 (Phase 4 D6): extract the text of one pane
+	 * for apparent lines [nApparentBegin, nApparentEnd], skipping
+	 * ghost lines. Moved to public for the sniper overlay (the
+	 * definition in MergeDocResultPane.cpp is unchanged). */
 	String GetPaneApparentLinesText(int nPane, int nApparentBegin, int nApparentEnd, int* pnLines) const;
+private:
 	int GetResultSegmentIndexByLine(int nLine) const;
 	bool IsResultDiffWhiteSpaceOnly(const DIFFRANGE* pdi) const;
 	CRLFSTYLE PickResultCRLFStyle() const;
