@@ -32,6 +32,15 @@
  * LVN_GETDISPINFO therefore only hands out pointers to strings
  * that live until the next Refresh().
  *
+ * P3 adds the linkage (design section 12.7): a single click on a
+ * row reports to the bar (which opens the file, toggles the output
+ * flag, or cycles the review state, depending on the column), and
+ * the bar re-selects the compare window's file after every Refresh()
+ * through SelectRowByRelPath, so the panel selection follows file
+ * moves in the compare window. Keyboard review actions (1-5/Space)
+ * are handled in the frame's PreTranslateMessage, which calls the
+ * bar: the list itself cannot swallow keys.
+ *
  * Row colours follow the folder compare list (S2, design section
  * 12.3 P-R2): SPECIAL = light red, HOLD = light yellow, KEEP =
  * grey. The review-state text itself is the "needs manual work"
@@ -57,6 +66,16 @@ class CDiffContext;
  * is free in this window: no WM_USER message is used anywhere in
  * the Merge20 panel code (verified on P2). */
 #define WM_MERGE20_FILELIST_ROW_RCLICK (WM_USER + 120)
+/** @brief Message the control sends its parent when a row is
+ * single-clicked (NM_CLICK, Panel P3, P-R7/P-R8). wParam = displayed
+ * row index, lParam = subitem index (the column that was clicked):
+ * the bar opens the file, toggles the output flag, or cycles the
+ * review state, depending on the column. The bar only posts the
+ * open request to the frame (async), so this synchronous send never
+ * outlives the control: opening a file closes this frame, but only
+ * after the posted message is pumped.
+ * WM_USER + 121 is free (see WM_MERGE20_FILELIST_ROW_RCLICK). */
+#define WM_MERGE20_FILELIST_ROW_CLICK (WM_USER + 121)
 
 class CMerge20FileListCtrl : public CListCtrl
 {
@@ -134,17 +153,21 @@ public:
 	/** @brief Displayed row by index (nullptr when out of range).
 	 * The pointer stays valid until the next Refresh(). */
 	const Row* GetDisplayedRow(int index) const;
-
-	//{{AFX_MSG(CMerge20FileListCtrl)
-	afx_msg void OnGetdispinfo(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnCustomDraw(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnRClick(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnDblclk(NMHDR* pNMHDR, LRESULT* pResult);
-	//}}AFX_MSG
-	DECLARE_MESSAGE_MAP()
-
-private:
-	/** @brief Panel columns, in display order (design section 12.3 P-R1). */
+	/** @brief Select the displayed row with this relative path and
+	 * scroll it into view (Panel P3, P-R7: the panel selection
+	 * follows the file the compare window shows). No-op when the
+	 * path is empty; when the row is not displayed (hidden by the
+	 * search, the filter tab or a collapsed folder, or gone after a
+	 * rescan), the selection is cleared instead of leaving a stale
+	 * row selected. */
+	void SelectRowByRelPath(const String& relPath);
+	/** @brief Selected displayed row, or -1 when none is selected
+	 * (Panel P3, P-R8: the keyboard actions apply to this row). */
+	int GetSelectedRow() const;
+	/** @brief Panel columns, in display order (design section 12.3
+	 * P-R1). Public (Panel P3): the bar dispatches single clicks by
+	 * column (output column toggles the flag, review column cycles
+	 * the state, other columns open the file). */
 	enum Column
 	{
 		COL_OUTPUT = 0, /**< Selection: output checkbox glyph */
@@ -156,6 +179,16 @@ private:
 		COL_COUNT /**< Number of columns */
 	};
 
+	//{{AFX_MSG(CMerge20FileListCtrl)
+	afx_msg void OnGetdispinfo(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnCustomDraw(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnRClick(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnDblclk(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnClick(NMHDR* pNMHDR, LRESULT* pResult);
+	//}}AFX_MSG
+	DECLARE_MESSAGE_MAP()
+
+private:
 	const CDiffContext* m_pCtxt; /**< Folder context (owned by CDirDoc, not by this control) */
 	std::vector<Row> m_allRows; /**< P2: all rows, in compare order (before search / tab / collapse) */
 	std::vector<Row> m_rows; /**< Cached displayed rows, in compare order */
