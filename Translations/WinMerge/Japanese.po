@@ -10740,8 +10740,13 @@ msgstr "PrediffLineFilter.sct WizMerge プラグインオプション"
 
 #. Merge20 (W1): Merge20Exclude.sct settings dialog title (Plugins/dlls/Merge20Exclude.sct)
 #: Plugins/dlls/Merge20Exclude.sct:294
-msgid "Merge20Exclude.sct WinMerge Plugin Options"
-msgstr "Merge20Exclude.sct WinMerge プラグインオプション"
+msgid "Merge20Exclude.sct WizMerge Plugin Options"
+msgstr "Merge20Exclude.sct WizMerge プラグインオプション"
+
+#. Merge20 (W2f): ApplyPatch.sct settings dialog title (Plugins/dlls/ApplyPatch.sct)
+#: Plugins/dlls/ApplyPatch.sct:474
+msgid "ApplyPatch.sct WizMerge Plugin Options"
+msgstr "ApplyPatch.sct WizMerge プラグインオプション"
 
 #. IDS_PLUGIN_PREDIFFLINEFILTER_STR3
 #: Strings.rc:287
