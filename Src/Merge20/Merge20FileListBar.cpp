@@ -16,6 +16,16 @@
  *   LayoutChildren().
  * - The width is clamped (LoadState / CalcFixedLayout, D2 lesson),
  *   and the initial width is set explicitly (D1 lesson).
+ *
+ * P3 (design section 12.7) adds the linkage: a single click on a
+ * row opens the file (or activates its frame when already open),
+ * the output column toggles the flag, the review column cycles the
+ * state, keys 1-5 / Space (via the frame's PreTranslateMessage)
+ * and the file-row context menu set the review state, and Refresh()
+ * re-selects the compare window's file, so the panel selection
+ * follows file moves. Panel-initiated changes are also pushed to
+ * the folder view (row repaint + status-bar count) through the
+ * CDirDoc forwarders, closing the P2 known limitation.
  */
 
 #include "StdAfx.h"
@@ -84,6 +94,7 @@ BEGIN_MESSAGE_MAP(CMerge20FileListBar, CSizingControlBarCF)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_EXPAND_ALL, OnExpandAll)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_COLLAPSE_ALL, OnCollapseAll)
 	ON_MESSAGE(WM_MERGE20_FILELIST_ROW_RCLICK, OnRowRClick)
+	ON_MESSAGE(WM_MERGE20_FILELIST_ROW_CLICK, OnRowClick)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -318,6 +329,13 @@ void CMerge20FileListBar::Refresh()
 	m_wndList.Refresh();
 	if (bHasDirDoc)
 		m_stCount.SetWindowText(m_wndList.GetCountText().c_str());
+	// P3 (P-R7): re-select the file the compare window shows. The
+	// rows were just rebuilt (a rescan may have moved them), so the
+	// selection is re-applied by relative path, not kept by index.
+	// A filtered-out or removed file clears the selection instead
+	// of leaving a stale row selected (see SelectRowByRelPath).
+	if (!m_sCurrentRelPath.empty())
+		m_wndList.SelectRowByRelPath(m_sCurrentRelPath);
 	LayoutChildren();
 }
 
@@ -596,6 +614,11 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 	}
 	ctxt.ResumeMerge20FileListNotify();
 	Refresh();
+	// P3 (P-R8): the folder list and its status-bar count follow the
+	// batch change at once (one invalidate + one count update for
+	// the whole batch, the S3 folder-side rule). This closes the P2
+	// known limitation for the batch path.
+	m_pDirDoc->Merge20UpdateDirViewStatus();
 }
 
 /**
@@ -641,8 +664,15 @@ LRESULT CMerge20FileListBar::OnRowRClick(WPARAM wParam, LPARAM /*lParam*/)
 void CMerge20FileListBar::ShowRowContextMenu(int row)
 {
 	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
-	if (pRow == nullptr || !pRow->isDirectory || m_pDirDoc == nullptr)
+	if (pRow == nullptr || m_pDirDoc == nullptr)
 		return;
+	// P3 (P-R8): file rows get the review-state menu; directory rows
+	// keep the P2 menu below.
+	if (!pRow->isDirectory)
+	{
+		ShowFileRowContextMenu(row);
+		return;
+	}
 	const String relPath = pRow->relPath;
 	const bool collapsed = m_wndList.IsRowCollapsed(row);
 	const bool hasChildren = pRow->hasChildren;
@@ -690,6 +720,227 @@ void CMerge20FileListBar::ShowRowContextMenu(int row)
 		SetOutputForDirectory(*it->second, false);
 	ctxt.ResumeMerge20FileListNotify();
 	Refresh();
+	// P3 (P-R8): the folder list and its status-bar count follow the
+	// directory change at once (one invalidate + one count update
+	// for the whole subtree, the S3 folder-side rule). This closes
+	// the P2 known limitation for the directory path.
+	m_pDirDoc->Merge20UpdateDirViewStatus();
+}
+
+/**
+ * @brief Show the context menu for a displayed file row (P3, P-R8).
+ *
+ * The five review states (checked = current state) and the
+ * output-flag toggle (checked = included in output). The labels
+ * reuse the S1 review-state msgids, so the menu shows exactly what
+ * the folder compare list shows for each state; only the toggle is
+ * a new msgid. The menu is run with TPM_RETURNCMD and the choice
+ * is handled here, so no ON_COMMAND entries are needed: the review
+ * items reuse the dedicated-bar review command IDs (38945-38949,
+ * state = ID - ID_MERGE20_DED_REVIEW_TODO), and the toggle uses
+ * ID_MERGE20_FILELIST_TOGGLE_OUTPUT (38967).
+ */
+void CMerge20FileListBar::ShowFileRowContextMenu(int row)
+{
+	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+	if (pRow == nullptr || pRow->isDirectory || m_pDirDoc == nullptr)
+		return;
+	// Literal _() calls (see SetupFilterTabs): the .pot generator
+	// only scans literal arguments.
+	const String stateLabels[5] =
+	{
+		_("Not reviewed"),
+		_("Done"),
+		_("On hold"),
+		_("Needs manual work"),
+		_("Keep as is"),
+	};
+	CMenu menu;
+	menu.CreatePopupMenu();
+	const int curState = static_cast<int>(pRow->reviewState);
+	for (int i = 0; i < 5; ++i)
+	{
+		menu.AppendMenu(MF_STRING | (i == curState ? MF_CHECKED : 0),
+			ID_MERGE20_DED_REVIEW_TODO + i, stateLabels[i].c_str());
+	}
+	menu.AppendMenu(MF_SEPARATOR);
+	String sToggle = _("Toggle output");
+	menu.AppendMenu(MF_STRING | (pRow->includeInOutput ? MF_CHECKED : 0),
+		ID_MERGE20_FILELIST_TOGGLE_OUTPUT, sToggle.c_str());
+	CPoint pt;
+	::GetCursorPos(&pt);
+	const UINT cmd = menu.TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
+		pt.x, pt.y, this);
+	if (cmd == 0)
+		return;
+	if (cmd == ID_MERGE20_FILELIST_TOGGLE_OUTPUT)
+	{
+		ToggleRowOutput(row);
+		return;
+	}
+	if (cmd >= ID_MERGE20_DED_REVIEW_TODO && cmd <= ID_MERGE20_DED_REVIEW_KEEP)
+		ApplyRowReview(row, static_cast<ReviewState>(cmd - ID_MERGE20_DED_REVIEW_TODO));
+}
+
+/**
+ * @brief Folder item for a displayed row (P3), or nullptr for a
+ * directory row or a row whose item is gone (rescan). The pointer
+ * is into the folder context's item list and is valid only for the
+ * synchronous call that uses it: a rescan rebuilds the items, and
+ * no pointer is kept past the call.
+ */
+const DIFFITEM* CMerge20FileListBar::FindRowItem(int row) const
+{
+	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+	if (pRow == nullptr || pRow->isDirectory || m_pDirDoc == nullptr)
+		return nullptr;
+	CDiffContext& ctxt = m_pDirDoc->GetDiffContext();
+	std::map<String, const DIFFITEM*> byRelPath;
+	Merge20FileListBuildRelPathMap(ctxt, byRelPath);
+	const std::map<String, const DIFFITEM*>::const_iterator it = byRelPath.find(pRow->relPath);
+	if (it == byRelPath.end())
+		return nullptr;
+	return it->second;
+}
+
+/**
+ * @brief Apply a review state to one displayed file row (P3, P-R8).
+ *
+ * The S2 output-flag linkage (DONE turns the flag back ON, HOLD /
+ * KEEP turn it OFF) is applied by CDirDoc::ApplyMerge20ReviewState,
+ * the same rule the folder list's 1-5 keys use. The folder row is
+ * repainted and its status-bar count updated at once (P3), and the
+ * panel refreshes itself directly afterwards (it does not wait for
+ * the notification).
+ */
+void CMerge20FileListBar::ApplyRowReview(int row, ReviewState state)
+{
+	const DIFFITEM* pItem = FindRowItem(row);
+	if (pItem == nullptr)
+		return;
+	m_pDirDoc->ApplyMerge20ReviewState(*pItem, state);
+	m_pDirDoc->Merge20UpdateDirViewItem(*pItem);
+	Refresh();
+}
+
+/**
+ * @brief Cycle the review state of one displayed file row (P3, P-R8):
+ * TODO -> DONE -> HOLD -> SPECIAL -> KEEP -> TODO, the same order
+ * as Space in the folder compare list (S2).
+ */
+void CMerge20FileListBar::CycleRowReview(int row)
+{
+	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+	if (pRow == nullptr || pRow->isDirectory)
+		return;
+	ApplyRowReview(row, static_cast<ReviewState>((static_cast<int>(pRow->reviewState) + 1) % 5));
+}
+
+/**
+ * @brief Toggle the output flag of one displayed file row (P3, P-R8),
+ * with the folder-view sync and a panel refresh. The flag is read
+ * from the cached row (the same value the panel shows).
+ */
+void CMerge20FileListBar::ToggleRowOutput(int row)
+{
+	const DIFFITEM* pItem = FindRowItem(row);
+	if (pItem == nullptr)
+		return;
+	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+	if (pRow == nullptr)
+		return;
+	m_pDirDoc->SetMerge20IncludeInOutput(*pItem, !pRow->includeInOutput);
+	m_pDirDoc->Merge20UpdateDirViewItem(*pItem);
+	Refresh();
+}
+
+/**
+ * @brief Open the file of one displayed file row (P3, P-R7).
+ *
+ * The relative path is stashed and MSG_MERGE20_FILELIST_OPEN_FILE
+ * is posted to the frame: the frame resolves the item and moves to
+ * it (closing this frame, or activating the frame that already
+ * shows the file). Posting, not calling, keeps this bar alive:
+ * opening the file closes this frame, so nothing of this bar may
+ * be touched after the move. The file already shown is a no-op
+ * (the panel already selects it). Two rapid clicks stash the
+ * second path before the first message is pumped, so the last
+ * clicked file wins.
+ */
+void CMerge20FileListBar::OpenRowFile(int row)
+{
+	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+	if (pRow == nullptr || pRow->isDirectory || m_hwndFrame == nullptr)
+		return;
+	if (pRow->relPath == m_sCurrentRelPath)
+		return;
+	m_sPendingOpenRelPath = pRow->relPath;
+	::PostMessage(m_hwndFrame, MSG_MERGE20_FILELIST_OPEN_FILE, 0, 0);
+}
+
+/**
+ * @brief Single click on a panel row, reported by the list control
+ * (P3, P-R7/P-R8): dispatch by column. The output column toggles
+ * the flag (the S2 folder-list behaviour), the review column cycles
+ * the state (the Space behaviour), any other column opens the file.
+ * Directory rows do nothing on a single click (folding stays on
+ * double-click, P2).
+ */
+LRESULT CMerge20FileListBar::OnRowClick(WPARAM wParam, LPARAM lParam)
+{
+	const int row = static_cast<int>(wParam);
+	const int subItem = static_cast<int>(lParam);
+	const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+	if (pRow == nullptr || pRow->isDirectory || m_pDirDoc == nullptr)
+		return 0;
+	if (subItem == CMerge20FileListCtrl::COL_OUTPUT)
+	{
+		ToggleRowOutput(row);
+		return 0;
+	}
+	if (subItem == CMerge20FileListCtrl::COL_REVIEW)
+	{
+		CycleRowReview(row);
+		return 0;
+	}
+	OpenRowFile(row);
+	return 0;
+}
+
+/**
+ * @brief Handle a bare 1-5 / Space key while the panel list has the
+ * focus (P3, P-R8). Called from the frame's PreTranslateMessage
+ * (the list itself cannot swallow keys). Keys 1-5 set the review
+ * state of the selected row (the S2 folder-list behaviour, with
+ * the output-flag linkage); Space cycles the state. Bare keys
+ * only, so accelerators with Ctrl/Alt/Shift keep working, and
+ * only when the focus is exactly the list (typing in the search
+ * box must keep working). Returns true when the key was handled.
+ */
+bool CMerge20FileListBar::HandleListKey(UINT nVKey)
+{
+	if (m_wndList.GetSafeHwnd() == nullptr || ::GetFocus() != m_wndList.GetSafeHwnd())
+		return false;
+	if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 ||
+		(GetKeyState(VK_MENU) & 0x8000) != 0 ||
+		(GetKeyState(VK_SHIFT) & 0x8000) != 0)
+	{
+		return false;
+	}
+	const int row = m_wndList.GetSelectedRow();
+	if (row < 0)
+		return false;
+	if (nVKey >= '1' && nVKey <= '5')
+	{
+		ApplyRowReview(row, static_cast<ReviewState>(nVKey - '1'));
+		return true;
+	}
+	if (nVKey == VK_SPACE)
+	{
+		CycleRowReview(row);
+		return true;
+	}
+	return false;
 }
 
 /**
