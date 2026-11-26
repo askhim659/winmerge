@@ -853,6 +853,15 @@ static String ColSummaryGet(const CDiffContext *pCtxt, const void *p, int)
 	const Merge20FileState& st = pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
 	if (!st.classified)
 		return _("Not calculated");
+	// Merge20 (D10, design section 5.2/D10, spec section 7): the
+	// [Simple] badge marks a file whose classification came from the
+	// simple (positional) compare of the bulk path. The badge is
+	// added here, at display time, so the stored summary stays clean
+	// and the badge also appears in the diff-list CSV (which reuses
+	// this getter). It carries no [Wiz] mark: the badge text itself
+	// is the one prescribed by the spec and the HTML tool.
+	if (st.simpleCompare)
+		return String(_T("[")) + _("Simple") + _T("] ") + st.summary;
 	return st.summary;
 }
 
