@@ -353,6 +353,14 @@ inline const String OPT_MERGE20_SHOW_REVIEW_KEEP {_T("Merge20/ShowReviewKeep"s)}
 // yet (D1-D9 add the readers); D11 wires them into session save.
 inline const String OPT_MERGE20_DED_MODE {_T("Merge20/DedMode"s)};
 inline const String OPT_MERGE20_DED_PINNED {_T("Merge20/DedPinned"s)};
+// Merge20 (Phase 4 D11, D2 residual (c)): pin the dedicated bar on
+// the first dedicated-mode entry ever, so a first-time user sees the
+// bar (and its pin button) instead of an auto-hidden bar whose only
+// way back is the invisible 8px top hover strip. Cleared on that
+// first entry; the user's own pin choice then rules. This key is a
+// D11 addition beyond the design section 4.1(a) table (see
+// MERGE20_NOTES.md section 37).
+inline const String OPT_MERGE20_DED_PIN_FIRST {_T("Merge20/DedPinFirst"s)};
 inline const String OPT_MERGE20_DED_ZOOM {_T("Merge20/DedZoom"s)};
 inline const String OPT_MERGE20_TODO_ONLY {_T("Merge20/TodoOnly"s)};
 inline const String OPT_MERGE20_SNIPER_ON {_T("Merge20/SniperOn"s)};
