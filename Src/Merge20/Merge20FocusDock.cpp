@@ -218,7 +218,10 @@ void CMerge20FocusDock::SyncFocusFromDetail(int nDetailTopOffset)
 		return;
 	const int nTop = Merge20FocusClampTopLine(nDetailTopOffset, m_pResultView->GetLineCount());
 	m_bSyncingScroll = true;
-	m_pResultView->ScrollToLine(nTop);
+	// ScrollToLine is protected in CCrystalTextView; the public
+	// ScrollToSubLine override is the entry point (with word
+	// wrap off a subline is a line, so this is the same scroll).
+	m_pResultView->ScrollToSubLine(nTop);
 	m_bSyncingScroll = false;
 }
 
@@ -239,7 +242,7 @@ void CMerge20FocusDock::SyncDetailFromFocus(int nFocusTopLine)
 		for (int nCol = 0; nCol < splitter.GetColumnCount(); ++nCol)
 		{
 			if (auto* pView = dynamic_cast<CMergeEditView*>(splitter.GetPane(nRow, nCol)))
-				pView->ScrollToLine(di.dbegin + nFocusTopLine);
+				pView->ScrollToSubLine(di.dbegin + nFocusTopLine);
 		}
 	}
 	m_bSyncingScroll = false;
