@@ -706,6 +706,34 @@ DIFFITEM* FindMerge20ItemFromPaths(const CDiffContext& ctxt, const PathContext& 
 	}
 	return pos;
 }
+
+/**
+ * @brief Merge20 (Panel P3): true when an open merge doc shows the
+ * folder item whose compare paths are given. One pane matches when
+ * the paths are equal, or when the compare path is the NUL device
+ * (a side missing from the folder compare: CDiffContext::
+ * GetComparePaths uses it) and the doc stores an empty path there
+ * (CDirView::Open leaves the FileLocation unset for a missing file).
+ * A single pane path identifies the item inside one folder compare,
+ * but every pane is checked so a doc opened on its own (or on
+ * renamed files) never matches by accident.
+ */
+bool Merge20DocMatchesItem(IMergeDoc* pDoc, const PathContext& cmpPaths)
+{
+	if (pDoc == nullptr || pDoc->GetFileCount() != cmpPaths.GetSize())
+		return false;
+	for (int i = 0; i < cmpPaths.GetSize(); ++i)
+	{
+		const String docPath = pDoc->GetPath(i);
+		const String cmpPath = cmpPaths[i];
+		if (docPath == cmpPath)
+			continue;
+		if (cmpPath == paths::NATIVE_NULL_DEVICE_NAME && docPath.empty())
+			continue;
+		return false;
+	}
+	return true;
+}
 } // namespace
 
 /**
@@ -771,6 +799,172 @@ bool CDirDoc::GetMerge20FilePosition(const PathContext& paths, int& nPos, int& n
 	if (pos == nullptr)
 		return false;
 	return m_pDirView->Merge20GetFilePosition(*pos, nPos, nTotal, bTodoOnly);
+}
+
+/**
+ * @brief Merge20 (Panel P3, design section 12.7): open one folder item
+ * in a file compare, from the file-list panel (P-R7).
+ *
+ * The panel's row click asks for one file: when it is already the
+ * current merge doc's file, nothing happens (the panel already
+ * selects it); when it is open in another merge doc of this folder
+ * compare, that frame is activated instead of opening a duplicate;
+ * otherwise the current merge doc is closed first (like
+ * MoveToNextFile: the panel replaces the compare in place, the HTML
+ * selFile behaviour) and the file is opened through the folder view,
+ * so the folder selection and the open logic stay in one place.
+ * A cancelled close (the user keeps unsaved changes) leaves the
+ * current file open and opens nothing. The caller (the file compare
+ * frame) must not touch the frame after this call when it closed
+ * its own doc: CloseNow destroys the frame synchronously.
+ * @param [in] pMergeDoc Current merge doc (nullptr when called
+ *             without one; then only the open step runs).
+ * @param [in] di Folder item to open.
+ */
+void CDirDoc::Merge20MoveToFile(IMergeDoc* pMergeDoc, const DIFFITEM& di)
+{
+	if (m_pCtxt == nullptr)
+		return;
+	PathContext cmpPaths;
+	m_pCtxt->GetComparePaths(di, cmpPaths);
+	// Already showing this file: nothing to do.
+	if (Merge20DocMatchesItem(pMergeDoc, cmpPaths))
+		return;
+	// Already open in another frame of this folder compare:
+	// activate that frame instead of opening a duplicate.
+	for (auto pOpenDoc : m_MergeDocs)
+	{
+		if (pOpenDoc == nullptr || pOpenDoc == pMergeDoc)
+			continue;
+		if (!Merge20DocMatchesItem(pOpenDoc, cmpPaths))
+			continue;
+		if (CDocument* pCd = dynamic_cast<CDocument*>(pOpenDoc))
+		{
+			if (POSITION pos = pCd->GetFirstViewPosition())
+			{
+				if (CView* pView = pCd->GetNextView(pos))
+				{
+					if (CFrameWnd* pFrame = pView->GetParentFrame())
+					{
+						pFrame->ActivateFrame();
+						return;
+					}
+				}
+			}
+		}
+	}
+	// Otherwise close the current file compare first (like
+	// MoveToNextFile). A cancelled close opens nothing.
+	if (pMergeDoc != nullptr && !pMergeDoc->CloseNow())
+		return;
+	if (m_pDirView != nullptr)
+		m_pDirView->Merge20OpenFile(di);
+}
+
+/**
+ * @brief Merge20 (Panel P3): relative path of the file a merge doc
+ * shows, for the panel's selection follow (P-R7).
+ *
+ * The full-path lookup (FindMerge20ItemFromPaths, the D2 rule) fails
+ * for one-sided files: the merge doc stores an empty path for the
+ * missing side, and FindItemFromPaths needs every pane under a base
+ * folder. The fallback matches on any single existing pane instead:
+ * inside one folder compare a pane path belongs to exactly one item.
+ * @param [in] paths Merge doc's file paths.
+ * @param [out] relPath Relative path of the folder item, untouched
+ *             when false is returned.
+ * @return False when there is no compare context, or the paths
+ *         belong to no item (a file compare opened on its own, or
+ *         a file switched to a path outside the compare).
+ */
+bool CDirDoc::Merge20FindRelPath(const PathContext& paths, String& relPath) const
+{
+	if (m_pCtxt == nullptr)
+		return false;
+	if (DIFFITEM* pos = FindMerge20ItemFromPaths(*m_pCtxt, paths))
+	{
+		relPath = pos->getItemRelativePath();
+		return true;
+	}
+	for (DIFFITEM* p = m_pCtxt->GetFirstDiffPosition(); p != nullptr;)
+	{
+		const DIFFITEM& di = m_pCtxt->GetNextDiffPosition(p);
+		if (di.diffcode.isDirectory())
+			continue;
+		PathContext cmpPaths;
+		m_pCtxt->GetComparePaths(di, cmpPaths);
+		if (cmpPaths.GetSize() != paths.GetSize())
+			continue;
+		for (int i = 0; i < paths.GetSize(); ++i)
+		{
+			if (!paths[i].empty() && paths[i] == cmpPaths[i])
+			{
+				relPath = di.getItemRelativePath();
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * @brief Merge20 (Panel P3): folder item by relative path (the
+ * panel's stable row key).
+ * @param [in] relPath DIFFITEM::getItemRelativePath().
+ * @return Folder item, or nullptr when there is no compare context
+ *         or no item with that path (removed by a rescan).
+ */
+const DIFFITEM* CDirDoc::Merge20FindItemByRelPath(const String& relPath) const
+{
+	if (m_pCtxt == nullptr)
+		return nullptr;
+	for (DIFFITEM* p = m_pCtxt->GetFirstDiffPosition(); p != nullptr;)
+	{
+		const DIFFITEM& di = m_pCtxt->GetNextDiffPosition(p);
+		if (di.getItemRelativePath() == relPath)
+			return &di;
+	}
+	return nullptr;
+}
+
+/**
+ * @brief Merge20 (Panel P3): repaint one folder-list row and update
+ * the folder status-bar count after a panel-initiated change (P-R8).
+ * The sidecar setters notify the panels, but the folder list itself
+ * is only repainted here (its values are read on demand, so a
+ * repaint is enough for the row) and the count only by
+ * UpdateMerge20StatusCount (S3). GetItemIndex returns 0 on a miss
+ * (upstream behaviour, not -1), so the row is verified through
+ * GetItemKey before repainting: a hidden row is skipped instead of
+ * repainting row 0.
+ * @param [in] di Changed folder item.
+ */
+void CDirDoc::Merge20UpdateDirViewItem(const DIFFITEM& di)
+{
+	if (m_pDirView == nullptr)
+		return;
+	const int nIdx = m_pDirView->GetItemIndex(const_cast<DIFFITEM*>(&di));
+	if (nIdx >= 0 && nIdx < m_pDirView->GetListCtrl().GetItemCount() &&
+		m_pDirView->GetItemKey(nIdx) == &di)
+	{
+		m_pDirView->UpdateDiffItemStatus(static_cast<UINT>(nIdx));
+	}
+	m_pDirView->UpdateMerge20StatusCount();
+}
+
+/**
+ * @brief Merge20 (Panel P3): refresh the folder list and its
+ * status-bar count after a panel-initiated bulk change (P-R8:
+ * batch check, directory check/uncheck). One invalidate plus one
+ * count update for the whole batch (the S3 folder-side rule), not
+ * one per file.
+ */
+void CDirDoc::Merge20UpdateDirViewStatus()
+{
+	if (m_pDirView == nullptr)
+		return;
+	m_pDirView->Invalidate();
+	m_pDirView->UpdateMerge20StatusCount();
 }
 
 /**
@@ -1031,6 +1225,15 @@ void CDirDoc::CompareReady()
 {
 	// Close and destroy the dialog after compare
 	m_pDirView->GetParentFrame()->HideProgressBar();
+	// Merge20 (Panel P3, design section 12.5): a rescan rebuilds the
+	// DIFFITEMs, so the panels' cached rows go stale. Notify here
+	// (compare completed, UI thread, before Redisplay): every open
+	// panel rebuilds from the new list. P1 left this to the next
+	// activation or state-change notification, so a rescanned list
+	// stayed old until then. The notification is posted (async), so
+	// the panels refresh after the folder view's Redisplay.
+	if (m_pCtxt != nullptr)
+		m_pCtxt->NotifyMerge20FileListChanged();
 }
 
 /**
