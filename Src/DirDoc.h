@@ -105,6 +105,12 @@ public:
 	bool GetMerge20IncludeInOutput(const DIFFITEM& di) const;
 	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include);
 	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	// Merge20 (Phase 4 D2, IDirDoc): review state of the file a merge
+	// doc shows, found by the merge doc's paths (same lookup, incl. the
+	// swapped-paths fallback, as SetMerge20Classification). The
+	// dedicated-mode bar's review buttons use these.
+	ReviewState GetMerge20ReviewState(const PathContext& paths) const override;
+	void ApplyMerge20ReviewState(const PathContext& paths, ReviewState state) override;
 	// Merge20 (S4, IDirDoc): store the classification computed by a
 	// merge doc after a rescan (see IDirDoc::SetMerge20Classification).
 	void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) override;

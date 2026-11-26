@@ -795,6 +795,18 @@
 #define IDC_MERGE20_LEARN_IMPORT        1742
 #define IDC_MERGE20_LEARN_CLEAR         1743
 #define IDC_MERGE20_LEARN_NOTICE        1744
+#define IDC_MERGE20_DED_EXIT            1745
+#define IDC_MERGE20_DED_PREV_FILE       1746
+#define IDC_MERGE20_DED_NEXT_FILE       1747
+#define IDC_MERGE20_DED_REVIEW_TODO     1748
+#define IDC_MERGE20_DED_REVIEW_DONE     1749
+#define IDC_MERGE20_DED_REVIEW_HOLD     1750
+#define IDC_MERGE20_DED_REVIEW_SPECIAL  1751
+#define IDC_MERGE20_DED_REVIEW_KEEP     1752
+#define IDC_MERGE20_DED_PIN             1753
+#define IDC_MERGE20_DED_TODO_ONLY       1754
+#define IDC_MERGE20_DED_SNIPER          1755
+#define IDC_MERGE20_DED_ZOOM            1756
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1744,6 +1756,18 @@
 #define ID_MERGE20_LEARN_APPLY        38939
 #define ID_MERGE20_LEARN_DISMISS      38940
 #define ID_VIEW_MERGE20_DEDICATED_MODE 38941
+#define ID_MERGE20_DED_EXIT           38942
+#define ID_MERGE20_DED_PREV_FILE      38943
+#define ID_MERGE20_DED_NEXT_FILE      38944
+#define ID_MERGE20_DED_REVIEW_TODO    38945
+#define ID_MERGE20_DED_REVIEW_DONE    38946
+#define ID_MERGE20_DED_REVIEW_HOLD    38947
+#define ID_MERGE20_DED_REVIEW_SPECIAL 38948
+#define ID_MERGE20_DED_REVIEW_KEEP    38949
+#define ID_MERGE20_DED_PIN            38950
+#define ID_MERGE20_DED_TODO_ONLY      38951
+#define ID_MERGE20_DED_SNIPER         38952
+#define ID_MERGE20_DED_ZOOM_RESET     38953
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2480,16 +2504,19 @@
 
 // Merge20 (Phase 4 D0, design section 5.2/D0): resource IDs reserved
 // for the Phase 4 dialogs and commands. D1 consumes 38941
-// (ID_VIEW_MERGE20_DEDICATED_MODE); D2-D9 allocate from these ranges.
+// (ID_VIEW_MERGE20_DEDICATED_MODE); D2 consumes commands 38942-38953
+// (dedicated-bar actions) and controls 1745-1756 (dedicated-bar buttons);
+// D3-D9 allocate from these ranges.
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 297 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
 //   (IDR_LOGO), 310 (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already
 //   taken; dialog IDs must skip those values.
-// - controls (IDC_*): from 1745 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1757 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603).
-// - commands (ID_*): from 38942 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
-//   D1; _APS_NEXT_COMMAND_VALUE is now 38942), free up to 38976
+// - commands (ID_*): from 38954 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
+//   D1; 38942-38953 are the D2 dedicated-bar commands;
+//   _APS_NEXT_COMMAND_VALUE is now 38954), free up to 38976
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2499,8 +2526,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        297
-#define _APS_NEXT_COMMAND_VALUE         38942
-#define _APS_NEXT_CONTROL_VALUE         1745
+#define _APS_NEXT_COMMAND_VALUE         38954
+#define _APS_NEXT_CONTROL_VALUE         1757
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif

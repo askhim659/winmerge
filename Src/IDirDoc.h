@@ -28,6 +28,15 @@ struct IDirDoc
 	// after a rescan. `paths` are the merge doc's file paths, used to
 	// find the folder-compare item.
 	virtual void SetMerge20Classification(const PathContext& paths, const Merge20FileState& state) = 0;
+	// Merge20 (Phase 4 D2): review state of one file, found by the
+	// merge doc's file paths (same lookup as SetMerge20Classification).
+	// The dedicated-mode bar's review buttons use these: a file compare
+	// opened from a folder compare applies the state to its own folder
+	// item (S2's ApplyMerge20ReviewState rule, incl. the output-flag
+	// linkage). Default implementations do nothing and report TODO, so
+	// existing IDirDoc users are unaffected; CDirDoc overrides them.
+	virtual ReviewState GetMerge20ReviewState(const PathContext& paths) const { return ReviewState::TODO; }
+	virtual void ApplyMerge20ReviewState(const PathContext& paths, ReviewState state) {}
 	virtual void ApplyDisplayRoot(int nIndex, String& sText) = 0;
 	virtual bool CompareFilesIfFilesAreLarge(int nFiles, const FileLocation ifileloc[]) = 0;
 	virtual bool MoveableToNextDiff() = 0;
