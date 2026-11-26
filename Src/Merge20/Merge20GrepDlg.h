@@ -81,11 +81,11 @@ protected:
 	virtual BOOL OnInitDialog() override;
 	virtual void OnOK() override;
 	virtual void OnCancel() override;
-	virtual void OnDestroy() override;
 	virtual BOOL PreTranslateMessage(MSG* pMsg) override;
 
 	//{{AFX_MSG(CMerge20GrepDlg)
 	afx_msg void OnSize(UINT nType, int cx, int cy);
+	afx_msg void OnDestroy();
 	afx_msg void OnButtonClicked(UINT nID);
 	afx_msg void OnClickResult(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg LRESULT OnGrepProgress(WPARAM wParam, LPARAM lParam);
