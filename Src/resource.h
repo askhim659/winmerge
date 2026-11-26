@@ -117,6 +117,7 @@
 #define IDD_MERGE20_CSV_EXPORT          294
 #define IDD_MERGE20_MEMO                295
 #define IDD_MERGE20_LEARN               296
+#define IDD_MERGE20_SNIPER              297
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -817,6 +818,17 @@
 #define IDC_MERGE20_FOCUS_SPLIT       1764
 #define IDC_MERGE20_FOCUS_REGROUP     1765
 #define IDC_MERGE20_FOCUS_RESULT      1766
+#define IDC_MERGE20_SNIPER_PREV       1767
+#define IDC_MERGE20_SNIPER_NEXT       1768
+#define IDC_MERGE20_SNIPER_LAYOUT     1769
+#define IDC_MERGE20_SNIPER_FONT_DOWN  1770
+#define IDC_MERGE20_SNIPER_FONT_UP    1771
+#define IDC_MERGE20_SNIPER_SPLIT      1772
+#define IDC_MERGE20_SNIPER_REGROUP    1773
+#define IDC_MERGE20_SNIPER_CLOSE      1774
+#define IDC_MERGE20_SNIPER_VIEW_OLD   1775
+#define IDC_MERGE20_SNIPER_VIEW_NEW   1776
+#define IDC_MERGE20_SNIPER_VIEW_MERGED 1777
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2520,13 +2532,15 @@
 // (dedicated-bar actions) and controls 1745-1756 (dedicated-bar buttons);
 // D3 consumes control 1757 (dedicated-bar file info); D4 consumes
 // controls 1758-1766 (focus dock header + result view); D5 consumes
-// commands 38954-38955 (split/regroup); D6-D9 allocate from these ranges.
+// commands 38954-38955 (split/regroup); D6 consumes dialog 297
+// (sniper overlay) and controls 1767-1777 (sniper header buttons
+// + panels); D7-D9 allocate from these ranges.
 // Verified by sorting all numeric defines in resource.h:
-// - dialogs (IDD_*): from 297 (_APS_NEXT_RESOURCE_VALUE). The numeric
+// - dialogs (IDD_*): from 298 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
 //   (IDR_LOGO), 310 (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already
 //   taken; dialog IDs must skip those values.
-// - controls (IDC_*): from 1767 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1778 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603).
 // - commands (ID_*): from 38956 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
@@ -2540,9 +2554,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        297
+#define _APS_NEXT_RESOURCE_VALUE        298
 #define _APS_NEXT_COMMAND_VALUE         38956
-#define _APS_NEXT_CONTROL_VALUE         1767
+#define _APS_NEXT_CONTROL_VALUE         1778
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
