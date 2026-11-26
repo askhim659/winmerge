@@ -4621,3 +4621,86 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 - D11 で判明した制限：(a) 比較オプション適用の busy 時フォールバック（比較スレッドが走っている場合、オプションは適用されず S8 の注記のみ動作になる。§37.5 参照）。(b) 名前付きファイルフィルタの定義ファイル消失時、復元値はリテラルマスク扱いになる（§37.5 参照）。(c) dedMode の復元は開封中のフレームを専用モードへ強制しない（次に開くファイル比較に反映。§37.5 参照）。(d) フォーカスドックの高さはフローティング時には保存されない（キャプション分が入るため。ドッキング時のみ保存）。(e) レビューフィルタの UI はフォルダ一覧のコンテキストメニューにのみあり、View メニューやフィルタバーにはない。(f) 見えるホバーストリップは不採用（初回ピン固定で代替。§37.2 参照）。
 - 実機確認待ち（§37.7 の全項目。特に A-4-1〜A-4-8 の実機確認と T-3-7／T-3-8）。実機で確認するまで「できた」とは言わない。
 - 品質修正版（D1〜D11）のリリース後に完全版へ進む際は、本節の残課題と実機確認結果を反映すること。
+
+## 38. Panel P0 — 常設ファイル一覧パネル基盤（設計書 §12.7 P0）
+
+### 38.1 変更一覧（1 ファイル 1 コミット、20 件＋本節の記録コミット）
+
+| # | ファイル | 内容 |
+|---|---|---|
+| 1 | Src/Merge20/Merge20FileListCtrl.h | 新規。`CMerge20FileListCtrl`（`CListCtrl` 派生。仮想リスト `LVS_OWNERDATA`）の宣言。行はキャッシュしたファイル名文字列 |
+| 2 | Src/Merge20/Merge20FileListCtrl.cpp | 新規。`Refresh()`（`GetFirstDiffPosition`／`GetNextDiffPosition` の平坦な深さ優先走査で全 `DIFFITEM` を列挙。表示値は S6 の `Merge20CsvGetFileNameText` を流用しフォルダ比較の一覧と一致）。`LVN_GETDISPINFO` で行テキストを供給 |
+| 3 | Src/Merge20/Merge20FileListBar.h | 新規。`CMerge20FileListBar`（`CSizingControlBarCF` 派生。左ドック）の宣言。子は一覧と空表示ラベル。幅クランプ用の `LoadState`／`CalcFixedLayout` override |
+| 4 | Src/Merge20/Merge20FileListBar.cpp | 新規。`OnCreate`（初期幅 280px・最小幅 160px、子 2 つの手動レイアウト）、幅クランプ（160〜600px）、`Refresh()`（フォルダ比較なしのとき一覧を隠して「フォルダ比較がありません」を表示し一覧を無効化）、`UpdateResources()` |
+| 5 | Src/StdAfx.h | `MSG_MERGE20_FILELIST_REFRESH = WM_USER + 4` を追加（`WM_USER + 1〜3` は使用済み、`+4` は未使用を確認） |
+| 6 | Src/DiffContext.h | 通知コールバックを追加（`Merge20FileListNotifyCallback = std::function<void()>`、`SetMerge20FileListNotifyCallback`、`NotifyMerge20FileListChanged`、メンバ `m_merge20FileListNotify`）。`#include <functional>` を追加 |
+| 7 | Src/DiffContext.cpp | `NotifyMerge20FileListChanged()` を実装し、単独変更の setter 6 件（確認内容 2 件・出力 1 件・`ApplyMerge20ReviewState`・分類・メモ）から呼ぶ |
+| 8 | Src/OptionsDef.h | 新キー `OPT_MERGE20_FILELIST_VISIBLE`（`Merge20/FileListVisible`）を追加 |
+| 9 | Src/OptionsInit.cpp | 同キーを既定 `true` で初期化 |
+| 10 | Src/resource.h | コマンド `ID_VIEW_MERGE20_FILELIST_PANEL` 38966、コントロール `IDC_MERGE20_FILELIST_LIST` 1810・`IDC_MERGE20_FILELIST_EMPTY` 1811 を確保。`_APS_NEXT_COMMAND_VALUE` 38966→38967、`_APS_NEXT_CONTROL_VALUE` 1810→1812。コメント欄に P0 の消費を記録 |
+| 11 | Src/Merge.rc | 表示メニューに `MENUITEM "File List Panel", ID_VIEW_MERGE20_FILELIST_PANEL` を追加（専用モード項目の次） |
+| 12 | Src/MergeEditFrm.h | `Merge20FileListBar.h` の include、`m_wndFileListBar` メンバ、`OnMerge20FileListRefresh` ハンドラ宣言を追加 |
+| 13 | Src/MergeEditFrm.cpp | バーの生成（`OnCreateClient`、専用モードバーと同方式）・ドック（`OnCreate`、左）・表示判定・トグル（`OnBarCheck` でキー保存＋`Refresh()`）・幅の保存（`SavePosition` で `SaveState`）・通知登録（`OnCreateClient`）・通知ハンドラ・活性化時 `Refresh()`（`OnMDIActivate`）・言語変更時の `UpdateResources()` |
+| 14 | Src/Merge.vcxproj | 新規 4 ファイルを登録（いずれも StdAfx.h グループの既定エントリ。MFC を使うため pch.h グループにはしない。S3／S4 の教訓） |
+| 15 | Src/Merge.vcxproj.filters | 同上（Merge20 フィルタ） |
+| 16 | Testing/GoogleTest/Merge20/Merge20FileListNotify_test.cpp | 新規。通知コールバックの単体テスト 5 件（未登録時の無通知・確認内容／分類／メモでの通知・登録の置換と解除） |
+| 17 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | テストを登録（pch.h グループ） |
+| 18 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | テストを登録（Tests フィルタ） |
+| 19 | Translations/WinMerge/Japanese.po | 新規 2 件を追加（下記 §38.4 の監査参照） |
+| 20 | Src/Merge20/Merge20FileListBar.cpp | CI 修正（C2672）：クランプ定数を `int` から `LONG` に変更（`CSize::cx` は `LONG`。下記 §38.4 参照） |
+
+### 38.2 設計判断（判断理由付き）
+
+- **`OPT_MERGE20_DOCK_HIDDEN` は流用しない**。コード実読で確認：`MergeEditFrm.cpp:413`（`OnBarCheck`）と `:923`（`SavePosition`）がともに `m_wndDetailBar`（Diff Pane／フォーカスドック）の表示状態を同キーに書き込む。パネルに流用すると 2 つのバーの表示状態が 1 つのキーで上書きし合う。専用キー `OPT_MERGE20_FILELIST_VISIBLE`（`Merge20/FileListVisible`、既定 `true`）を新設し、トグルの永続化は P0 で実施できた。幅はバーの `SaveState`／`LoadState`（`Settings` プロファイル、他バーと同じ方式）で永続化される。スリム化・検索文字列の保存は P4 の範囲（設計書 §12.7）。
+- **通知は `std::function<void()>` コールバック経由**。`CDiffContext` は pch.h グループ（`DiffContext.cpp` は先頭 include が `pch.h`）で、`StdAfx.h`（`MSG_` 定数の置き場所）は読めず、`DiffContext.h` の include 閉包には `windows.h` がないため `HWND` をヘッダに持ち込めない。フレームが `PostMessage(hwndFrame, MSG_MERGE20_FILELIST_REFRESH, 0, 0)` するラムダを登録し、状態変更時に `CDiffContext::NotifyMerge20FileListChanged()` が呼ぶ。ポーリングはしない（設計書 §12.5 どおり）。
+- **通知が届くのは最後に登録したフレームだけ**。`CDiffContext` は同じフォルダ比較から開いた全ファイル比較フレームで共有されるため、後から開いたフレームが登録を上書きする。他のフレームは `OnMDIActivate` での `Refresh()` で追いつく。登録解除はしない：破棄済み `HWND` への `PostMessage` は無害な no-op だが、閉じるフレームが解除すると後から登録したフレームの登録まで消してしまうため。複数フレームへの同報は P3 の課題とする。
+- **バルク経路には通知を付けない**。`SetMerge20SessionState`・`ResetMerge20ChangedFile`・`SetMerge20DiffJudgments`・`SetMerge20SplitGroups` は復元・再計算の一括処理で、ファイルごとに通知すると 1000 件の `PostMessage` が飛ぶ。P0 のパネルはファイル名しか表示しないため実害はない。P1（行の表示値）・P3（連動）で一括処理後の通知を整備する。
+- **`ApplyMerge20ReviewState` は 2 回通知する**。内部で呼ぶ `SetMerge20ReviewState(di)` が 1 回目、出力フラグの連動変更後に 2 回目（最終状態での通知）。P0 の表示には影響しないが、P1 以降で行の表示値が最終状態と一致することを保証する。
+- **`SCBS_SIZECHILD` は付けない**。`sizecbar.cpp` の実装は「子は 1 つだけ」を前提に最初の子だけをバー全体に広げる（`ASSERT` 付き）。このバーは子が 2 つ（一覧＋空表示ラベル）のため、DedBar の `LayoutButtons()` と同じく `OnSize` で両方を手動レイアウトする。スタイルは左ドックの前例（`CLocationBar`）と同じ `SCBS_EDGELEFT | SCBS_EDGERIGHT`。
+- **表示の既定：保存トグル ON かつフォルダ比較ありのときだけ表示する**。設計書 §12.7 (a)「空のパネルがドッキング表示される」と §12.4「空の状態でドッキングしないこと（パネルは一覧の中身がある場合だけ表示する）」の読み分け：(a) は P0 の骨格パネルが左にドックされ表示されること（フォルダ比較から開いた場合）であり、§12.4 は一覧の中身がない単独ファイル比較では自動表示しないこと。単独ファイル比較ではパネルは初期非表示だが、表示メニューのトグルで表示でき、その場合は「フォルダ比較がありません」の 1 行になる（§12.5 どおり）。
+- **幅は 160〜600px にクランプ、初期幅 280px**。D1 の教訓（空のサイズ可変バーがクライアント領域を奪う）を初期幅の明示で、D2 の教訓（保存値・ドラッグによる肥大化）を `LoadState`／`CalcFixedLayout` のクランプで受ける。`m_szVert`／`m_szFloat` ともにクランプする。
+- **P0 の一覧はファイル名 1 列・フラット**。全 `DIFFITEM` を比較順に列挙し、ディレクトリ行も含む（フォルダ比較の一覧と同じく行として存在するため）。階層の展開／折畳は P2、選択・対応区分・リスク・旧／変／新・確認内容の列と行色・件数表示は P1。表示値は S6 のラッパー（`Merge20CsvGetFileNameText`）経由でフォルダ比較の一覧と一致させる。
+- **専用モードはパネルに触れない**。`EnterDedicatedMode`／`ExitDedicatedMode` が隠す・戻すのは 5 バー（ファイルパスバー・Location Pane・Diff Pane・Merge Result Pane・ステータスバー）のみで、パネルは対象外（設計書 §12.6 どおり）。専用モードに入ってもパネルの表示状態は維持される。スリム化（専用モード中の既定の折畳み表示）は P4 の範囲。
+- **空表示メッセージに【Wiz】は付けない**。新規文字列 2 件のうち、表示名・ラベルである「File List Panel」→「【Wiz】ファイル一覧パネル」には付け、状態メッセージである「No folder comparison」→「フォルダ比較がありません」には付けない（D11 §37.6 の前例：中間メッセージ・不一致メッセージ・レポート行は意図的に【Wiz】なし）。列見出しは既存 msgid「Filename」（→「名前」）を流用し、新規文字列は増やさない。
+- **新規 UI ファイルは `Merge.vcxproj` のみ登録**。バー／コントロールは MFC のため `UnitTests.vcxproj` には登録しない（`Merge20DedBar` と同じ。S1 の LNK2019 の教訓は、単体テストがリンクする純粋モジュールに限る）。テスト対象の通知コールバックは `CDiffContext`（`UnitTests` に既登録）に置いたため、テスト 5 件は `UnitTests` で実行できる。
+- **クランプ定数の型は `CSize::cx`（`LONG`）に揃える**。初回 CI で error C2672 が 6 件出た：`(std::min)(...)`／`(std::max)(...)` と書いても（D7 の教訓）、引数の型が `LONG` と `int` で違うとテンプレート推論が曖昧になりコンパイルできない。定数を `LONG` にして修正した（コミット `fcc9f4c`）。
+
+### 38.3 設計書 §12.7 P0 受け入れ条件の照合表
+
+| 条件 | 判定 | 備考 |
+|---|---|---|
+| (a) ファイル比較フレームの左側に空のパネルがドッキング表示されること | 満たす（コード）＋未検証（実機） | `OnCreateClient` で生成、`OnCreate` で左ドック。フォルダ比較から開いた場合は保存トグル ON なら表示される。単独ファイル比較では初期非表示（§38.2 の読み分け参照）。実機確認は §38.5 項目 1・2 |
+| (b) フォルダ比較から開いた場合は一覧が表示され、単独ファイル比較の場合は「フォルダ比較がありません」と表示されること | 満たす（コード）＋未検証（実機） | `Refresh()` が `m_pDirDoc` の有無で一覧／空表示を切り替える。一覧はファイル名 1 列（P0 の範囲）。実機確認は §38.5 項目 3・4 |
+| (c) 表示／非表示の切替が正しく動くこと | 満たす（コード）＋未検証（実機） | 表示メニューの「【Wiz】ファイル一覧パネル」は `OnBarCheck` による標準のバー切替＋チェック表示（`OnUpdateControlBarMenu`）。トグルは専用キーに保存される。実機確認は §38.5 項目 5 |
+| (d) 既存のファイル比較・フォルダ比較の回帰がないこと | 満たす（コード）＋未検証（実機） | 既存の比較経路への変更は、通知コールバックの追加（未登録時は no-op）とフレームへのバー追加のみ。`CDiffContext` の setter の挙動自体は不変。実機確認は §38.5 項目 7 |
+| 設計書 §12.5：`m_pDirDoc` 経由の状態参照。`CDiffContext` の内部構造には直接触れないこと | 満たす（コード） | パネルは `CDirDoc::GetDiffContext()` 経由で公開 API（`DiffItemList` の走査、`Merge20CsvGetFileNameText`）だけを使う。サイドカーへの直接アクセスはない |
+| 設計書 §12.5：更新の通知（`PostMessage` による再描画要求。ポーリングはしない） | 満たす（コード）＋未検証（実機） | コールバック＋`MSG_MERGE20_FILELIST_REFRESH`。単体テスト 5 件でコールバックの発火を確認。実機での通知→再描画の確認は §38.5 項目 6 |
+| 設計書 §12.6：専用モードとは独立したトグル。専用モードに入ってもパネルの表示状態は維持する | 満たす（コード）＋未検証（実機） | 専用モードの出入りはパネルに触れない。実機確認は §38.5 項目 8 |
+| 設計書 §12.4：初期サイズを明示し、空の状態でドッキングしないこと。D2 の教訓（固定値でクランプ） | 満たす（コード）＋未検証（実機） | 初期幅 280px、幅 160〜600px クランプ（`LoadState`／`CalcFixedLayout`）。実機確認は §38.5 項目 2 |
+
+### 38.4 検証レポート
+
+- CI 実行 45819589348（head `fcc9f4c`、PR #34）：結論 success。GoogleTest 699 テスト全パス（57 スイート、`[ FAILED ]` 行なし。新規 Merge20FileListNotify 5 件含む。D11 時点 694 件から＋5）。コンパイルエラー 0 件。成果物：WinMerge-x64.zip 26,426,245 バイト（ID 15117947614、失効 2027-02-24T12:26:00Z）、WinMerge-x64-Setup-x64.exe 39,872,578 バイト（ID 15118027455、失効 2027-02-24T12:26:00Z）。全文ログは `~/workspace/.coord/p0_final_log.txt` に保存（47,531 行）。ログ中の "FAILED" 4 件は翻訳文字列 ID（IDS_FILESAVE_FAILED 等）で、テスト失敗ではない。CI の番兵「Merge20 strings present in the bundled Japanese.po.」も確認。
+- 初回実行 45817715295（head `03a41e5`）は failure：`Merge20FileListBar.cpp` の `LoadState`／`CalcFixedLayout` で error C2672 が 6 件（`CSize::cx` は `LONG`、クランプ定数は `int` でテンプレート推論が曖昧。§38.2 の教訓参照）。定数を `LONG` に変更して修正（コミット `fcc9f4c`）。修正後の実行 45819589348 が success。
+- .po 監査：ブランチ版 msgid 2150 件 vs master 版 2148 件（＋2。新規 2 件）。【Wiz】118 件 vs master 版 117 件（＋1）。＋2 と ＋1 の差 1 件は空表示メッセージのため意図的に【Wiz】なし（§38.2 参照）。ブランチ版・master 版とも API から取得して確認。CI の番兵は msgid の存在しか見ないため、件数監査で msgstr の欠落がないことを確認済み。
+- ローカル検証：全変更ファイルの括弧バランス、`resource.h` の値ソートによる ID 重複チェック（38966・1810・1811 に重複なし。既存の FIRST／LAST 別名の重複は従来どおり）、`WM_USER + 4` の未使用確認、`SCBS_SIZECHILD` の実装確認（`sizecbar.cpp`：子は 1 つだけ）、`dynamic_cast<CDirDoc*>` の前例確認（`Merge20SessionDoc.cpp:641`）、`OnBarCheck`／`OnUpdateControlBarMenu` の既存バーでの前例確認。`Merge20FileListCtrl`／`Bar` は MFC のためこの VM ではコンパイルできない（CI で確認）。
+- 未検証（Windows 実機でのみ確認できる挙動）：§38.5 のチェックリスト。実機で確認するまで「できた」とは言わない。
+
+### 38.5 実機確認チェックリスト（手順付き）
+
+1. **パネルの表示（フォルダ比較から開く）**：実フォルダを比較し、一覧からファイルを開く。ファイル比較ウィンドウの左側にパネルがドッキング表示され、ファイル名の一覧が出ること。パネルが Location Pane の左にあること（左端）。パネル幅はドラッグで変えられること。
+2. **パネルの初期サイズとクランプ**：パネル幅を極端に狭く（または広く）ドラッグして終了→再起動→同じフォルダを開くと、幅が 160〜600px の範囲に戻っていること（極端な幅が復元されないこと）。パネルがファイル表示領域を奪って比較画面が見えなくならないこと。
+3. **一覧の内容**：パネルの一覧がフォルダ比較の一覧と同じファイル名・同じ順序であること（ディレクトリ行も含む。P0 はファイル名 1 列のみ）。100 ファイル規模のフォルダで一覧表示が重くないこと。
+4. **単独ファイル比較の空表示**：2 ファイルを直接開く（コマンドラインまたはドラッグ＆ドロップ）。パネルは初期非表示であること。表示メニューから「【Wiz】ファイル一覧パネル」を ON にすると、パネルに「フォルダ比較がありません」の 1 行だけが表示され、一覧・操作ができないこと。
+5. **表示／非表示の切替と保存**：表示メニュー「【Wiz】ファイル一覧パネル」のチェックを外すとパネルが消え、入れると再表示されること。バーの ✕ ボタンでも閉じられること。閉じた状態で終了→再起動→同じフォルダを開くと、パネルが閉じたままであること。開いた状態でも同様に復元されること。
+6. **通知による再描画**：フォルダ比較画面で確認内容を変更（キー 1〜5 など）したとき、開いているファイル比較のパネルが（表示が変わる項目がない P0 では見た目は変わらないが）エラーなく表示され続けること。複数ファイルを開いている場合、最後に開いたフレームのパネルが最新になること。
+7. **回帰なし**：ファイル比較（2 ファイル）・フォルダ比較（2 フォルダ）が従来どおり動くこと。確認内容の変更・出力チェック・一括チェック・CSV 出力が従来どおり動くこと。専用モード・スナイパー・フォーカスドック・Grep が従来どおり動くこと。
+8. **専用モードとの独立性**：パネルを表示したまま専用モードに入ると、パネルは表示されたままであること（5 バーだけが隠れること）。専用モードを出るとパネルの表示状態が入る前と同じであること。パネルを隠したまま専用モードに入って出ても、パネルは隠れたままであること。
+
+### 38.6 P1 への引き継ぎ
+
+- 列の追加（選択・対応区分・リスク・旧／変／新・確認内容）。表示値は S6 のラッパー（`Merge20CsvGet*Text`）を流用し、フォルダ比較の一覧と一致させること。旧／変／新の内訳 3 列は H-LIST の列を流用する。H-LIST がまだの場合は要約文の「欠落：N行 / 変更：M行 / 追加：K行」を 1 列にまとめる暫定形（設計書 §12.3 P-R1）。
+- 行色（S2 と同じ規則：SPECIAL＝薄赤、HOLD＝薄黄、KEEP＝灰）。要判断タグ・リスク「高」の強調。件数表示（「表示 N 件中 M 件チェック」。S3 の `GetMerge20StatusCountText()` と同じ定義）。
+- 通知の整備：一括処理（セッション復元・再分類）後の通知、複数フレームへの同報（§38.2 の制限の解消）。`NotifyMerge20FileListChanged()` の呼び出し箇所は `DiffContext.cpp` の setter に集約されている。
+- P0 で残した制限：パネルからの操作は一切ない（行クリックでの比較切替・確認内容の変更は P3）。検索・階層展開／折畳・一括チェックは P2。表示状態・幅・スリム化・検索文字列の保存・復元の完成は P4（D11 と連携）。パネルのドック位置（Location Pane との左右関係）は実機で確認すること（§38.5 項目 1）。
+- 実機確認待ち（§38.5 の全項目）。実機で問題が出た場合は本節へ結果を追記すること。
