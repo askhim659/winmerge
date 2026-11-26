@@ -41,6 +41,7 @@ public:
 	// Each setter is a no-op when the value did not change, so the
 	// idle-time refresh does not flicker the buttons.
 	void SetReviewState(ReviewState state);
+	void SetReviewEnabled(bool bEnable);
 	void SetPrevNextEnabled(bool bPrev, bool bNext);
 	void SetPinned(bool bPinned);
 	void SetTodoOnly(bool bTodoOnly);
