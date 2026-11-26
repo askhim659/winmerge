@@ -173,6 +173,12 @@ public:
 	bool IsDiffVisible(int nDiff);
 	bool IsDiffFiltered(int nDiff);
 	void ZoomText(short amount);
+	// Merge20 (Phase 4 D2): set the zoom to an absolute OPT_VIEW_ZOOM
+	// value (100-8000, 1000 = 100%). Unlike ZoomText(0), which resets
+	// to the original font size (100%), this can set the dedicated-mode
+	// zoom (e.g. 750 = 75% for the R key). Same font application as
+	// ZoomText: all panes plus the merge result view.
+	void ZoomTextTo(int nZoom);
 	virtual bool QueryEditable() override;
 	virtual void EnsureVisible(CEPoint pt) override;
 	virtual void EnsureVisible(CEPoint ptStart, CEPoint ptEnd) override;
