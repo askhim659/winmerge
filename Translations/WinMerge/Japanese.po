@@ -890,8 +890,8 @@ msgstr "ヘルプ(&H)"
 
 #. IDR_MERGEDOCTYPE, ID_HELP_CONTENTS
 #: Merge.rc:498 Merge.rc:675 Merge.rc:1020
-msgid "&WinMerge Help\tF1"
-msgstr "&WinMerge ヘルプ\tF1"
+msgid "&WizMerge Help\tF1"
+msgstr "&WizMerge ヘルプ\tF1"
 
 #. IDR_MERGEDOCTYPE, ID_HELP_RELEASENOTES
 #: Merge.rc:500 Merge.rc:677 Merge.rc:1022
@@ -915,8 +915,8 @@ msgstr "&GNU General Public License"
 
 #. IDR_MERGEDOCTYPE, ID_APP_ABOUT
 #: Merge.rc:505 Merge.rc:682 Merge.rc:1027
-msgid "&About WinMerge..."
-msgstr "WinMerge について(&A)..."
+msgid "&About WizMerge..."
+msgstr "WizMerge について(&A)..."
 
 #. IDR_MERGEDOCTYPE
 #: Merge.rc:538 Merge.rc:735
@@ -3304,13 +3304,13 @@ msgstr "結合: OR(&O)"
 
 #. IDD_ABOUTBOX
 #: Merge.rc:2291
-msgid "About WinMerge"
-msgstr "WinMerge について"
+msgid "About WizMerge"
+msgstr "WizMerge について"
 
 #. IDD_ABOUTBOX, IDC_WWW
 #: Merge.rc:2295
-msgid "Visit the WinMerge Homepage!"
-msgstr "WinMerge のホームページに行く!"
+msgid "Visit the WizMerge Homepage!"
+msgstr "WizMerge のホームページに行く!"
 
 #. IDD_PLUGINS_EDITPLUGIN, IDOK
 #: Merge.rc:2297 Merge.rc:2452 Merge.rc:2808 Merge.rc:2832 Merge.rc:2846
@@ -4145,7 +4145,7 @@ msgstr "2/3方向マージにマージ結果ペインを使用(&U)"
 #. IDD_PROPPAGE_MESSAGEBOXES, IDC_STATIC
 #: Merge.rc:2776
 msgid "Some messages can be hidden by the user. Press Reset to make all messages visible again."
-msgstr "WinMerge は、いくつかの共通メッセージボックスを非表示にできます。すべてのメッセージボックスを再び表示させるには、[リセット] ボタンを押してください。"
+msgstr "WizMerge は、いくつかの共通メッセージボックスを非表示にできます。すべてのメッセージボックスを再び表示させるには、[リセット] ボタンを押してください。"
 
 #. IDD_SELECT_FILES_OR_FOLDERS, IDC_RESET
 #: Merge.rc:2777 Merge.rc:3520
@@ -4539,8 +4539,8 @@ msgstr "システム コードページ"
 
 #. IDD_PROPPAGE_CODEPAGE, IDC_CP_UI
 #: Merge.rc:3022
-msgid "According to WinMerge User Interface"
-msgstr "WinMerge ユーザー インターフェイス言語"
+msgid "According to WizMerge User Interface"
+msgstr "WizMerge ユーザー インターフェイス言語"
 
 #. IDD_PROPPAGE_CODEPAGE, IDC_CP_CUSTOM
 #: Merge.rc:3023
@@ -5505,8 +5505,8 @@ msgstr ""
 
 #. IDS_SPLASH_GPLTEXT
 #: Merge.rc:4630
-msgid "WinMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
-msgstr "WinMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
+msgid "WizMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
+msgstr "WizMerge comes with ABSOLUTELY NO WARRANTY. It is free software and can be redistributed under the conditions of the GNU General Public License - see the Help menu for details."
 
 #. IDS_MESSAGEBOX_ABORT
 #: Merge.rc:4638
@@ -5684,8 +5684,8 @@ msgstr "すべてのファイル (*.*)|*.*||"
 
 #. IDS_PROJECTFILES
 #: Merge.rc:4730
-msgid "WinMerge Project Files (*.WinMerge)|*.WinMerge||"
-msgstr "WinMerge プロジェクト ファイル (*.WinMerge)|*.WinMerge||"
+msgid "WizMerge Project Files (*.WinMerge)|*.WinMerge||"
+msgstr "WizMerge プロジェクト ファイル (*.WinMerge)|*.WinMerge||"
 
 #. IDS_INIFILES
 #: Merge.rc:4732
@@ -6329,12 +6329,12 @@ msgstr ""
 msgid ""
 "Another application updated\n"
 "%1\n"
-"since WinMerge loaded it.\n"
+"since WizMerge loaded it.\n"
 "\n"
 "Overwrite?"
 msgstr ""
 "%1\n"
-"このファイルは WinMerge 以外のアプリケーションで修正されています。修正されたファイルに上書きしますか?"
+"このファイルは WizMerge 以外のアプリケーションで修正されています。修正されたファイルに上書きしますか?"
 
 #. IDS_SAVEREADONLY_MULTI
 #: Merge.rc:4937
@@ -7936,7 +7936,7 @@ msgstr "中央の文字コードです。"
 #. IDS_COLDESC_NIDIFFS
 #: Merge.rc:5297
 msgid "Number of ignored differences in file. Ignored and cannot be merged."
-msgstr "ファイル内で無視した差異の数です。この差異は WinMerge によって無視され、マージされません。"
+msgstr "ファイル内で無視した差異の数です。この差異は WizMerge によって無視され、マージされません。"
 
 #. Merge20 (S0)
 #: Src/DirViewColItems.cpp
@@ -9395,8 +9395,8 @@ msgid "This system does not support clipboard history."
 msgstr "このシステムではクリップボード履歴はサポートされていません。"
 
 #: Merge.rc:5848
-msgid "32-bit WinMerge does not support Clipboard Compare"
-msgstr "32bit版 WinMerge ではクリップボード比較はサポートされていません。"
+msgid "32-bit WizMerge does not support Clipboard Compare"
+msgstr "32bit版 WizMerge ではクリップボード比較はサポートされていません。"
 
 #. IDS_WEBVIEW2_RUNTIME_NOT_INSTALLED
 #: Merge.rc:5853
@@ -9831,8 +9831,8 @@ msgstr "例: %1"
 
 #. IDS_DETECTED_PREVIOUS_CRASH
 #: Merge.rc:5979
-msgid "WinMerge detected a previous crash. Please report this if possible."
-msgstr "以前の WinMerge のクラッシュを検出しました。可能であればご報告ください。"
+msgid "WizMerge detected a previous crash. Please report this if possible."
+msgstr "以前の WizMerge のクラッシュを検出しました。可能であればご報告ください。"
 
 #. IDS_REGEX_REPLACE_LIST_TEMPLATE
 #: Merge.rc:5984
@@ -10576,8 +10576,8 @@ msgstr ""
 "引数: cliphcat コマンドに渡すコマンドライン オプション"
 
 #: Strings.rc:212
-msgid "CompareMSExcelFiles.sct WinMerge Plugin Options"
-msgstr "CompareMSExcelFiles.sct WinMerge プラグインオプション"
+msgid "CompareMSExcelFiles.sct WizMerge Plugin Options"
+msgstr "CompareMSExcelFiles.sct WizMerge プラグインオプション"
 
 #: Strings.rc:214
 msgid "Extract workbook data to multiple files"
@@ -10638,8 +10638,8 @@ msgid ""
 "Enable 'Trust access to Visual Basic Project' in MS Office Macro Security."
 msgstr ""
 "マクロを取得できません。\r\n"
-"WinMergeでマクロを比較するには、MS Officeを使用して、現在のアプリケーションのマクロセキュリティの設定を変更してください。\r\n"
-"WinMergeでこの機能を使用するには、「VBA プロジェクトへのアクセスを信頼する」をオンにする必要があります。"
+"WizMergeでマクロを比較するには、MS Officeを使用して、現在のアプリケーションのマクロセキュリティの設定を変更してください。\r\n"
+"WizMergeでこの機能を使用するには、「VBA プロジェクトへのアクセスを信頼する」をオンにする必要があります。"
 
 #. IDS_PLUGIN_COMPAREMSEXCELFILES_STR14
 #: Strings.rc:228
@@ -10657,8 +10657,8 @@ msgid "Compare VBA macros"
 msgstr "VBA マクロを比較する"
 
 #: Strings.rc:236
-msgid "CompareMSWordFiles.sct WinMerge Plugin Options"
-msgstr "CompareMSWordFiles.sct WinMerge プラグインオプション"
+msgid "CompareMSWordFiles.sct WizMerge Plugin Options"
+msgstr "CompareMSWordFiles.sct WizMerge プラグインオプション"
 
 #: Strings.rc:238
 msgid "Extract document data to multiple files"
@@ -10679,8 +10679,8 @@ msgid "Compare documents as HTML file (very slow)"
 msgstr "ドキュメントをHTMLファイル化して比較する (処理時間増大)"
 
 #: Strings.rc:253
-msgid "CompareMSPowerPointFiles.sct WinMerge Plugin Options"
-msgstr "CompareMSPowerPointFiles.sct WinMerge プラグインオプション"
+msgid "CompareMSPowerPointFiles.sct WizMerge Plugin Options"
+msgstr "CompareMSPowerPointFiles.sct WizMerge プラグインオプション"
 
 #: Strings.rc:255
 msgid "Extract slide data to multiple files"
@@ -10696,8 +10696,8 @@ msgid "Compare texts in notes page"
 msgstr "ノート内のテキストを比較する"
 
 #: Strings.rc:273
-msgid "CompareMSVisioFiles.sct WinMerge Plugin Options"
-msgstr "CompareMSVisioFiles.sct WinMerge プラグインオプション"
+msgid "CompareMSVisioFiles.sct WizMerge Plugin Options"
+msgstr "CompareMSVisioFiles.sct WizMerge プラグインオプション"
 
 #. IDS_PLUGIN_COMPAREMSVISIOFILES_STR2
 #: Strings.rc:274
@@ -10710,8 +10710,8 @@ msgid "Compare pages as image (very slow)"
 msgstr "ページを画像化して比較する (処理時間増大)"
 
 #: Strings.rc:285
-msgid "PrediffLineFilter.sct WinMerge Plugin Options"
-msgstr "PrediffLineFilter.sct WinMerge プラグインオプション"
+msgid "PrediffLineFilter.sct WizMerge Plugin Options"
+msgstr "PrediffLineFilter.sct WizMerge プラグインオプション"
 
 #. IDS_PLUGIN_PREDIFFLINEFILTER_STR3
 #: Strings.rc:287
@@ -10792,8 +10792,8 @@ msgid "Do not use '-p0' for patch files with absolute paths"
 msgstr "絶対パスが含まれているパッチファイルに '-p0' オプションが指定されました。このまま実行するとパッチが一時ファイルではなく、元ファイルに適用されてしまう可能性があるため、中止します。"
 
 #: Strings.rc:322
-msgid "AI.sct WinMerge Plugin Options"
-msgstr "AI.sct WinMerge プラグイン オプション"
+msgid "AI.sct WizMerge Plugin Options"
+msgstr "AI.sct WizMerge プラグイン オプション"
 
 #: Strings.rc:324
 msgid "Enter prompt"
@@ -10832,7 +10832,7 @@ msgstr "モデル"
 
 #: Strings.rc:338
 msgid "API key changed. Restart to apply."
-msgstr "APIキーが変更されました。 変更を適用するには、WinMerge を再起動してください。"
+msgstr "APIキーが変更されました。 変更を適用するには、WizMerge を再起動してください。"
 
 #: Strings.rc:340
 msgid "Provider"
