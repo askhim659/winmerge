@@ -17,6 +17,7 @@
 #include "Clipboard.h"
 #include "DirActions.h"
 #include "DirViewColItems.h"
+#include "locality.h" // Merge20 (S0-F1): NumToLocaleStr for the excluded-lines tooltip
 #include "DirFrame.h"  // StatePane
 #include "DirDoc.h"
 #include "IMergeDoc.h"
