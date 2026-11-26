@@ -1132,7 +1132,7 @@ bool CMergeDoc::DoSave(const tchar_t* szPath, bool &bSaveSuccess, int nBuffer)
 	fileChanged = IsFileChangedOnDisk(szPath, fileInfo, true, nBuffer);
 	if (fileChanged == FileChange::Changed)
 	{
-		String msg = strutils::format_string1(_("Another application updated\n%1\nsince WinMerge loaded it.\n\nOverwrite?"), szPath);
+		String msg = strutils::format_string1(_("Another application updated\n%1\nsince WizMerge loaded it.\n\nOverwrite?"), szPath);
 		if (ShowMessageBox(msg, MB_ICONWARNING | MB_YESNO) == IDNO)
 		{
 			bSaveSuccess = true;

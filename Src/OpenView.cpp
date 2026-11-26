@@ -1251,7 +1251,7 @@ String COpenView::AskProjectFileName(bool bOpen)
 	String strProjectPath = GetOptionsMgr()->GetString(OPT_PROJECTS_PATH);
 
 	if (!::SelectFile(GetSafeHwnd(), strProjectFileName, bOpen, strProjectPath.c_str(),
-			_T(""), _("WinMerge Project Files (*.WinMerge)|*.WinMerge||"), _T(".WinMerge")))
+			_T(""), _("WizMerge Project Files (*.WinMerge)|*.WinMerge||"), _T(".WinMerge")))
 		return _T("");
 
 	if (strProjectFileName.empty())

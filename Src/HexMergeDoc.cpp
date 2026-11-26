@@ -237,7 +237,7 @@ bool CHexMergeDoc::DoFileSave(int nBuffer)
 			// Warn user in case file has been changed by someone else
 			if (m_pView[nBuffer]->IsFileChangedOnDisk(m_filePaths.GetPath(nBuffer).c_str()) == IMergeDoc::FileChange::Changed)
 			{
-				String msg = strutils::format_string1(_("Another application updated\n%1\nsince WinMerge loaded it.\n\nOverwrite?"), m_filePaths.GetPath(nBuffer));
+				String msg = strutils::format_string1(_("Another application updated\n%1\nsince WizMerge loaded it.\n\nOverwrite?"), m_filePaths.GetPath(nBuffer));
 				if (AfxMessageBox(msg.c_str(), MB_ICONWARNING | MB_YESNO) == IDNO)
 					return false;
 			}
