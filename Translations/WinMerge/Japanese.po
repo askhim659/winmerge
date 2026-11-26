@@ -11544,3 +11544,8 @@ msgstr "マスタデータを保存できませんでした：%1"
 #: Src/Merge20/Merge20MasterDoc.cpp
 msgid "Could not save the master data: failed to serialize master data"
 msgstr "マスタデータを保存できませんでした：シリアライズに失敗しました"
+
+#. Merge20 (D8): Master management list column, kind (CMerge20MasterDlg)
+#: Src/Merge20/Merge20MasterDlg.cpp
+msgid "Kind"
+msgstr "【Wiz】種類"
