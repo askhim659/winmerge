@@ -11178,9 +11178,88 @@ msgstr "【Wiz】通常モードへ戻る"
 #: Src/DirView.cpp
 #: Src/MergeEditFrm.cpp
 msgid "No unreviewed files"
-msgstr "æªç¢ºèªãã¡ã¤ã«ãããã¾ãã"
+msgstr "未確認ファイルがありません"
 
 #. Merge20 (D3): folder-compare status bar count with the unreviewed count (CDirView)
 #: Src/DirView.cpp
 msgid "%1 displayed, %2 checked, %3 unreviewed"
-msgstr "è¡¨ç¤º %1 ä»¶ä¸­ %2 ä»¶ãã§ãã¯ãæªç¢ºèª %3 ä»¶"
+msgstr "表示 %1 件中 %2 件チェック、未確認 %3 件"
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Insert old lines"
+msgstr "【Wiz】旧挿入"
+
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Reject"
+msgstr "【Wiz】不採用"
+
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Use new"
+msgstr "【Wiz】新"
+
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Use old"
+msgstr "【Wiz】旧"
+
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Use both"
+msgstr "【Wiz】両方"
+
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Split"
+msgstr "【Wiz】✂ 分割"
+
+#. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Regroup"
+msgstr "【Wiz】↩ 戻す"
+
+#. Merge20 (D4): focus dock header, diff position and state (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Diff %1 of %2 (%3)"
+msgstr "差分 %1/%2（%3）"
+
+#. Merge20 (D4): focus dock header, segment state (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Unresolved"
+msgstr "未解決"
+
+#. Merge20 (D4): focus dock header, segment state (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Conflict"
+msgstr "競合"
+
+#. Merge20 (D4): focus dock header, segment state (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Chosen"
+msgstr "採用済み"
+
+#. Merge20 (D4): focus dock header, segment state (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Auto"
+msgstr "自動解決"
+
+#. Merge20 (D4): focus dock header, segment state (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Edited"
+msgstr "手編集あり"
+
+#. Merge20 (D4): focus dock placeholder, no merge session (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "No merge session"
+msgstr "マージセッションが開始されていません"
+
+#. Merge20 (D4): focus dock placeholder, no diff selected (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "No difference selected"
+msgstr "差分が選択されていません"
+
+#. Merge20 (D4): focus dock placeholder, empty result segment (CMerge20FocusDock)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "(No lines)"
+msgstr "（行なし）"
