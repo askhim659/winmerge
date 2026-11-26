@@ -46,6 +46,13 @@ public:
 	virtual bool QueryEditable() override;
 	virtual void OnInitialUpdate() override;
 	int GetTopLine() const { return m_nTopLine; }
+	/**
+	 * @brief Panel line height in pixels (CCrystalTextView::
+	 * GetLineHeight is protected, so the dialog reads it
+	 * through this accessor for the pixel-to-line scroll
+	 * conversion).
+	 */
+	int GetSniperLineHeight() { return GetLineHeight(); }
 
 	/**
 	 * @brief Replace the shown text with the given diff lines.
