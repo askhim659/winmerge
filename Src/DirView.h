@@ -24,6 +24,7 @@
 #include "IListCtrlImpl.h"
 #include "FileOpenFlags.h"
 #include "7zCommon.h"
+#include "Merge20/Merge20GrepDlg.h"
 
 class FileActionScript;
 
@@ -143,6 +144,10 @@ public:
 	// IDirDoc::GetMerge20FilePosition). False when the item is not a
 	// displayed file row.
 	bool Merge20GetFilePosition(const DIFFITEM& di, int& nPos, int& nTotal, bool bTodoOnly) const;
+	// Merge20 (Phase 4 D7): Grep file list for the dialog, and the
+	// jump from a Grep hit to its file and diff.
+	std::vector<Merge20GrepFile> Merge20BuildGrepFiles();
+	void Merge20OpenFileAtLine(const Merge20GrepHit& hit);
 
 	void SetActivePane(int pane);
 
@@ -257,6 +262,7 @@ protected:
 	std::unique_ptr<DirViewColItems> m_pColItems;
 	std::unique_ptr<CFileFilterHelperMenu> m_pFilterMenu;
 	int m_nActivePane;
+	CMerge20GrepDlg m_wndGrep; /**< Grep dialog (Merge20 Phase 4 D7): modeless, created on first use, hidden on close */
 
 	// Generated message map functions
 	afx_msg void OnColumnClick(NMHDR* pNMHDR, LRESULT* pResult);
@@ -377,6 +383,8 @@ protected:
 	afx_msg void OnMerge20CsvExport();
 	// Merge20 (Phase 3 L4): learning dialog
 	afx_msg void OnMerge20Learn();
+	// Merge20 (Phase 4 D7): Grep cross-file search dialog
+	afx_msg void OnMerge20Grep();
 	// Merge20 (S8): session save/restore, audit-memo editor
 	afx_msg void OnMerge20SessionSave();
 	afx_msg void OnMerge20SessionRestore();
