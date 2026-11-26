@@ -6886,7 +6886,7 @@ msgstr "無視した差異数"
 #. Merge20 (S0): interim column for the excluded-line count (plan 2)
 #: Src/DirViewColItems.cpp
 msgid "Ignored diffs"
-msgstr "無視差分"
+msgstr "【Wiz】無視差分"
 
 #. IDS_COLHDR_BINARY
 #: Merge.rc:5137
@@ -7191,7 +7191,7 @@ msgstr "新のみ"
 #. Merge20 (S1): folder compare "Review State" column and its five states
 #: Src/DirViewColItems.cpp
 msgid "Review State"
-msgstr "確認内容"
+msgstr "【Wiz】確認内容"
 
 #. Merge20 (S1)
 #: Src/DirViewColItems.cpp
@@ -7226,7 +7226,7 @@ msgstr "現状維持"
 #. Merge20 (S2): folder compare "Include in Output" column
 #: Src/DirViewColItems.cpp
 msgid "Include in Output"
-msgstr "出力"
+msgstr "【Wiz】出力"
 
 #. Merge20 (S2)
 #: Src/DirViewColItems.cpp
@@ -7236,22 +7236,32 @@ msgstr "ファイルが出力（ZIP／マージ後ファイル）に含まれる
 #. Merge20 (S3): batch-check dialog, OK button label with the target count
 #: Src/Merge20/Merge20BatchCheckDlg.cpp
 msgid "Check selected (%1 items)"
-msgstr "選択分を一括チェック（%1件）"
+msgstr "【Wiz】選択分を一括チェック（%1件）"
+
+#. Merge20 (W1): batch dialog initial text (IDD_MERGE20_BATCH_CHECK, IDOK)
+#: Src/Merge.rc:3034
+msgid "Check selected (0 items)"
+msgstr "選択分を一括チェック（0件）"
 
 #. Merge20 (S3): batch-check dialog, target count line
 #: Src/Merge20/Merge20BatchCheckDlg.cpp
 msgid "%1 files will be checked"
-msgstr "%1件のファイルが対象です"
+msgstr "【Wiz】%1件のファイルが対象です"
+
+#. Merge20 (W1): batch dialog initial text (IDD_MERGE20_BATCH_CHECK, IDC_MERGE20_BATCH_COUNT)
+#: Src/Merge.rc:3031
+msgid "0 files will be checked"
+msgstr "0件のファイルが対象です"
 
 #. Merge20 (S3): batch-check dialog caption (Merge.rc)
 #: Src/Merge.rc
 msgid "Batch Check"
-msgstr "一括チェック"
+msgstr "【Wiz】一括チェック"
 
 #. Merge20 (S3): batch-check dialog group box (Merge.rc)
 #: Src/Merge.rc
 msgid "Review states to check"
-msgstr "チェックする確認内容"
+msgstr "【Wiz】チェックする確認内容"
 
 #. Merge20 (S3): batch-check dialog explanation (Merge.rc)
 #: Src/Merge.rc
@@ -7261,47 +7271,52 @@ msgstr "選択した確認内容の、表示中の全ファイルの出力チェ
 #. Merge20 (S3): batch-check dialog button (Merge.rc)
 #: Src/Merge.rc
 msgid "Check all displayed"
-msgstr "表示分すべてチェック"
+msgstr "【Wiz】表示分すべてチェック"
 
 #. Merge20 (S3): batch-check dialog button (Merge.rc)
 #: Src/Merge.rc
 msgid "Clear all checks"
-msgstr "全解除"
+msgstr "【Wiz】全解除"
 
 #. Merge20 (S3): folder compare context menu
 #: Src/DirView.cpp
 msgid "Batch check..."
-msgstr "一括チェック…"
+msgstr "【Wiz】一括チェック…"
 
 #. Merge20 (S3): folder compare context menu (directory rows only)
 #: Src/DirView.cpp
 msgid "Check all files under folder"
-msgstr "配下をすべてチェック"
+msgstr "【Wiz】配下をすべてチェック"
 
 #. Merge20 (S3): folder compare context menu (directory rows only)
 #: Src/DirView.cpp
 msgid "Uncheck all files under folder"
-msgstr "配下のチェックをすべて外す"
+msgstr "【Wiz】配下のチェックをすべて外す"
 
 #. Merge20 (S3): status bar count
 #: Src/DirView.cpp
 msgid "%1 displayed, %2 checked"
-msgstr "表示 %1 件中 %2 件チェック"
+msgstr "【Wiz】表示 %1 件中 %2 件チェック"
+
+#. Merge20 (W1): status-bar join of the displayed count and the checked count (DirView.cpp)
+#: Src/DirView.cpp:3252
+msgid "%1 | %2"
+msgstr "%1 | %2"
 
 #. Merge20 (S4): folder compare column headers (design section 6, spec section 3 (2/4))
 #: Src/DirViewColItems.cpp
 msgid "Action Category"
-msgstr "対応区分"
+msgstr "【Wiz】対応区分"
 
 #. Merge20 (S4): folder compare column headers
 #: Src/DirViewColItems.cpp
 msgid "Risk"
-msgstr "リスク"
+msgstr "【Wiz】リスク"
 
 #. Merge20 (S4): folder compare column headers
 #: Src/DirViewColItems.cpp
 msgid "Summary"
-msgstr "要約"
+msgstr "【Wiz】要約"
 
 #. Merge20 (S4): folder compare column descriptions (column dialog)
 #: Src/DirViewColItems.cpp
@@ -7331,7 +7346,7 @@ msgstr "要判断（欠落＋変更）"
 #. Merge20 (S4): action category value (folder compare column)
 #: Src/DirViewColItems.cpp
 msgid "Review (modified)"
-msgstr "要判断（同一書換）"
+msgstr "要判断（変更のみ）"
 
 #. Merge20 (S4): action category value (folder compare column)
 #: Src/DirViewColItems.cpp
@@ -7426,7 +7441,7 @@ msgstr "新のみ存在（%1行）"
 #. Merge20 (S6): folder compare context menu (DirView)
 #: Src/DirView.cpp
 msgid "Export diff list as CSV..."
-msgstr "差分一覧 CSV…"
+msgstr "【Wiz】差分一覧 CSV…"
 
 #. Merge20 (S6): no files to export (DirView)
 #: Src/DirView.cpp
@@ -7441,22 +7456,32 @@ msgstr "%1件のファイルを %2 に出力しました"
 #. Merge20 (S6): CSV export dialog caption (Merge.rc)
 #: Src/Merge.rc
 msgid "Export Diff List as CSV"
-msgstr "差分一覧 CSV 出力"
+msgstr "【Wiz】差分一覧 CSV 出力"
 
 #. Merge20 (S6): CSV export dialog group box (Merge.rc)
 #: Src/Merge.rc
 msgid "Range to export"
-msgstr "出力する範囲"
+msgstr "【Wiz】出力する範囲"
 
 #. Merge20 (S6): CSV export dialog, selected-only range with count
 #: Src/Merge20/Merge20CsvExportDlg.cpp
 msgid "Checked files only (%1 files)"
-msgstr "選択分のみ（%1件）"
+msgstr "【Wiz】選択分のみ（%1件）"
+
+#. Merge20 (W1): CSV dialog initial text (IDD_MERGE20_CSV_EXPORT, IDC_MERGE20_CSV_SELECTED)
+#: Src/Merge.rc:3044
+msgid "Checked files only (0 files)"
+msgstr "選択分のみ（0件）"
 
 #. Merge20 (S6): CSV export dialog, all-diffs range with count
 #: Src/Merge20/Merge20CsvExportDlg.cpp
 msgid "All files with differences (%1 files)"
-msgstr "差分全件（%1件）"
+msgstr "【Wiz】差分全件（%1件）"
+
+#. Merge20 (W1): CSV dialog initial text (IDD_MERGE20_CSV_EXPORT, IDC_MERGE20_CSV_ALL)
+#: Src/Merge.rc:3045
+msgid "All files with differences (0 files)"
+msgstr "差分全件（0件）"
 
 #. Merge20 (S6): CSV export dialog explanation (Merge.rc)
 #: Src/Merge.rc
@@ -7506,7 +7531,7 @@ msgstr "新追加"
 #. Merge20 (S6): folder compare "Memo" column (DirViewColItems)
 #: Src/DirViewColItems.cpp
 msgid "Memo"
-msgstr "メモ"
+msgstr "【Wiz】メモ"
 
 #. Merge20 (S8): folder compare "Memo" column description (DirViewColItems)
 #: Src/DirViewColItems.cpp
@@ -7516,17 +7541,17 @@ msgstr "ファイルの監査メモ（確認者の自由記述）。差分一覧
 #. Merge20 (S8): folder compare context menu (DirView)
 #: Src/DirView.cpp
 msgid "Save session"
-msgstr "セッションを保存"
+msgstr "【Wiz】セッションを保存"
 
 #. Merge20 (S8): folder compare context menu (DirView)
 #: Src/DirView.cpp
 msgid "Restore session..."
-msgstr "セッションを復元…"
+msgstr "【Wiz】セッションを復元…"
 
 #. Merge20 (S8): folder compare context menu (DirView)
 #: Src/DirView.cpp
 msgid "Edit audit memo..."
-msgstr "監査メモを編集…"
+msgstr "【Wiz】監査メモを編集…"
 
 #. Merge20 (S8): session save result (DirView)
 #: Src/DirView.cpp
@@ -7638,7 +7663,7 @@ msgstr "行末の違いを無視"
 #. Merge20 (S8): memo dialog caption (Merge.rc)
 #: Src/Merge.rc
 msgid "Edit Audit Memo"
-msgstr "監査メモの編集"
+msgstr "【Wiz】監査メモの編集"
 
 #. IDS_IMAGE_FILES_SAME
 #: Merge.rc:5212
@@ -10713,6 +10738,11 @@ msgstr "ページを画像化して比較する (処理時間増大)"
 msgid "PrediffLineFilter.sct WizMerge Plugin Options"
 msgstr "PrediffLineFilter.sct WizMerge プラグインオプション"
 
+#. Merge20 (W1): Merge20Exclude.sct settings dialog title (Plugins/dlls/Merge20Exclude.sct)
+#: Plugins/dlls/Merge20Exclude.sct:294
+msgid "Merge20Exclude.sct WinMerge Plugin Options"
+msgstr "Merge20Exclude.sct WinMerge プラグインオプション"
+
 #. IDS_PLUGIN_PREDIFFLINEFILTER_STR3
 #: Strings.rc:287
 msgid "Delete"
@@ -10849,12 +10879,12 @@ msgstr "(上のフィールドに設定するプリセットを選択)"
 #. Merge20 (L1): learning on/off checkbox, compare options (PropCompare)
 #: Src/PropCompare.cpp
 msgid "Enable learning"
-msgstr "🎓 学習機能"
+msgstr "【Wiz】🎓 学習機能"
 
 #. Merge20 (L1): learning on/off explanation, compare options (PropCompare)
 #: Src/PropCompare.cpp
 msgid "When off, learning suggestions and recording stop."
-msgstr "OFF にすると候補提示と記録を停止します。"
+msgstr "【Wiz】OFF にすると候補提示と記録を停止します。"
 
 #. Merge20 (L1): this PC's learning source display name (Merge20LearnDoc)
 #: Src/Merge20/Merge20LearnDoc.cpp
@@ -10875,18 +10905,18 @@ msgstr "学習データを保存できません：\n%1"
 #. IDR_POPUP_MERGERESULTVIEW_2WAY, ID_MERGE20_LEARN_APPLY
 #: Src/Merge.rc:83
 msgid "Apply Learning Suggestion"
-msgstr "🎓 学習候補を適用"
+msgstr "【Wiz】🎓 学習候補を適用"
 
 #. Merge20 (L3): learning candidate commands, result pane context menu
 #. IDR_POPUP_MERGERESULTVIEW_2WAY, ID_MERGE20_LEARN_DISMISS
 #: Src/Merge.rc:84
 msgid "Dismiss Learning Suggestion"
-msgstr "候補を却下"
+msgstr "【Wiz】候補を却下"
 
 #. Merge20 (L3): apply menu item with the candidate detail (MergeResultView)
 #: Src/MergeResultView.cpp
 msgid "Apply Learning Suggestion (%1, %2, %3)"
-msgstr "🎓 学習候補を適用（%1・%2・%3件）"
+msgstr "【Wiz】🎓 学習候補を適用（%1・%2・%3件）"
 
 #. Merge20 (L3): strategy display names (Merge20LearnDoc)
 #: Src/Merge20/Merge20LearnDoc.cpp
@@ -10921,7 +10951,7 @@ msgstr "特徴一致"
 #. Merge20 (L4): learning dialog title (Merge.rc)
 #: Src/Merge.rc
 msgid "Learning (merge judgment history and sharing)"
-msgstr "🎓 学習機能（マージ判定の蓄積と共有）"
+msgstr "【Wiz】🎓 学習機能（マージ判定の蓄積と共有）"
 
 #. Merge20 (L4): learning dialog description (Merge.rc)
 #: Src/Merge.rc
@@ -10931,27 +10961,27 @@ msgstr "あなたのマージ判定（旧挿入／新維持／旧置換／両方
 #. Merge20 (L4): learning dialog ON/OFF toggle button (Merge.rc)
 #: Src/Merge.rc
 msgid "Toggle ON/OFF"
-msgstr "ON/OFF切替"
+msgstr "【Wiz】ON/OFF切替"
 
 #. Merge20 (L4): learning dialog sources group (Merge.rc)
 #: Src/Merge.rc
 msgid "Sources (per import)"
-msgstr "出典（取込単位）"
+msgstr "【Wiz】出典（取込単位）"
 
 #. Merge20 (L5): learning dialog delete-sources button, plural in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Delete selected sources"
-msgstr "選択したソースを削除"
+msgstr "【Wiz】選択したソースを削除"
 
 #. Merge20 (L4): learning dialog merged-export button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Export merged sources"
-msgstr "🔗 選択したソースを統合して出力"
+msgstr "【Wiz】🔗 選択したソースを統合して出力"
 
 #. Merge20 (L4): learning dialog rules group (Merge.rc)
 #: Src/Merge.rc
 msgid "Learned rules (top 50)"
-msgstr "学習したルール（上位50件）"
+msgstr "【Wiz】学習したルール（上位50件）"
 
 #. Merge20 (L4): learning dialog sharing notice (Merge.rc, also the export confirmation in L5)
 #: Src/Merge.rc
@@ -10962,22 +10992,22 @@ msgstr "学習データにはソースコードの断片が含まれます。共
 #. Merge20 (L4): learning dialog export button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Export learning data (JSON)"
-msgstr "📤 学習データを出力（JSON）"
+msgstr "【Wiz】📤 学習データを出力（JSON）"
 
 #. Merge20 (L4): learning dialog import button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Import learning data"
-msgstr "📥 学習データを取込（蓄積型）"
+msgstr "【Wiz】📥 学習データを取込（蓄積型）"
 
 #. Merge20 (L4): learning dialog clear button, wired in L5 (Merge.rc)
 #: Src/Merge.rc
 msgid "Clear learning data"
-msgstr "🗑️ 学習データをクリア"
+msgstr "【Wiz】🗑️ 学習データをクリア"
 
 #. Merge20 (L4): learning dialog menu item, folder compare context menu
 #: Src/DirView.cpp
 msgid "Learning..."
-msgstr "学習…"
+msgstr "【Wiz】学習…"
 
 #. Merge20 (L4): learning dialog ON state (Merge20LearnDlg)
 #: Src/Merge20/Merge20LearnDlg.cpp
@@ -11092,12 +11122,12 @@ msgstr "【Wiz】比較専用モード"
 #. Merge20 (D2): dedicated bar Prev button (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Prev"
-msgstr "前へ"
+msgstr "【Wiz】前へ"
 
 #. Merge20 (D2): dedicated bar Next button (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Next"
-msgstr "次へ"
+msgstr "【Wiz】次へ"
 
 #. Merge20 (D2): dedicated bar review-state buttons (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
@@ -11127,19 +11157,19 @@ msgstr "現状維持"
 #. Merge20 (D2): dedicated bar pin toggle (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Pin"
-msgstr "ピン固定"
+msgstr "【Wiz】ピン固定"
 
 #. Merge20 (D2): dedicated bar unreviewed-only toggle (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Unreviewed only"
-msgstr "未確認のみ"
+msgstr "【Wiz】未確認のみ"
 
 #. Merge20 (D2): dedicated bar sniper toggle (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Sniper"
-msgstr "スナイパー"
+msgstr "【Wiz】スナイパー"
 
 #. Merge20 (D2): dedicated bar exit button (Merge20DedBar)
 #: Src/Merge20/Merge20DedBar.cpp
 msgid "Back to Normal Mode"
-msgstr "通常モードへ戻る"
+msgstr "【Wiz】通常モードへ戻る"
