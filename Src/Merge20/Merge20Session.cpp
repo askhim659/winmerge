@@ -764,6 +764,48 @@ namespace
 		return true;
 	}
 
+	// Read one split diff group. Returns false when the entry is
+	// unusable (wrong type or out-of-range value); the caller skips
+	// that group.
+	bool ParseSplitGroup(const Merge20JsonValue& value, Merge20SplitGroup& out)
+	{
+		if (value.type != Merge20JsonValue::Type::Object)
+			return false;
+		int64_t op = 0, dbegin = 0, dend = 0, rows = 0;
+		if (!GetIntField(value, L"op", op, 0, 5))
+			return false;
+		if (!GetIntField(value, L"dbegin", dbegin, 0, INT32_MAX))
+			return false;
+		if (!GetIntField(value, L"dend", dend, 0, INT32_MAX))
+			return false;
+		if (!GetIntField(value, L"rows", rows, 2, INT32_MAX))
+			return false;
+		out.op = static_cast<int>(op);
+		out.dbegin = static_cast<int>(dbegin);
+		out.dend = static_cast<int>(dend);
+		out.rows = static_cast<int>(rows);
+		const Merge20JsonValue* begin = value.Find(L"begin");
+		const Merge20JsonValue* end = value.Find(L"end");
+		const Merge20JsonValue* blank = value.Find(L"blank");
+		if (begin == nullptr || end == nullptr || blank == nullptr)
+			return false;
+		const Merge20JsonValue* arrays[3] = { begin, end, blank };
+		int* fields[3] = { out.begin, out.end, out.blank };
+		for (int a = 0; a < 3; ++a)
+		{
+			if (arrays[a]->type != Merge20JsonValue::Type::Array || arrays[a]->array.size() != 3)
+				return false;
+			for (int i = 0; i < 3; ++i)
+			{
+				if (arrays[a]->array[i].type != Merge20JsonValue::Type::Int ||
+					arrays[a]->array[i].integer < -1 || arrays[a]->array[i].integer > INT32_MAX)
+					return false;
+				fields[a][i] = static_cast<int>(arrays[a]->array[i].integer);
+			}
+		}
+		return true;
+	}
+
 	// Read one file entry. Returns false when the entry is unusable;
 	// the caller skips that file and counts it.
 	bool ParseSessionFile(const Merge20JsonValue& value, Merge20SessionFile& out)
@@ -846,6 +888,20 @@ namespace
 				// A single bad diff is dropped; the file entry survives.
 			}
 		}
+		out.splits.clear();
+		const Merge20JsonValue* splits = value.Find(L"splits");
+		if (splits != nullptr)
+		{
+			if (splits->type != Merge20JsonValue::Type::Array)
+				return false;
+			for (const auto& splitValue : splits->array)
+			{
+				Merge20SplitGroup group;
+				if (ParseSplitGroup(splitValue, group))
+					out.splits.push_back(std::move(group));
+				// A single bad split group is dropped; the file entry survives.
+			}
+		}
 		return true;
 	}
 
@@ -869,11 +925,34 @@ namespace
 		});
 	}
 
+	Merge20JsonValue SplitGroupToJson(const Merge20SplitGroup& group)
+	{
+		std::vector<Merge20JsonValue> begin, end, blank;
+		for (int i = 0; i < 3; ++i)
+		{
+			begin.push_back(Merge20JsonInt(group.begin[i]));
+			end.push_back(Merge20JsonInt(group.end[i]));
+			blank.push_back(Merge20JsonInt(group.blank[i]));
+		}
+		return Merge20JsonObject({
+			{ L"op", Merge20JsonInt(group.op) },
+			{ L"begin", Merge20JsonArray(std::move(begin)) },
+			{ L"end", Merge20JsonArray(std::move(end)) },
+			{ L"dbegin", Merge20JsonInt(group.dbegin) },
+			{ L"dend", Merge20JsonInt(group.dend) },
+			{ L"blank", Merge20JsonArray(std::move(blank)) },
+			{ L"rows", Merge20JsonInt(group.rows) },
+		});
+	}
+
 	Merge20JsonValue SessionFileToJson(const Merge20SessionFile& file)
 	{
 		std::vector<Merge20JsonValue> diffs;
 		for (const auto& judgment : file.diffs)
 			diffs.push_back(DiffJudgmentToJson(judgment));
+		std::vector<Merge20JsonValue> splits;
+		for (const auto& group : file.splits)
+			splits.push_back(SplitGroupToJson(group));
 		return Merge20JsonObject({
 			{ L"path", Merge20JsonText(file.relPath) },
 			{ L"review", Merge20JsonInt(static_cast<int>(file.review)) },
@@ -896,6 +975,7 @@ namespace
 			{ L"nsdiffs", Merge20JsonInt(file.nsdiffs) },
 			{ L"nidiffs", Merge20JsonInt(file.nidiffs) },
 			{ L"diffs", Merge20JsonArray(std::move(diffs)) },
+			{ L"splits", Merge20JsonArray(std::move(splits)) },
 		});
 	}
 
