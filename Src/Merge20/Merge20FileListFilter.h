@@ -40,6 +40,7 @@
  */
 #pragma once
 
+#include <set>
 #include <vector>
 #include "UnicodeString.h"
 #include "Merge20Types.h"
@@ -69,3 +70,25 @@ std::vector<bool> Merge20ComputeFileListVisibility(
 	const std::vector<Merge20FileListFilterRow>& rows,
 	const String& searchText,
 	int actionFilter);
+
+/**
+ * @brief Join the folded directories' relative paths into the one
+ * string stored under OPT_MERGE20_FILELIST_COLLAPSED (Panel P4,
+ * design section 12.7: the collapse state is restored at the next
+ * start). One path per line (L'\n'); a relative path cannot
+ * contain a line break in practice (Windows file names), so no
+ * escaping is needed. The set order is the sorted order, so the
+ * same set always joins to the same string. Empty set -> empty
+ * string.
+ */
+String Merge20JoinCollapsedPaths(const std::set<String>& paths);
+
+/**
+ * @brief Split a stored collapsed-paths string back into a set.
+ * Empty pieces (a leading, trailing or doubled line break) are
+ * skipped, so a hand-edited or truncated value cannot create a
+ * phantom empty path. Stale paths (folders that no longer exist)
+ * are kept: they only match rows that exist, so they are harmless
+ * until the folder comes back.
+ */
+std::set<String> Merge20SplitCollapsedPaths(const String& text);
