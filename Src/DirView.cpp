@@ -46,6 +46,7 @@
 #include "Merge20/Merge20CsvExportDlg.h"
 #include "Merge20/Merge20MemoDlg.h"
 #include "Merge20/Merge20LearnDlg.h"
+#include "Merge20/Merge20MasterDlg.h"
 #include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20Patrol.h"
 #include "Merge20/Merge20SessionDoc.h"
@@ -161,6 +162,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_MEMO_EDIT, OnMerge20MemoEdit)
 	ON_COMMAND(ID_MERGE20_LEARN, OnMerge20Learn)
 	ON_COMMAND(ID_MERGE20_GREP, OnMerge20Grep)
+	ON_COMMAND(ID_MERGE20_MASTER, OnMerge20Master)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
@@ -924,6 +926,10 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// Grep cross-file search. Always offered.
 	String sMerge20Grep = _("Cross-File Search...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_GREP, sMerge20Grep.c_str());
+	// Merge20 (Phase 4 D8, design section 5.2/D8, spec section 3 (4/4)):
+	// Master management (exclude words, highlight, risk keywords). Always offered.
+	String sMerge20Master = _("Master Management...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_MASTER, sMerge20Master.c_str());
 	// Merge20 (S8, design section 3.6, spec section 6.1): session
 	// save/restore, next to the batch check and CSV export. Always offered.
 	String sMerge20SessionSave = _("Save session");
@@ -3696,6 +3702,21 @@ void CDirView::OnMerge20Learn()
 void CDirView::OnMerge20Grep()
 {
 	m_wndGrep.ShowGrep(this);
+}
+
+/**
+ * @brief Merge20 (Phase 4 D8, design sections 4.4 and 5.2/D8, spec
+ * section 3 (4/4)): open the master management dialog (modal).
+ * When the dialog closes with Save and the exclude rules changed,
+ * re-compare all files (the HTML tool's "save and re-judge").
+ */
+void CDirView::OnMerge20Master()
+{
+	CMerge20MasterDlg dlg;
+	if (dlg.DoModal() != IDOK)
+		return;
+	if (dlg.ExcludeChanged())
+		GetDocument()->Rescan();
 }
 
 /**

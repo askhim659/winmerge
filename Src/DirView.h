@@ -385,6 +385,8 @@ protected:
 	afx_msg void OnMerge20Learn();
 	// Merge20 (Phase 4 D7): Grep cross-file search dialog
 	afx_msg void OnMerge20Grep();
+	// Merge20 (Phase 4 D8): master management dialog
+	afx_msg void OnMerge20Master();
 	// Merge20 (S8): session save/restore, audit-memo editor
 	afx_msg void OnMerge20SessionSave();
 	afx_msg void OnMerge20SessionRestore();

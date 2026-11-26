@@ -4202,3 +4202,85 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 - D6 からの残課題（§31.6）は D7 では扱っていない。引き続き残課題。
 - D7 固有の残課題：(1) ファイル比較からの Grep 起動（IDirDoc に DirView アクセサがないため未対応。対応する場合は DirDoc／MainFrm 側の設計が必要）。(2) Grep は unpacker／prediffer 適用後のテキストではなくディスク生テキストを検索する（仕様との意図的差分。unpacker 適用後のテキストで検索すべきという判断になれば、ワーカー側の読み込み経路の再設計が必要）。(3) 3-way の中間ペインは Grep の対象に含まれる（`paths` は 3 要素、ペインラベルは既存訳「中央」を再利用）が、実機での 3-way 動作は未確認。(4) ダイアログの検索対象に「差分のあるファイルのみ」等の絞り込みはない（設計どおり全ファイル対象）。(5) `3d824036` は no-op コミット（履歴に残る。revert 不要）。
 - 次スライス（D8）の着手時は、master の最新 head と NOTES の次節番号（§34 の見込み）を再確認すること。
+
+## 34. Phase 4 D8（マスタ管理画面）— ブランチ `merge20/phase4-d8`
+
+- PR: #30（https://github.com/askhim659/winmerge/pull/30）。最終 head（コード＋修正）`506f4d0081c546795049cb782e69d3c2763f1644`。マージは本記録時点では未実施（コーディネーター判断待ち）。
+- 設計書 §5.2 D8・§4.4、仕様書 §3 (4/4)・§6。受け入れ条件：除外ワード・強調文字・リスク重要語を画面で編集でき、保存・復元されること。除外ワードの変更後に再判定で全ファイルが再計算されること。入出力で JSON を共有できること。
+
+### 34.1 変更一覧（1 ファイル 1 コミット、22 件＋本節の記録コミット）
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| 09bf09bc | Src/Merge20/Merge20Master.h | 純粋モジュールヘッダ（ルール構造体、一致判定、JSON 変換、HTML プリセット） |
+| 4d7596f8 | Src/Merge20/Merge20Master.cpp | 純粋モジュール実装（S8 の JSON DOM・パーサ・シリアライザを流用） |
+| e7fbb07b | Testing/GoogleTest/Merge20/Merge20Master_test.cpp | 単体テスト 12 件 |
+| 8fb5a2a0 | Src/Merge.vcxproj | Master.cpp／.h 登録（pch.h グループ） |
+| 92d52485 | Src/Merge.vcxproj.filters | 同上 |
+| c8f2d581 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Master.cpp＋テスト登録 |
+| 8d36cfa6 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上 |
+| 81ea39a6 | Src/Merge20/Merge20MasterDoc.h | アダプタヘッダ（保存場所、ライブストア、入出力） |
+| 9cca766a | Src/Merge20/Merge20MasterDoc.cpp | アダプタ実装（prediffer オプションキー同期、JSON ファイル入出力） |
+| 72d3f56b | Src/Merge.vcxproj | MasterDoc.cpp／.h 登録（StdAfx.h グループの既定エントリ） |
+| f3076110 | Src/Merge.vcxproj.filters | 同上 |
+| e2d75cf0 | Src/resource.h | IDD 299、IDC 1785〜1804、コマンド 38957、`_APS_NEXT_*` 更新（300／1805／38958） |
+| a3276a1d | Src/Merge.rc | `IDD_MERGE20_MASTER` 空テンプレート（640x460、CAPTION "Master Management"） |
+| c3baf3f9 | Src/Merge20/Merge20MasterDlg.h | モーダルダイアログヘッダ（3 マスタ共用） |
+| 80b26440 | Src/Merge20/Merge20MasterDlg.cpp | ダイアログ実装（約 27KB、動的コントロール＋LayoutAll） |
+| cd505479 | Src/Merge.vcxproj | MasterDlg.cpp／.h 登録（StdAfx.h グループの既定エントリ） |
+| 3e169582 | Src/Merge.vcxproj.filters | 同上 |
+| 872c79c5 | Src/DirView.h | OnMerge20Master の宣言を追加 |
+| 9b147b29 | Src/DirView.cpp | メッセージマップ＋右クリックメニュー「【Wiz】マスタ管理…」＋ハンドラ（保存後に除外変更時のみ Rescan） |
+| 4e497363 | Translations/WinMerge/Japanese.po | 新規 `_()` 文字列 34 件の日本語訳を追加（汎用動詞の Update／Move up／Move down を除き【Wiz】付き） |
+| 50aaa7fb | Translations/WinMerge/Japanese.po | 「Kind」列見出しの訳を追加（初回コミットの抽出漏れ。抽出スクリプトで検出して追加。msgstr は「【Wiz】種類」） |
+| 506f4d00 | Translations/WinMerge/Japanese.po | 【Wiz】欠落の修正（§34.2 参照）。D8 訳 35 件のうち汎用動詞 3 件を除く 31 件に【Wiz】を付与し直した |
+
+### 34.2 設計判断（判断理由付き）
+
+- **リスク重要語エディタはマスタ管理画面と共用する**（設計書の D8 判断事項）。1 つのモーダルダイアログ「【Wiz】マスタ管理」に 3 マスタをコンボ切替で載せる。理由：単一の入口、共有の一覧・編集・入出力 UI、リソース ID 面の節約。3 マスタで編集 UI（パターン編集＋名称編集＋正規表現／大文字小文字／有効チェック）を共用し、該当しない欄は無効化する。
+- **除外ワードのライブストアは prediffer のオプションキー**（`Plugins\Merge20Exclude.sct/`＋Count／Enabled<i>／IgnoreCase<i>／UseRegExp<i>／Pattern<i>／IgnoreL2）。`MergeAppCOMClass::GetOption` がキー文字列を `GetOptionsMgr()->Get(name)` へ verbatim に渡すことを実読で確認したため、C++ 側で同一キー文字列を読み書きすれば .sct が読む値と完全に一致する。未書込みキーは VT_NULL 判定（`MergeAppCOMClass` と同じ方法）で .sct の既定値（Enabled=true、IgnoreCase=false、UseRegExp=false、Pattern=""、Count=0、IgnoreL2=true）を適用する。これが設計書 §4.4 の「prediffer が読む形式と整合させる」の実現方法。
+- **JSON（`Merge20Masters.json`）は共有・ミラー用**：`{"app":"Merge20Masters","version":1,"excludeIgnoreL2":true,"excludeRules":[{pattern,useRegExp,ignoreCase,enabled}],"highlightRules":[{pattern,name,useRegExp,enabled}],"riskKeywords":";..."}`。UTF-8・BOM なし・2 スペース字下げ（S8／L0 流用）。保存場所は学習と同じ親ルール（ポータブル時は `<prog>\Merge20Masters\`、それ以外は `%APPDATA%\WinMerge\Merge20Masters\`）。保存時にライブ状態全体を JSON へも書く。読み込み時は除外ワードとリスク重要語はオプションキーを正とし、強調文字だけを JSON から読む（手編集した JSON がオプションを黙って上書きしないため）。
+- **除外ワードの既定はルールなし**（.sct の Count=0 と一致し、現行動作を変えない）。HTML の既定 2 件（`Last Modified:`、`@version\s+[0-9.]+`）はシードしない。理由：Phase 1 の prediffer が既定で何も除外しない動作を変えると、既存ユーザーの比較結果が変わる。HTML 既定は単体テスト（HtmlExcludeDefaults）でパースと一致判定だけ検証した。
+- **強調文字の既定は HTML プリセット 3 件**（設計書どおり同梱）：`Math\.floor|Math\.round`（正規表現、表示名「Math.floor／round」）、`独自`（部分一致）、`0\.92|0\.014`（正規表現、表示名「税率・補正率」）。表示名は HTML にはない項目だが設計書 §4.4 が要求するため name フィールドに持つ。
+- **強調文字の比較画面での表示は D8 の範囲外**（意図的な先送り）。設計書 §2.1 は表示を「検討」とだけ書いており、D8 の受け入れ条件にも表示は含まれない。`CMergeResultView::GetLineColors`／`CMergeEditView` の行色付けへの追加は、色・無効化・再描画の設計が必要なため別スライス（D9／D11 以降）へ残す。ダイアログのヒント文に未実装であることを明記した。
+- **リスク重要語の変更は次回の分類実行時に反映**。分類はファイル比較のオープン／再スキャン時の既存フック（`MergeDoc::Rescan` 末尾）で `OPT_MERGE20_RISK_KEYWORDS` を読むため、ダイアログの保存だけでは開いているファイル比較の分類は変わらない。フォルダ再比較は分類を再実行しない。D8 の受け入れ条件は「編集でき、保存・復元されること」であり、それを満たす。開いている文書の再分類が必要になれば、L2 の `Merge20LearnRefreshAllOpenDocs` と同じ形の刷新関数が要る（残課題）。
+- **再計算の入口は `CDirDoc::Rescan()`**。設計書 §4.4 の「`CDirDoc` の再比較（`FlushAndRescan`）」は文言の誤りで、`FlushAndRescan` は `CMergeDoc` のもので `CDirDoc` には存在しない。フォルダ再比較の入口は `CDirDoc::Rescan()`（DirView.cpp の既存呼び出しと同じ）。除外ワード／IgnoreL2 の変更時のみ呼び、強調文字・リスク重要語のみの変更では呼ばない。
+- **入出力は L5 前例**：保存ダイアログ＋共有注意文つき確認ダイアログ（「マスタデータにはソースコードの断片が含まれます。承認された内部経路でのみ共有してください…」）。エクスポート既定名は `マージ支援20号_マスタ_YYYY-MM-DD.json`（L5 の命名形）。インポートは作業コピーへ読み込むだけで、保存を押すまでライブストアは変わらない（その旨を完了メッセージに明記）。不正なルールは 1 件ずつスキップして件数を報告する（L0 の skippedRules と同じ扱い）。
+- **.po の汎用動詞**：新規 msgid のうち Update／Move up／Move down だけは訳に【Wiz】を付けていない。D7 の前例（Search／Stop／Close 等の汎用動詞は既存訳を再利用し【Wiz】なし）に倣い、ボタン上の汎用動詞は素の訳とした。再利用 msgid（訳追加なし）：`Regular expression`、`Ignore case`、`Enabled`、`Add`、`Delete`、`Export...`、`Import...`、`Save`、`Cancel`、`Skipped %1 rules (invalid format).`（L5）。
+- **【Wiz】欠落の発生と修正（506f4d00）**：初回コミット 4e497363 の訳 34 件のうち 31 件で msgstr 先頭の【Wiz】が欠落していた。原因は編集スクリプトを muse.write で書いたためで、muse.write が全角括弧【】を欠落させる既知の問題がスクリプト内のリテラルにも及んだ。CI の .po チェックは msgid の存在しか見ないため、この欠落は CI では検出できない。§34 記録の準備中に D8 訳の【Wiz】件数を数えて発覚した（master 75 件→D8 ブランチ 76 件しか増えておらず、D8 訳 35 件中【Wiz】付きは「Kind」1 件だけだった）。修正は exec 経由の Python で 31 件に【Wiz】を付与し直し、差分が msgstr 31 行のプレフィックス追加のみであることを API 版との diff で確認した。教訓：【Wiz】を含むファイル編集は exec 経由で行うこと（muse.write／muse.edit は使わない）。また .po の検証には msgid の存在確認に加えて、新規 msgstr の【Wiz】付与件数の監査を入れること（D8：35 件中 32 件が【Wiz】付き、素の訳は汎用動詞 3 件のみ）。
+- **細部**：(1) resource.h は mixed line endings（D0 の注記ブロックだけ LF）だったため、注記部分の編集は LF アンカーで行い、他は CRLF を維持した。(2) ルール数が減ったときに Count を超えた古いキー（Enabled3 等）が残るが、.sct は Count までしか読まないため無害。オプション削除 API がないため残す。(3) ダイアログはモーダル（学習ダイアログ前例）。Enter は保存（既定ボタン）、Esc は破棄。(4) `github_api.py pr` は head を `merge20/phase1` に固定しているため、PR #30 は API 直接呼び出しで開いた。(5) `/tmp/d8-master` 作業ツリーはランタイム再起動で消えた（`/tmp` は揮発性）。以降のスライスでは作業ツリーを `~/workspace/` 配下に置くこと。
+
+### 34.3 CI 結果
+
+- 1 回目：実行 45782824163（head 50aaa7fb、【Wiz】欠落ありの状態）→ **success**。ジョブ 139782171559 "build" success。全文ログ（47,433 行）で確認：`error C*`／`error LNK*`／`error MSB*` は 0 件、`[  PASSED  ] 676 tests.`（D7 時 664 件＋新規 Merge20Master 12 件＝676 件。`[  FAILED  ]` 行は 0 件。ログ中の "FAILED" 4 件は `.po` の `IDS_*_FAILED` コメントのみ）、Merge20Master 12 テストすべて `[ OK ]`、`.po` チェック行 `Merge20 strings present in the bundled Japanese.po.` を確認。Merge20Master 新規ファイルへのコンパイル警告は 0 件。成果物 2 件（API 確認、未失効、失効日 2027-02-24T08:24:00Z）：WinMerge-x64.zip（ID 15099986041、26,394,334 バイト）、WinMerge-x64-Setup-x64.exe（ID 15098933456、39,846,642 バイト）。
+- 2 回目（【Wiz】修正後）：実行 45785339440（head 506f4d00）→ **success**。ジョブ 139790576395 "build" success。全文ログ（47,390 行）で確認：`error C*`／`error LNK*`／`error MSB*` は 0 件、`[  PASSED  ] 676 tests.`、`[  FAILED  ]` 行は 0 件（"FAILED" 4 件は同じく `IDS_*_FAILED` コメントのみ）、Merge20Master 12 テストすべて `[ OK ]`、`.po` チェック行を確認。成果物 2 件（API 確認、未失効、失効日 2027-02-24T08:41:46Z）：WinMerge-x64.zip（ID 15100192525、26,394,141 バイト）、WinMerge-x64-Setup-x64.exe（ID 15101150012、39,844,787 バイト）。
+- PR #30 は mergeable: True、mergeable_state: clean（2 回目の実行完了時点で確認）。
+- 本節の記録コミット後の最終 head については CI を再検証すること（実行の conclusion、GoogleTest、成果物）。
+
+### 34.4 検証ゲート (a)〜(d)＋GoogleTest
+
+- (a) 仕様・設計書の条項：除外ワードマスタの管理画面（○、新規ダイアログ。`%` ワイルドカード付き部分一致・正規表現可、比較オプションとは独立に保持）、強調文字マスタの管理画面（○、プリセット 3 件を既定ルールとして同梱、正規表現チェック可）、リスク重要語エディタ（○、共用ダイアログで `OPT_MERGE20_RISK_KEYWORDS` の値を編集）、保存形式 §4.4（○、JSON。1 ルール＝｛部分一致／正規表現、`%` パターン、有効／無効｝等。S8 の JSON モジュールを流用。純粋モジュールは ASCII のみ）、入出力（○、保存ダイアログ＋共有注意文つき確認ダイアログ。L5 前例）、保存して再判定で全ファイル再計算（○、除外変更時に `CDirDoc::Rescan()`）。**仕様・設計書との意図的差分**：強調文字の比較画面での表示は未実装（§34.2 参照）。設計書の「FlushAndRescan」は `CDirDoc::Rescan()` が正しい入口（§34.2 参照）。
+- (b) 利用可否：コード読解と GoogleTest と g++ ハーネスで確認（純粋モジュールはローカルで全チェック合格。作業ファイル `~/workspace/d8-work/harness/`）。**Windows 実機での操作の流れ（編集→保存→復元→再計算→入出力）は未検証**（§34.5 のチェックリストで実施すること）。
+- (c) 表示の正当性：新規 `_()` 文字列 35 件は全て .po に訳あり（CI の .po チェックも通過）。【Wiz】付与は監査済み（35 件中 32 件が【Wiz】付き、素の訳は汎用動詞 Update／Move up／Move down の 3 件のみ。§34.2 の欠落と修正を参照）。**日本語 UI での実際の表示、レイアウト崩れ・文字の見切れは未検証**（§34.5 で実施すること）。
+- (d) 回帰：GoogleTest 676 件全パス（既存 664 件を含む）で確認。既存のフォルダ比較・ファイル比較の実機での動作は未検証（§34.5 で実施すること）。
+- GoogleTest：Merge20Master 12 件全パス（WildcardPercentMatchesAnyText、WildcardPlainIsSubstring、WildcardEmptyNeverMatches、WildcardIgnoreCase、RuleMatchesRegex、IsValidRegex、ExcludeLineSkipsDisabled、DefaultHighlightPresets、JsonRoundTrip、JsonErrors、JsonSkipsBadRules、HtmlExcludeDefaults）。ダイアログ／アダプタ／再計算経路（MFC 依存）は GoogleTest の対象外のため実機確認が必要。
+
+### 34.5 Windows 実機確認チェックリスト（手順付き。未検証）
+
+成果物 WinMerge-x64.zip（ID 15100192525）または WinMerge-x64-Setup-x64.exe（ID 15101150012）を入手し、以下を順に確認すること。
+
+1. **起動**：フォルダ比較を開く。フォルダ比較ウィンドウで右クリックする→「【Wiz】マスタ管理…」があり、開くと「【Wiz】マスタ管理」ダイアログが開くこと。タイトル・ラベル・ボタンが日本語表示になること。コンボに「【Wiz】除外ワードマスタ」「【Wiz】強調文字マスタ」「【Wiz】リスク重要語」の 3 件があること。
+2. **除外ワードの編集と保存・復元**：除外ワードマスタでパターン（例：`--1.0.8%`、部分一致）を追加し「保存」を押す→ダイアログが閉じること。再度開く→追加したルールが残っていること（復元）。再起動後も残っていること。ルールの有効チェックを外して保存→再度開くと無効のまま残ること。
+3. **除外ワードの再判定**：差分のある実フォルダで、除外したい文字列を含む行の差分があるファイルを用意する。除外ワード（例：その文字列を含む `%` 付きパターン）を追加して保存する→フォルダ比較が自動で再比較され、該当ファイルの差分が消える（または「同一」になる）こと。2 行目のバージョン番号を持つファイルで「【Wiz】2行目のバージョン番号を無視する」のチェックを外して保存→再比較で 2 行目が差分として出ること。
+4. **正規表現チェック**：パターン欄に `[unclosed` と入力し「正規表現」チェックを付けて「【Wiz】正規表現をチェック」を押す→「【Wiz】正規表現が無効です。」と表示されること。`@version\s+[0-9.]+` では「【Wiz】正規表現は有効です。」と表示されること。無効な正規表現のまま「追加」を押す→追加されずエラーメッセージが出ること。
+5. **強調文字のプリセット**：強調文字マスタを開く→初回は「Math.floor／round」「独自」「税率・補正率」の 3 件が既に入っていること。表示名・パターン・種類（正規表現／部分一致）が正しいこと。ルールを追加・削除・上下移動できること。ヒント文に「比較画面での表示は未実装です。」と出ること。
+6. **リスク重要語の編集**：リスク重要語マスタで重要語（例：`決算`）を追加して保存する→再度開くと残っていること。ファイルを分類し直す（ファイル比較を開き直す）と、該当語を含む差分でリスクが変わること（既存の分類フックどおり）。
+7. **入出力**：「エクスポート…」を押す→共有注意文（承認された内部経路のみ…）の確認が出る→「はい」で JSON ファイルが保存されること。保存した JSON をテキストエディタで開き、`app` が `Merge20Masters`、`version` が 1 であること。別のマスタ状態で「インポート…」からその JSON を読む→件数付きの完了メッセージが出て、保存を押すと反映されること（保存前にキャンセルすると反映されないこと）。
+8. **レイアウト**：ダイアログをリサイズする→一覧・編集欄・ボタンが追従し、文字の見切れ・重なりがないこと。高 DPI 環境でも表示が崩れないこと。パターン列が長い日本語パターンでも読めること。
+9. **回帰**：フォルダ比較（表示・ソート・フィルタ・ダブルクリックで開く）とファイル比較（差分表示・編集・マージ）が従来どおり動くこと。既存の Merge20 機能（巡回・フォーカス・スナイパー・学習・セッション保存・Grep）に影響がないこと。除外ワードが空の状態では、従来どおり 2 行目バージョン無視だけが働くこと。
+
+### 34.6 D9 への引き継ぎと残課題
+
+- D7 からの残課題（§33.6）は D8 では扱っていない。引き続き残課題。
+- D8 固有の残課題：(1) 強調文字の比較画面での表示（`CMergeResultView::GetLineColors`／`CMergeEditView` の行色付けへの追加。色・無効化・再描画の設計が必要）。(2) リスク重要語の変更時に開いているファイル比較の分類を再計算する刷新関数（L2 の `Merge20LearnRefreshAllOpenDocs` と同じ形）。(3) 除外ワードの HTML 既定 2 件はシードしていない（§34.2 参照。シードすべきという判断になれば、初回読み込み時の既定として入れる）。(4) ルール数削減時に Count を超えた古いオプションキーが残る（無害だが掃除されない。§34.2 参照）。(5) `github_api.py pr` は head を `merge20/phase1` に固定しているため、PR 作成は API 直接呼び出しで行った（§34.2 参照）。(6) muse.write は【】を欠落させるため、【Wiz】を含むファイル編集は exec 経由で行うこと（§34.2 参照）。また .po の検証には新規 msgstr の【Wiz】付与件数の監査を入れること。
+- 次スライス（D9）の着手時は、master の最新 head と NOTES の次節番号（§35 の見込み）を再確認すること。

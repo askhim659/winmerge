@@ -460,6 +460,7 @@
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Split.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Sniper.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Grep.cpp" />
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20Master.cpp" />
     <ClCompile Include="..\..\..\Src\DiffFileData.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -803,6 +804,11 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20Master_test.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
     <ClCompile Include="..\DirItem\DirItem_test.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -950,6 +956,7 @@
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Split.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Sniper.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Grep.h" />
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20Master.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Types.h" />
     <ClInclude Include="..\..\..\Src\DiffFileData.h" />
     <ClInclude Include="..\..\..\Src\DiffItem.h" />
