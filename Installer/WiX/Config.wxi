@@ -4,14 +4,14 @@
     <?define Platform = "x86" ?>
   <?endif ?>
   <?define Manufacturer = "Thingamahoochie Software" ?>
-  <?define ProductName = "WinMerge" ?>
+  <?define ProductName = "WizMerge" ?>
   <?ifndef ProductVersion ?> <!-- if product version NOT defined -->
     <?define ProductVersion = "0.0.1" ?>
   <?endif ?>
   
-  <?define PackageDescription = "WinMerge Installer" ?>
+  <?define PackageDescription = "WizMerge Installer" ?>
   <?define PackageKeywords = "Installer" ?>
-  <?define PackageComments = "WinMerge" ?>
+  <?define PackageComments = "WizMerge" ?>
   
   <?if $(var.Platform) = "x64" ?> <!-- if "x64" platform -->
     <?define Win64 = "yes" ?>
