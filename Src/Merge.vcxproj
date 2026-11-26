@@ -1053,6 +1053,8 @@
     <ClInclude Include="Merge20\Merge20FileListBar.h" />
     <ClInclude Include="Merge20\Merge20FileListCtrl.h" />
     <ClInclude Include="Merge20\Merge20FileListFilter.h" />
+    <ClInclude Include="Merge20\Merge20FilterDeck.h" />
+    <ClInclude Include="Merge20\Merge20FilterDeckBar.h" />
     <ClInclude Include="Merge20\Merge20FileStates.h" />
     <ClInclude Include="Merge20\Merge20Focus.h" />
     <ClInclude Include="Merge20\Merge20Split.h" />
@@ -1386,6 +1388,12 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20FilterDeck.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FilterDeckBar.cpp" />
     <ClCompile Include="Merge20\Merge20FileStates.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
