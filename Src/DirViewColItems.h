@@ -59,6 +59,12 @@ String Merge20CsvGetReviewText(const CDiffContext* pCtxt, const DIFFITEM& di);
 String Merge20CsvGetActionText(const CDiffContext* pCtxt, const DIFFITEM& di);
 String Merge20CsvGetRiskText(const CDiffContext* pCtxt, const DIFFITEM& di);
 String Merge20CsvGetSummaryText(const CDiffContext* pCtxt, const DIFFITEM& di);
+// Merge20 (Panel P1, design section 12.3 P-R1): the output checkbox
+// glyph and the provisional old/changed/new counts column. Both
+// forward to the same getters the folder compare list uses, so the
+// panel shows exactly what the list shows.
+String Merge20CsvGetOutputText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetOldChangedNewText(const CDiffContext* pCtxt, const DIFFITEM& di);
 
 class DirViewColItems
 {
