@@ -4369,10 +4369,10 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 
 ## 36. Phase 4 D10（速度改善）— ブランチ `merge20/phase4-d10`
 
-- PR: 未作成（本記録後に作成し、§36.5 に追記する）。
+- PR: #32（https://github.com/askhim659/winmerge/pull/32）。最終 head（コード）`31eb380da02356d850335e8c2d68b0de545866fc`（修正 3 件込み）。マージは本記録時点では未実施（コーディネーター判断待ち）。
 - 設計書 §5.2 D10、§3.11、§3.12、§4、§8.3、仕様書 §3（2/4）・§7。受け入れ条件：1000 ファイル規模で一括計算が UI を固めないこと（バックグラウンドで進捗が表示されること）。巨大ファイルで簡易比較へ自動切替し [簡易] バッジが表示されること。100／500／1000 ファイルでの計測結果が記録されていること（§8.3）。
 
-### 36.1 変更一覧（1 ファイル 1 コミット、25 件＋本節の記録コミット）
+### 36.1 変更一覧（1 ファイル 1 コミット、28 件＋本節の記録コミット）
 
 | コミット | ファイル | 内容 |
 |---|---|---|
@@ -4401,6 +4401,9 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 | 51975d5b | Src/DirView.h | ダイアログメンバ m_wndBulkClassify、OnMerge20BulkClassify、Merge20BuildBulkClassifyFiles 宣言 |
 | 644171cb | Src/DirView.cpp | コンテキストメニュー項目、メッセージマップ、OnDestroy での CloseBulkClassify、ファイル一覧ビルダ |
 | e1003fc8 | Translations/WinMerge/Japanese.po | 新規文字列 8 件の日本語訳（§36.5 の監査参照） |
+| 82b0ded1 | Src/Merge20/Merge20ClassifyDoc.h | CI 修正：Merge20BulkDiff.h を include（C2065 Merge20BulkRange 未宣言。Merge20ClassifyFromRanges の宣言で使う） |
+| 555aabd1 | Src/DirView.h | CI 修正：Merge20BulkClassifyDlg.h を include（C2065 Merge20BulkClassifyFile／m_wndBulkClassify 未宣言） |
+| 31eb380d | Src/DirView.cpp | CI 修正：`di.isResultDiff()` → `di.diffcode.isResultDiff()`（isResultDiff は DIFFCODE のメンバ。C2039） |
 
 ### 36.2 設計判断（判断理由付き）
 
@@ -4439,7 +4442,7 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 
 ### 36.5 検証レポート
 
-- CI：未実施（PR 作成後に本節へ追記する）。
+- CI 実行 45799955548（head `dfc560d5`、PR #32）：結論 failure。原因はコンパイルエラー 3 件（いずれも include／メンバ所属の見落とし。全文ログ 38,718 行を確認し、エラーはこの 3 ファイルのみであることを確認。Merge20BulkClassifyDlg.cpp 自体・UnitTests 側の新規テストに独立したエラーはなし）：(1) Merge20ClassifyDoc.h が Merge20BulkRange を使うのに Merge20BulkDiff.h を include していなかった（C2065）。(2) DirView.h が Merge20BulkClassifyDlg.h を include していなかった（C2065、m_wndBulkClassify／Merge20BulkClassifyFile 未宣言）。(3) Merge20BuildBulkClassifyFiles が `di.isResultDiff()` と書いていたが isResultDiff は DIFFCODE のメンバ（C2039、正しくは `di.diffcode.isResultDiff()`）。修正コミット 82b0ded1／555aabd1／31eb380d。本記録コミット後の CI 実行で再確認する。
 - .po 監査：ブランチ版 msgid 2144 件 vs master 版 2136 件（＋8。新規 8 件）。【Wiz】116 件 vs master 版 109 件（＋7）。＋8 と ＋7 の差 1 件は "Simple" → 「簡易」（バッジ用で意図的に【Wiz】なし。§36.2 参照）。"Stop"・"Close" は既存の stock 文字列を流用（新規追加なし）。ブランチ版を API から取得して確認。
 - ローカル検証：Merge20BulkDiff 純粋モジュールを g++ スタブ pch ハーネスで検証し、38 アサーション全パス（gtest 12 テストと同内容）。Node 相互検証：HTML 本体から isExcl／isL2Ver／normL／diffFast／lcs／alignHunks を抽出して実行し、8 ケース（identical／onechange／addmissing／moved／emptyold／interleave／multihunk／trailing）の範囲が C++ 出力と完全一致。vcxproj 4 ファイルは XML 整形式をパーサで確認済み。
 - 未検証（Windows 実機でのみ確認できる挙動）：§36.6 のチェックリスト。実機で確認するまで「できた」とは言わない。
