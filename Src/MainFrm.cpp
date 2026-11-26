@@ -345,6 +345,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWnd)
 	ON_COMMAND(ID_WINDOW_PREV, MDIPrev)
 	// [Help] menu
 	ON_COMMAND(ID_HELP_CONTENTS, OnHelpContents)
+	ON_COMMAND(ID_MERGE20_USER_MANUAL, OnHelpWizManual)
 	ON_COMMAND(ID_HELP_GNULICENSE, OnHelpGnulicense)
 	ON_COMMAND(ID_HELP_GETCONFIG, OnSaveConfigData)
 	ON_COMMAND(ID_HELP_RELEASENOTES, OnHelpReleasenotes)
@@ -2023,6 +2024,25 @@ void CMainFrame::UpdateResources()
 void CMainFrame::OnHelpContents()
 {
 	CMergeApp::ShowHelp();
+}
+
+/**
+ * @brief Open the WizMerge user manual (H-DOC).
+ *
+ * The manual is bundled as Docs/WizMergeManual.html and opened in the
+ * default browser, following OnHelpReleasenotes(). If the file is missing
+ * (for example when running from a build directory without Docs),
+ * show a message instead of letting ShellExecute fail silently.
+ */
+void CMainFrame::OnHelpWizManual()
+{
+	const String sPath = paths::ConcatPath(env::GetProgPath(), WizManual);
+	if (paths::DoesPathExist(sPath) != paths::IS_EXISTING_FILE)
+	{
+		AfxMessageBox(_("WizMerge user manual (Docs\\WizMergeManual.html) was not found.").c_str(), MB_OK | MB_ICONSTOP);
+		return;
+	}
+	shell::Open(sPath.c_str());
 }
 
 /**
