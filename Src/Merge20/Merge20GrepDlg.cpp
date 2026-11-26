@@ -500,6 +500,25 @@ void CMerge20GrepDlg::RefreshHistoryCombo()
 		m_cbQuery.SetCurSel(0);
 }
 
+/**
+ * @brief Merge20 (Phase 4 D11, design section 4.1(b)): put a saved
+ * search string back at the head of the search history (same rule
+ * as StartSearch: latest 10, most recent first, saved to
+ * OPT_MERGE20_GREP_HISTORY). When the dialog is open, the combo is
+ * rebuilt so the restored string shows in it; otherwise the next
+ * ShowGrep rebuilds it from the history.
+ */
+void CMerge20GrepDlg::RestoreSearchText(const String& text)
+{
+	if (text.empty())
+		return;
+	const std::vector<String> history = Merge20GrepPushHistory(
+		Merge20GrepParseHistory(GetOptionsMgr()->GetString(OPT_MERGE20_GREP_HISTORY)), text);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_GREP_HISTORY, Merge20GrepFormatHistory(history));
+	if (m_hWnd != nullptr)
+		RefreshHistoryCombo();
+}
+
 void CMerge20GrepDlg::StartSearch()
 {
 	if (m_bRunning.load() || m_pDirView == nullptr)
