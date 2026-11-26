@@ -368,6 +368,14 @@ public:
 	tchar_t GetResultLineMarker(int nLine) const;
 	const MergeResultSegment* GetResultSegmentByLine(int nLine) const;
 	const MergeResultSegment* GetResultSegmentByDiff(int nDiff) const;
+	/** @brief Merge20 (Phase 4 D3): is the diff still waiting for a
+	 * decision (the TODO-only diff-patrol predicate)? True when there
+	 * is no merge session yet (no result segment, so every diff
+	 * counts as unreviewed) or the segment is Unresolved/Conflict.
+	 * Unlike IsResultDiffPending, which is false without a segment,
+	 * this is the patrol predicate: resolved (Chosen/Auto/Edited)
+	 * diffs are skipped by TODO-only patrol. */
+	bool Merge20IsDiffUnresolved(int nDiff) const;
 
 	void ResultChooseSource(int nDiff, int srcPane, bool bGroupWithPrevious = false);
 	void ResultChooseSources(int nDiff, const std::vector<int>& srcPanes, bool bGroupWithPrevious = false);
