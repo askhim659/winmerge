@@ -152,9 +152,10 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 		return FALSE;
 	}
 
-	// Merge20 (Phase 4 D1): dedicated-mode bar (skeleton, caption only).
-	// D2 adds the Prev/Next, review-state and exit buttons; D1 only
-	// wires its show/hide to the dedicated mode.
+	// Merge20 (Phase 4 D1/D2): dedicated-mode bar. D2 adds the
+	// Prev/Next, review-state, pin/toggle, zoom and exit buttons,
+	// and fixes the bar height to one button row (see
+	// CMerge20DedBar::LoadState / CalcFixedLayout).
 	sCaption = _("Dedicated Compare Mode");
 	if (!m_wndDedBar.Create(this, sCaption.c_str(), WS_CHILD | WS_VISIBLE, ID_VIEW_MERGE20_DEDICATED_MODE))
 	{
