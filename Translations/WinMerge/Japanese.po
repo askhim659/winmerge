@@ -11634,3 +11634,33 @@ msgstr "【Wiz】ファイル一覧パネル"
 #: Src/Merge20/Merge20FileListBar.cpp
 msgid "No folder comparison"
 msgstr "フォルダ比較がありません"
+
+#. Merge20 (Panel P2): file-list panel search label (design section 12.3 P-R4)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Search file name or folder:"
+msgstr "【Wiz】ファイル名・フォルダ検索："
+
+#. Merge20 (Panel P2): file-list panel expand-all button (design section 12.3 P-R5)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Expand all"
+msgstr "【Wiz】すべて展開"
+
+#. Merge20 (Panel P2): file-list panel collapse-all button (design section 12.3 P-R5)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Collapse all"
+msgstr "【Wiz】すべて折りたたむ"
+
+#. Merge20 (Panel P2): file-list panel filter tab "all" (design section 12.3 P-R10)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "All action categories"
+msgstr "【Wiz】すべて"
+
+#. Merge20 (Panel P2): file-list panel directory-row context menu (design section 12.3 P-R5)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Expand folder"
+msgstr "【Wiz】フォルダを展開"
+
+#. Merge20 (Panel P2): file-list panel directory-row context menu (design section 12.3 P-R5)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Collapse folder"
+msgstr "【Wiz】フォルダを折りたたむ"

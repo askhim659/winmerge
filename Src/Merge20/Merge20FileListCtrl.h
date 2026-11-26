@@ -44,11 +44,19 @@
  */
 #pragma once
 
+#include <set>
 #include <vector>
 #include "UnicodeString.h"
 #include "Merge20Types.h"
 
 class CDiffContext;
+
+/** @brief Message the control sends its parent (CMerge20FileListBar)
+ * when a row is right-clicked (NM_RCLICK). wParam = displayed row
+ * index; the bar reads the cursor position itself. WM_USER + 120
+ * is free in this window: no WM_USER message is used anywhere in
+ * the Merge20 panel code (verified on P2). */
+#define WM_MERGE20_FILELIST_ROW_RCLICK (WM_USER + 120)
 
 class CMerge20FileListCtrl : public CListCtrl
 {
@@ -56,6 +64,33 @@ class CMerge20FileListCtrl : public CListCtrl
 public:
 	CMerge20FileListCtrl();
 	virtual ~CMerge20FileListCtrl();
+
+	/** @brief One cached row: display strings plus the enums the
+	 * custom draw and the count line need. Cached by value, never
+	 * by DIFFITEM pointer (see the file header comment). Public so
+	 * the bar can read the displayed rows for the batch check and
+	 * the directory operations (P2); the bar never writes them.
+	 * Declared first: member declarations below use Row in their
+	 * signatures, and a nested type is only visible after its
+	 * definition. */
+	struct Row
+	{
+		String output; /**< Output checkbox glyph (empty for directories) */
+		String fileName;
+		String action;
+		String risk;
+		String oldChangedNew; /**< Provisional counts column */
+		String review;
+		ReviewState reviewState = ReviewState::TODO; /**< Row tint (S2 rule) */
+		RiskLevel riskLevel = RiskLevel::NONE; /**< High-risk emphasis */
+		bool isDirectory = false; /**< Skipped by the count line (S3 rule) */
+		bool includeInOutput = false; /**< Counted as checked (S3 rule) */
+		String relPath; /**< P2: DIFFITEM::getItemRelativePath(), key for collapse and for resolving DIFFITEMs */
+		int depth = 0; /**< P2: DIFFITEM::GetDepth(), files directly under the root are 0 */
+		ActionCategory actionCategory = ActionCategory::NO_ACTION_IDENTICAL; /**< P2: filter-tab value (meaningful only when classified) */
+		bool classified = false; /**< P2: S4 classification ran for this file (unclassified files match no tab) */
+		bool hasChildren = false; /**< P2: DIFFITEM::HasChildren(), whether the row can be folded */
+	};
 
 	/** @brief Folder context to list (nullptr = no folder compare). */
 	void SetDiffContext(const CDiffContext* pCtxt) { m_pCtxt = pCtxt; }
@@ -69,10 +104,42 @@ public:
 	 * CDirView::GetMerge20StatusCountText (S3): displayed files,
 	 * checked files, unreviewed files. Directory rows are skipped. */
 	String GetCountText() const;
+	/** @brief Count displayed files per review state (P2, for the
+	 * batch-check dialog): the same definition as
+	 * CDirView::Merge20CountDisplayedByReviewState, but over the
+	 * panel's displayed rows (search / tab / collapse applied).
+	 * Directory rows are skipped. */
+	void CountByReviewState(int counts[5]) const;
+	/** @brief Search text (P2, P-R4): files whose relative path
+	 * does not contain it are hidden. Empty text shows all rows. */
+	void SetSearchText(const String& searchText);
+	/** @brief Action-category filter (P2, P-R10): -1 shows every
+	 * category, otherwise static_cast<int>(ActionCategory) of the
+	 * selected tab. Unclassified files match no tab, only -1. */
+	void SetActionFilter(int actionFilter);
+	/** @brief Fold or unfold one directory row (P2, P-R5), keyed
+	 * by its relative path. The bar drives this from the buttons,
+	 * the double-click and the context menu. */
+	void SetCollapsed(const String& relPath, bool collapsed);
+	/** @brief True when the displayed row is a folded directory. */
+	bool IsRowCollapsed(int index) const;
+	/** @brief Unfold every directory row (P2, "expand all"). */
+	void ExpandAll();
+	/** @brief Fold every directory row that has children (P2,
+	 * "collapse all"). */
+	void CollapseAll();
+	/** @brief Number of displayed rows (after search / tab /
+	 * collapse). */
+	int GetDisplayedRowCount() const { return static_cast<int>(m_rows.size()); }
+	/** @brief Displayed row by index (nullptr when out of range).
+	 * The pointer stays valid until the next Refresh(). */
+	const Row* GetDisplayedRow(int index) const;
 
 	//{{AFX_MSG(CMerge20FileListCtrl)
 	afx_msg void OnGetdispinfo(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnCustomDraw(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnRClick(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnDblclk(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -89,23 +156,10 @@ private:
 		COL_COUNT /**< Number of columns */
 	};
 
-	/** @brief One cached row: display strings plus the enums the
-	 * custom draw and the count line need. Cached by value, never
-	 * by DIFFITEM pointer (see the file header comment). */
-	struct Row
-	{
-		String output; /**< Output checkbox glyph (empty for directories) */
-		String fileName;
-		String action;
-		String risk;
-		String oldChangedNew; /**< Provisional counts column */
-		String review;
-		ReviewState reviewState = ReviewState::TODO; /**< Row tint (S2 rule) */
-		RiskLevel riskLevel = RiskLevel::NONE; /**< High-risk emphasis */
-		bool isDirectory = false; /**< Skipped by the count line (S3 rule) */
-		bool includeInOutput = false; /**< Counted as checked (S3 rule) */
-	};
-
 	const CDiffContext* m_pCtxt; /**< Folder context (owned by CDirDoc, not by this control) */
-	std::vector<Row> m_rows; /**< Cached rows, in compare order */
+	std::vector<Row> m_allRows; /**< P2: all rows, in compare order (before search / tab / collapse) */
+	std::vector<Row> m_rows; /**< Cached displayed rows, in compare order */
+	std::set<String> m_collapsed; /**< P2: relative paths of folded directories (default: all unfolded) */
+	String m_searchText; /**< P2: raw search text (trimmed and lower-cased by the filter module) */
+	int m_actionFilter = -1; /**< P2: -1 = all action categories, otherwise static_cast<int>(ActionCategory) */
 };
