@@ -128,12 +128,12 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 	CFont* pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
 	CRect rc(0, 0, 0, 0);
-	// Search row (P2, P-R4): label + edit. The label has no
-	// control ID (IDC_STATIC): its text is re-applied in
+	// Search row (P2, P-R4): label + edit. The label takes the
+	// default control ID (no ID): its text is re-applied in
 	// UpdateResources() through the member variable.
 	if (!m_stSearchLabel.Create(_("Search file name or folder:").c_str(),
 		WS_CHILD | SS_LEFTNOWORDWRAP | SS_CENTERIMAGE,
-		rc, this, IDC_STATIC))
+		rc, this))
 	{
 		TRACE0("Failed to create Merge20FileListBar search label\n");
 		return -1;
