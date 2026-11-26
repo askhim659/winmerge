@@ -11664,3 +11664,8 @@ msgstr "【Wiz】フォルダを展開"
 #: Src/Merge20/Merge20FileListBar.cpp
 msgid "Collapse folder"
 msgstr "【Wiz】フォルダを折りたたむ"
+
+#. Merge20 (Panel P3): file-list panel file-row context menu (design section 12.3 P-R8)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Toggle output"
+msgstr "【Wiz】出力を切り替える"
