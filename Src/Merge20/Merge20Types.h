@@ -67,6 +67,28 @@ struct Merge20DiffJudgment
 };
 
 /**
+ * @brief One split diff group (D5, design sections 3.8 and 4.2 layer 3).
+ *
+ * The original diff range a split replaced, plus the number of
+ * per-row hunks it became. Stored as plain ints (like
+ * Merge20DiffJudgment) so this header stays free of MergeDoc
+ * headers and the session JSON module can read and write it. The
+ * first per-row hunk keeps the group's real-line starts and
+ * apparent start, so the group is found again without an index
+ * (indices shift when another group is split or regrouped).
+ */
+struct Merge20SplitGroup
+{
+	int op = 0;       /**< OP_TYPE of the original diff range */
+	int begin[3] = { -1, -1, -1 }; /**< First real line of the original range, per pane */
+	int end[3] = { -1, -1, -1 };   /**< Last real line of the original range, per pane */
+	int dbegin = 0;   /**< First apparent (ghost-inclusive) line of the original range */
+	int dend = 0;     /**< Last apparent line of the original range */
+	int blank[3] = { -1, -1, -1 }; /**< First ghost line per pane (-1 when none) */
+	int rows = 0;     /**< Per-row hunks the group was split into (>= 2) */
+};
+
+/**
  * @brief Per-file work state kept outside DIFFITEM (design section 2.4).
  *
  * DIFFITEM must not hold GUI work state (see the comment in DiffItem.h),
@@ -91,6 +113,7 @@ struct Merge20FileState
 	String summary;    /**< Rule-based summary text */
 	String memo;       /**< Audit memo */
 	std::vector<Merge20DiffJudgment> diffJudgments; /**< Per-diff judgments of the merge result pane (S8). Empty when the file was never judged in a merge session, or when its merge doc was never opened. */
+	std::vector<Merge20SplitGroup> splitGroups; /**< Split diff groups of the merge result pane (D5). Empty when no diff of the file was split. A changed file resets these with the judgments (spec section 6.1). */
 	String leftEncoding;  /**< Left-side encoding, for display */
 	String rightEncoding; /**< Right-side encoding, for display */
 };
