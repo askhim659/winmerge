@@ -60,11 +60,17 @@ String Merge20CsvGetActionText(const CDiffContext* pCtxt, const DIFFITEM& di);
 String Merge20CsvGetRiskText(const CDiffContext* pCtxt, const DIFFITEM& di);
 String Merge20CsvGetSummaryText(const CDiffContext* pCtxt, const DIFFITEM& di);
 // Merge20 (Panel P1, design section 12.3 P-R1): the output checkbox
-// glyph and the provisional old/changed/new counts column. Both
-// forward to the same getters the folder compare list uses, so the
-// panel shows exactly what the list shows.
+// glyph. It forwards to the same getter the folder compare list
+// uses, so the panel shows exactly what the list shows.
+// Merge20 (H-LIST, coverage matrix H-27/H-LIST): the three
+// old/changed/new count columns. They forward to the same getters
+// the folder compare list uses, so the panel shows exactly what the
+// list shows; they replace the P1 provisional single column
+// (Merge20CsvGetOldChangedNewText, removed).
 String Merge20CsvGetOutputText(const CDiffContext* pCtxt, const DIFFITEM& di);
-String Merge20CsvGetOldChangedNewText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetMissingText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetModifiedText(const CDiffContext* pCtxt, const DIFFITEM& di);
+String Merge20CsvGetAddedText(const CDiffContext* pCtxt, const DIFFITEM& di);
 
 class DirViewColItems
 {
