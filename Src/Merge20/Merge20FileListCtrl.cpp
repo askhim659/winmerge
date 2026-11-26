@@ -82,13 +82,6 @@ CMerge20FileListCtrl::~CMerge20FileListCtrl()
  */
 void CMerge20FileListCtrl::SetupColumns()
 {
-	// Header texts reuse the folder compare list's msgids
-	// ("Include in Output", "Filename", "Action Category", "Risk",
-	// "Review State"), so the headers match the list exactly,
-	// including the [Wiz] mark W1 put on the Merge20 headers. The
-	// old/changed/new column is the exception: it has no folder-list
-	// counterpart yet (H-LIST), so it uses the new msgid
-	// "Old/Changed/New" ([Wiz] old/changed/new in Japanese).
 	// The headers are written as literal _() calls, not taken from
 	// a table of string pointers: the .pot generator
 	// (Translations/WinMerge/CreateMasterPotFile.js) only scans
