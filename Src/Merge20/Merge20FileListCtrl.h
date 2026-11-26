@@ -15,14 +15,15 @@
  *
  * P1 columns (design section 12.3 P-R1): selection (output
  * checkbox glyph), file name, action category, risk, old/changed/
- * new counts (provisional single column, see below), review state.
- * Every display value reuses the S6 wrappers (Merge20CsvGet*Text),
- * so the panel shows exactly what the folder compare list shows.
- * The old/changed/new column is provisional: H-LIST (coverage
- * matrix section 4) will add the three separate columns; until
- * then this one column shows the counts part of the summary text
- * ("Missing: N lines / Changed: M lines / Added: K lines",
- * Merge20CsvGetOldChangedNewText).
+ * new counts (three columns, H-LIST), review state. Every display
+ * value reuses the S6 wrappers (Merge20CsvGet*Text), so the panel
+ * shows exactly what the folder compare list shows. The three
+ * count columns reuse the folder compare list's new columns
+ * (Merge20CsvGetMissingText / Merge20CsvGetModifiedText /
+ * Merge20CsvGetAddedText): one locale-formatted number per column,
+ * "Not calculated" for never-opened files, empty for directories.
+ * They replace the P1 provisional single column
+ * (Merge20CsvGetOldChangedNewText, removed by H-LIST).
  *
  * Rows are cached by value (display strings plus the review state
  * and risk level the drawing needs), never by DIFFITEM pointer:
@@ -98,7 +99,9 @@ public:
 		String fileName;
 		String action;
 		String risk;
-		String oldChangedNew; /**< Provisional counts column */
+		String missing; /**< Missing-in-new (deleted) lines (H-LIST) */
+	String modified; /**< Changed lines (H-LIST) */
+	String added; /**< Newly added lines (H-LIST) */
 		String review;
 		ReviewState reviewState = ReviewState::TODO; /**< Row tint (S2 rule) */
 		RiskLevel riskLevel = RiskLevel::NONE; /**< High-risk emphasis */
@@ -115,7 +118,7 @@ public:
 	void SetDiffContext(const CDiffContext* pCtxt) { m_pCtxt = pCtxt; }
 	/** @brief Rebuild the cached rows from the context. */
 	void Refresh();
-	/** @brief Insert the six P1 columns (call once, after Create). */
+	/** @brief Insert the eight P1 columns (call once, after Create). */
 	void SetupColumns();
 	/** @brief Re-apply the column header texts (language change). */
 	void UpdateColumnHeaders();
@@ -188,7 +191,9 @@ public:
 		COL_FILENAME, /**< File name */
 		COL_ACTION, /**< Action category */
 		COL_RISK, /**< Risk level */
-		COL_OLD_CHANGED_NEW, /**< Old/changed/new counts (provisional, one column) */
+		COL_MISSING, /**< Missing-in-new (deleted) lines (H-LIST) */
+	COL_MODIFIED, /**< Changed lines (H-LIST) */
+	COL_ADDED, /**< Newly added lines (H-LIST) */
 		COL_REVIEW, /**< Review state */
 		COL_COUNT /**< Number of columns */
 	};
