@@ -27,6 +27,8 @@
 #include "Merge20/Merge20FileListFilter.h"
 #include "DiffContext.h"
 #include "DirViewColItems.h"
+#include "OptionsMgr.h"
+#include "OptionsDef.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -282,6 +284,75 @@ void CMerge20FileListCtrl::SetCollapsed(const String& relPath, bool collapsed)
 	else
 		m_collapsed.erase(relPath);
 	Refresh();
+	// P4: the folded set is saved at once (see SaveCollapsedState).
+	SaveCollapsedState();
+}
+
+/**
+ * @brief Replace the folded directories (Panel P4, restore).
+ *
+ * The set is taken as-is (stale paths are harmless: they only
+ * match rows that exist). No save here: the bar saves the
+ * restored set with the rest of the panel state.
+ */
+void CMerge20FileListCtrl::SetCollapsedPaths(const std::set<String>& paths)
+{
+	m_collapsed = paths;
+	Refresh();
+}
+
+/**
+ * @brief Persist the folded directories at once (Panel P4).
+ *
+ * Called after every collapse change (SetCollapsed, ExpandAll,
+ * CollapseAll; the double-click path goes through SetCollapsed),
+ * so the state survives even a crash. The option holds the
+ * newline-joined relative paths (Merge20JoinCollapsedPaths).
+ */
+void CMerge20FileListCtrl::SaveCollapsedState()
+{
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions != nullptr)
+	{
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_COLLAPSED,
+			Merge20JoinCollapsedPaths(m_collapsed));
+	}
+}
+
+/**
+ * @brief Slim display (Panel P4, design section 12.4): hide every
+ * column except file name and review state.
+ *
+ * Hiding is by column width 0 (the headers stay, squeezed to
+ * nothing, as in the folder list's slim mode the columns are
+ * hidden the same way). The widths are remembered first, so
+ * un-slimming restores exactly what was there, including a
+ * manually widened column. No-op when the state does not change
+ * or the list has no columns yet (SetupColumns runs in the bar's
+ * OnCreate, before any slim call).
+ */
+void CMerge20FileListCtrl::ApplySlim(bool slim)
+{
+	if (GetSafeHwnd() == nullptr || GetHeaderCtrl() == nullptr)
+		return;
+	if (slim == m_bSlim)
+		return;
+	m_bSlim = slim;
+	if (slim)
+	{
+		for (int col = 0; col < COL_COUNT; ++col)
+			m_savedColWidths[col] = GetColumnWidth(col);
+		for (int col = 0; col < COL_COUNT; ++col)
+		{
+			if (col != COL_FILENAME && col != COL_REVIEW)
+				SetColumnWidth(col, 0);
+		}
+	}
+	else
+	{
+		for (int col = 0; col < COL_COUNT; ++col)
+			SetColumnWidth(col, m_savedColWidths[col]);
+	}
 }
 
 /**
@@ -304,6 +375,8 @@ void CMerge20FileListCtrl::ExpandAll()
 		return;
 	m_collapsed.clear();
 	Refresh();
+	// P4: the folded set is saved at once (see SaveCollapsedState).
+	SaveCollapsedState();
 }
 
 /**
@@ -318,6 +391,8 @@ void CMerge20FileListCtrl::CollapseAll()
 			m_collapsed.insert(row.relPath);
 	}
 	Refresh();
+	// P4: the folded set is saved at once (see SaveCollapsedState).
+	SaveCollapsedState();
 }
 
 /**
