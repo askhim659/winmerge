@@ -738,8 +738,11 @@ BOOL CMergeEditFrame::PreTranslateMessage(MSG* pMsg)
 	// button. The panels handle their own keys in
 	// CMerge20SniperView::OnKeyDown; the dialog's own
 	// PreTranslateMessage is not reached by the pump for a modeless
-	// dialog, so the frame forwards here.
-	if (m_wndSniper.IsOpen() && m_wndSniper.PreTranslateMessage(pMsg))
+	// dialog, so the frame forwards here, through the dialog's
+	// public HandleSniperKey (CWnd::PreTranslateMessage is
+	// protected and cannot be called from the frame).
+	if (m_wndSniper.IsOpen() && pMsg->message == WM_KEYDOWN &&
+		m_wndSniper.HandleSniperKey(static_cast<UINT>(pMsg->wParam)))
 		return TRUE;
 	if (m_bDedicatedMode && pMsg->message == WM_KEYDOWN &&
 		pMsg->wParam == 'R' &&
