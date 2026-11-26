@@ -4284,3 +4284,85 @@ PR #28。2026-11-26。master f20571b0（D5＝PR #27 マージ済み）から分�
 - D7 からの残課題（§33.6）は D8 では扱っていない。引き続き残課題。
 - D8 固有の残課題：(1) 強調文字の比較画面での表示（`CMergeResultView::GetLineColors`／`CMergeEditView` の行色付けへの追加。色・無効化・再描画の設計が必要）。(2) リスク重要語の変更時に開いているファイル比較の分類を再計算する刷新関数（L2 の `Merge20LearnRefreshAllOpenDocs` と同じ形）。(3) 除外ワードの HTML 既定 2 件はシードしていない（§34.2 参照。シードすべきという判断になれば、初回読み込み時の既定として入れる）。(4) ルール数削減時に Count を超えた古いオプションキーが残る（無害だが掃除されない。§34.2 参照）。(5) `github_api.py pr` は head を `merge20/phase1` に固定しているため、PR 作成は API 直接呼び出しで行った（§34.2 参照）。(6) muse.write は【】を欠落させるため、【Wiz】を含むファイル編集は exec 経由で行うこと（§34.2 参照）。また .po の検証には新規 msgstr の【Wiz】付与件数の監査を入れること。
 - 次スライス（D9）の着手時は、master の最新 head と NOTES の次節番号（§35 の見込み）を再確認すること。
+
+## 35. Phase 4 D9（スリムリスト・ミニマップ・キー整備）— ブランチ `merge20/phase4-d9`
+
+- PR: #31（https://github.com/askhim659/winmerge/pull/31）。最終 head（コード）`6575965653e0b254bfc90d57b73b3e1591e20ec7`。マージは本記録時点では未実施（コーディネーター判断待ち）。
+- 設計書 §5.2 D9、§3.10、§4.1、T-4-8、仕様書 §4(g)・§5.1・§5.4・§6.1。受け入れ条件：スリム切替で列が隠れ、確認内容タグが折り返し表示されること。F・R が専用モード内でのみ有効で、通常モードでは従来動作（文字入力等）を壊さないこと。
+
+### 35.1 変更一覧（1 ファイル 1 コミット、15 件＋本節の記録コミット）
+
+| コミット | ファイル | 内容 |
+|---|---|---|
+| 2cd80ab7 | Src/Merge20/Merge20Slim.h | 純粋モジュールヘッダ（スリム列集合・列順文字列・幅定数・折り返し判定） |
+| 48c71d8b | Src/Merge20/Merge20Slim.cpp | 純粋モジュール実装（`VisibleColumns()`＝Name／Soutput／Sreview、`ColumnOrders()`＝`"0 | Name Soutput Sreview"`、確認内容列幅 126、出力列幅 48） |
+| bcd19215 | Testing/GoogleTest/Merge20/Merge20Slim_test.cpp | 単体テスト 5 件 |
+| d9046714 | Src/Merge.vcxproj | Merge20Slim.cpp／.h 登録（pch.h グループ） |
+| b7c99b98 | Src/Merge.vcxproj.filters | 同上 |
+| 60c865f1 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | Merge20Slim.cpp＋テスト登録 |
+| ac67d1c5 | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上 |
+| 16b0050a | Src/resource.h | ID_MERGE20_DED_DIFFS_ONLY 38958、ID_MERGE20_SLIM 38959、IDC_MERGE20_DED_DIFFS_ONLY 1805、`_APS_NEXT_*` 更新（38960／1806）。D0 コメントブロック更新 |
+| 441a5325 | Src/Merge20/Merge20DedBar.h | 専用バーの「Diffs only」トグルボタン宣言（`m_btnDiffsOnly`、`SetDiffsOnly`）。ボタン 13 個に |
+| 6a009d7b | Src/Merge20/Merge20DedBar.cpp | 同ボタン実装（幅・ID・配列。トグル 2〜10、プッシュ 0／1／11／12） |
+| d47c724a | Src/MergeEditFrm.h | `OnMerge20DedDiffsOnly`（F キーハンドラ）の宣言を追加 |
+| 64eb696a | Src/MergeEditFrm.cpp | F キー（差分のみ表示切替、専用モード内のみ）＋メッセージマップ＋`UpdateDedBar` でのボタン状態更新 |
+| ef70e53e | Src/DirView.h | スリム状態メンバ（`m_bMerge20Slim`、全レイアウト記憶用 `m_sMerge20FullColumnOrders/Widths`、`m_merge20SlimImageList`）とメソッド宣言 |
+| f468244a | Src/DirView.cpp | スリムリスト本体（列プリセット、126px 折り返し確認内容タグ、レイアウトガード、コンテキストメニュー項目、`OnInitialUpdate` での復元） |
+| 65759656 | Translations/WinMerge/Japanese.po | 新規 `_()` 文字列 2 件の日本語訳を追加（「【Wiz】スリムリスト」「【Wiz】差分のみ」） |
+
+### 35.2 設計判断（判断理由付き）
+
+- **スリム表示列は Name＋Soutput＋Sreview のみ**。HTML のスリムはチェックボックス（24px）＋ファイル名＋確認内容（126px）。WinMerge におけるチェックボックス相当は出力（Soutput）列なので残す。隠す列：Saction、Srisk、Ssummary ほか全 stock 列。Ssummary の件数情報はテキスト内に含まれるため情報損失はない（旧／変／新は Ssummary テキスト＋既定非表示の Snsdiffs／Snidiffs で対応）。
+- **全レイアウトは記憶して復元する。スリム中の列設定は保存しない**。スリム突入時に列順・幅を `CDirView` メンバに記憶し、解除時に完全復元する。スリム中の列順・幅がオプションに保存されないよう `OnDestroy`、`Merge20GetDisplaySettings`、`Merge20ApplyColumnSettings` にガードを入れた。`OnEditColumns`（列の表示ダイアログ）はスリムを先に解除して全レイアウトを表示する。`OPT_MERGE20_SLIM`（D0 キー）でフラグを永続化し、`OnInitialUpdate` で全レイアウト読込後にスリムを再適用する。
+- **確認内容タグの折り返しは `OnCustomDraw` で自前描画**。スリム＋非選択行の確認内容セルのみ `DT_WORDBREAK` で描画する。選択行は stock の選択ハイライトを優先する。背景・文字色は `GetColors` から取り、S2 の行ティントを保つ。2 行分の行高は `BuildMerge20SlimImageList` で実現する（`m_imageList` から `ExtractIcon` で順序通り複写する taller な小アイコンリスト。all-or-nothing。既に 2 行分以上の高さがあれば省略）。解除時は `RestoreMerge20SlimImageList` で復元する。物理／論理列インデックスは都度検索する（ヘッダのドラッグ並べ替え後の陳腐化を回避）。描画は `m_bUseColors` と同じゲート（色表示は既定 ON）。正直な注記：現行の日本語ラベルは最大 5 文字（約 60px）で 126px に 1 行で収まるため、折り返しは長いラベルへの安全策である（英語最長ラベル "Needs manual work" は約 119px）。
+- **T-4-8 再描画コストは解析で確認した**。切替は `ReloadColumns`（約 40 列のヘッダ再構築）＋ `Redisplay`（O(N) の仮想リスト bookkeeping。項目テキストの取得はなく、テキストは可視行のみ描画）＋可視行の再描画 1 回。折り返しは描画ごとに確認内容セル 1 回分の `DrawText` 追加のみ。ファイル内容量に比例する処理はない。実測タイミングは実機確認項目とする。
+- **F キーは既存 `OPT_DIFF_CONTEXT` を流用し、all ⇔ 0 の明示トグルにする**。既定 −1＝全表示、0＝差分のみ。`ID_VIEW_DIFFCONTEXT_TOGGLE` の `-m-1` 方式（直前の N を記憶して all → N になる）は使わない。`CMergeEditFrame::PreTranslateMessage` で D2 の R と同じフォーカスゲート（フレームまたは専用バーのみ。比較ビュー内の 'f' は文字入力のまま）、専用モード限定、Ctrl／Alt／Shift 除外。専用バーに「Diffs only」トグルボタン（BS_PUSHLIKE チェックボックス）を追加し、`UpdateDedBar` で `OPT_DIFF_CONTEXT == 0` から状態を更新する。ハンドラ `OnMerge20DedDiffsOnly` は `ID_VIEW_DIFFCONTEXT_ALL`／`ID_VIEW_DIFFCONTEXT_0` を post し `FlashDedBar()` を呼ぶ。
+- **R は D2 実装済み。D9 では専用モード内限定であることを再確認するのみ**。
+- **ミニマップはコード追加なし**。`CLocationView`（Src/LocationView.cpp／.h）に "tooltip" の出現が 0 件であることを再確認した（grep）。仕様書 §3「全体マップにはマウスホバー時の説明ツールチップを付けない」に適合する。ツールチップは追加しない。
+- **`OPT_MERGE20_SHOW_REVIEW_*` の UI は付けない（キーのみ残す）**。`IsShowable` が参照しておらず（grep で確認。読んでいるのは `Merge20SessionDisplay.reviewFilter` へのセッション永続化用のみ）、フィルタ適用ロジックなしのチェックボックスは死に UI になるため。フィルタ適用＋UI は D11 で一体実装する。
+- **スリムの入口はフォルダ一覧のコンテキストメニュー**（動的追加、MF_CHECKED、「Master Management...」の後）。メニューはポップアップ毎に再構築されるため更新ハンドラは不要。メイン View メニューには追加しない。
+
+### 35.3 仕様・設計条項チェック
+
+| 条項 | 判定 | 備考 |
+|---|---|---|
+| 仕様書 §4(g) ショートカット表（F・R） | 満たす | 専用モード内限定。競合なし（§35.4） |
+| 仕様書 §5.1 スリム表示 | 満たす | 列を絞って行を詰める表示 |
+| 仕様書 §5.4 比較専用モード | 満たす | F・R は専用モード内のみ有効 |
+| 仕様書 §6.1 保存原則 | 満たす | スリム中の列設定をオプションに保存しないガードあり |
+| 設計書 §5.2 D9 | 満たす | スリム／ミニマップ確認／F・R 限定／SHOW_REVIEW_* 判断／ショートカット一覧整理の全項目を実施 |
+| 設計書 §3.10 スリムリスト | 満たす | 列プリセット＋126px 折り返し＋全レイアウト復元 |
+| 設計書 T-4-8 | 解析で確認 | 実測は実機確認項目（§35.6） |
+| 設計書 §4.1 オプションキー | 満たす | OPT_MERGE20_SLIM（D0 キー）を流用。新規キーなし |
+
+### 35.4 キーボードショートカット一覧（仕様書 §4(g) に沿って整理）と競合監査
+
+- F：差分のみ表示切替（専用モード内のみ。D9 で追加）。R：倍率 75% リセット（専用モード内のみ。D2 実装済み）。
+- J／K：スナイパー表示中のみ（D6）。Space／Esc／矢印：スナイパー表示中のみ（D6）、および比較ビューのマージ中矢印＋Esc（`CMergeEditView::PreTranslateMessage`、`MergeModeKeyDown`）。
+- Ctrl+D：差分コンテキストのトグル（既存。`-m-1` 方式）。F は専用モード内の素キー別名で、all ⇔ 0 の単純な意味論。競合ではない。
+- 競合監査の方法と結果：`Merge.rc` に素文字のアクセラレータなし（F は Ctrl+F `ID_EDIT_FIND` と Ctrl+Shift+F `ID_MERGE20_GREP` のみ。数字は修飾キー付きのみ。素の Space／R／J／K なし）。`PreTranslateMessage` で素の F／R を扱うのは D2 の R のみ（D9 で F を追加）。`CMainFrame::PreTranslateMessage` は Insert／Esc／Ctrl+Tab のみ。フォーカスドックにキー処理なし。以上、素キー F・R の競合なし。
+
+### 35.5 検証レポート
+
+- CI 実行 45791964305：結論 success（head `6575965653e0b254bfc90d57b73b3e1591e20ec7`）。GoogleTest 681 テスト全パス（55 スイート、FAILED 0 件。新規 Merge20Slim 5 テスト含む）。成果物：WinMerge-x64.zip 26,398,587 バイト（ID 15104032142、失効 2027-02-24T09:26:20Z）、WinMerge-x64-Setup-x64.exe 39,856,229 バイト（ID 15104351265、失効 2027-02-24T09:26:20Z）。全文ログは `~/workspace/.coord/d9_final_log.txt` に保存。
+- .po 監査：ブランチ版 【Wiz】109 件 vs master 版 107 件（＋2。新規 2 件とも【Wiz】付き）。msgid 2136 件 vs master 2134 件（＋2）。ブランチ版を API から取得して確認。
+- ローカル検証：Merge20Slim 純粋モジュールを g++ スタブ pch ハーネスで検証し、5 テスト全パス。
+- 未検証（Windows 実機でのみ確認できる挙動）：§35.6 のチェックリスト。実機で確認するまで「できた」とは言わない。
+
+### 35.6 実機確認チェックリスト（手順付き）
+
+1. スリム切替（1000 ファイル規模のフォルダ比較）：フォルダ一覧を右クリック → 「【Wiz】スリムリスト」を ON。列が Name／出力／確認内容のみになること。確認内容列が 126px で、タグが見切れないこと。もう一度 OFF にすると切替前の列順・幅が完全に復元されること。
+2. スリムの永続化：スリム ON のまま再起動し、スリムが復元されること。「列の表示」ダイアログを開くと全レイアウトが表示されること（スリム自動 OFF）。
+3. 確認内容タグの折り返し：UI を英語に切り替え、"Needs manual work" のタグが 2 行に折り返ること。スリム中の行が 2 行分の高さになること。ファイルアイコンがスリム中も正しいこと（taller なアイコンリスト）。スリム OFF でアイコン表示が元に戻ること。
+4. F キー（専用モード）：比較専用モードに入り、フレームまたは専用バーにフォーカスがある状態で F を押すと全表示 ⇔ 差分のみが切り替わること。専用バーの「Diffs only」ボタンのチェックが連動すること。通常モードでは F を押しても何も起きないこと。比較ビューで 'f' をタイプすると文字入力になること。Ctrl+F／Ctrl+Shift+F は従来通り（検索／Grep）であること。
+5. R キー：専用モード内で R を押すと倍率が 75% に戻ること。通常モードでは何も起きないこと。
+6. ミニマップ：ファイル比較で LocationView が表示され、ホバーしてもツールチップが出ないこと。
+7. 回帰：フォルダ比較・ファイル比較が従来通り動くこと。スリム ON のままセッション保存・復元しても全レイアウトが壊れないこと（スリムフラグ自体の永続化は D11）。
+8. T-4-8 実測：1000 ファイル規模でスリム切替の体感遅延がないこと。
+
+### 35.7 D10 への引き継ぎ・残課題
+
+- D11：`OPT_MERGE20_SHOW_REVIEW_*` のフィルタ適用＋UI を一体実装する（D9 ではキーのみ）。
+- D11：スリムフラグ自体のセッション永続化（D9 では `OPT_MERGE20_SLIM` によるフラグ永続化と `OnInitialUpdate` での再適用まで。セッション JSON への保存は D11 の範囲）。
+- D8 からの残課題（D9 の範囲外）：比較ビューでのハイライト表示、リスク重要語変更時の再分類リフレッシュ、HTML 既定除外ワードの未シード、ルール数縮小時の陳腐オプションキー。
+- 検証ゲートの注意：CI 緑だけでは不十分。最終 head の実行結論・全文ログの GoogleTest 全パス行・成果物 2 件の API 確認を毎回行うこと。実機挙動は §35.6 のチェックリストでユーザーに確認してもらうこと。
