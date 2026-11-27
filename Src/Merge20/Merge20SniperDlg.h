@@ -31,6 +31,7 @@
 
 #include "TrDialogs.h"
 #include "Merge20/Merge20Sniper.h"
+#include "Merge20/Merge20ImpactList.h"
 #include "resource.h"
 
 class CMergeDoc;
@@ -112,6 +113,7 @@ private:
 	CButton m_btnRegroup;
 	CButton m_btnClose;
 	CMerge20SniperView* m_pView[3]; /**< OLD / NEW / MERGED panels */
+	CMerge20ImpactList m_wndImpactList; /**< "Uses in other files" list (B5) at the bottom of the overlay */
 
 	CMergeDoc* m_pDoc; /**< Owning document, or nullptr */
 	int m_nCurrentDiff; /**< Diff shown, or -1 */
