@@ -540,18 +540,22 @@ void CMergeEditFrame::SetDedicatedMode(bool bEnable)
  */
 void CMergeEditFrame::EnterDedicatedMode()
 {
-	// Merge20 (Phase 4 D11, D2 residual (c)): pin the dedicated bar
-	// on the first entry, so the auto-hide does not take the bar away
-	// before a first-time user has found the pin. The key is cleared
-	// after the first entry, so the HTML default (unpinned,
-	// auto-hide) applies from the second entry on. UpdateDedBar
-	// syncs the pin button from the key, so setting the key is
-	// enough.
-	if (GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PIN_FIRST))
-	{
-		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, true);
-		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PIN_FIRST, false);
-	}
+	// Merge20 (ded-mode fix, 2026-11-27): pin the dedicated bar on
+	// every entry, not just the first (D11's OPT_MERGE20_DED_PIN_FIRST
+	// once-only pin). Real-machine reports (2026-11-26 D1 build,
+	// 2026-11-27 quality-fix build) show the mode looks broken when
+	// the bar is gone: the IDT_DEDHIDE timer hides it ~3s after entry
+	// whenever it is not pinned, and the only way back is an invisible
+	// 8px hover strip at the top of the child window, so the user sees
+	// nothing but the hidden bottom pane and cannot recover the bar.
+	// Pinning on entry keeps the bar (the mode's only UI) visible; the
+	// pin button still unpins it for the current session, and a session
+	// restore may still clear the pin of an already-open frame (see the
+	// PR description). UpdateDedBar syncs the pin button from the key,
+	// so setting the key is enough. OPT_MERGE20_DED_PIN_FIRST is left
+	// defined (now unused for gating) so first-only pinning can be
+	// revived later.
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, true);
 	// Remember the current layout so exiting restores it exactly.
 	m_bDedFilePathBarVisible = !!m_wndFilePathBar.IsWindowVisible();
 	m_bDedLocationBarVisible = !!m_wndLocationBar.IsWindowVisible();
