@@ -6851,3 +6851,40 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 78.4 次への移行
 - 次は **B5**（他ファイルへの影響表示）に進む。B5 の担当を spawn する。
 - ID 割り当て状況（2026-11-27 18:40 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）、F7 が 308 を使用、B11 が 309 を使用（310 は `IDR_MARGIN_ICONS_PNG`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用、F7 が 1910–1912 を使用、B11 が 1913–1916 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、B10 PR1 が 38984–38985 を使用、B11 が 38986–38987 を使用。`_APS_NEXT_RESOURCE_VALUE` 311、`_APS_NEXT_COMMAND_VALUE` 38988、`_APS_NEXT_CONTROL_VALUE` 1917（B13 マージ時点）。
+
+## 79. B5 PR1 — 判断時の他ファイル影響表示（検索エンジン＋バックグラウンド検索）（PR #75）
+
+### 79.1 概要
+- B5（判断時の他ファイル影響表示）の PR1：検索エンジン＋バックグラウンド検索。PR2（ドック／スナイパーへの表示追加＋ジャンプ配線）は別途。
+- 純粋モジュール `Merge20Impact.h/.cpp`：S4 の抽出結果（`Merge20ClassifyResult::functions`）をそのままシンボル一覧にする（精度は上げない）。D7 のテキスト検索を流用（大文字小文字を区別しない部分一致、`Merge20GrepMakeExcerpt` による 120 文字抜粋、上限 80 件は `Merge20GrepMaxHits` と共有）。判断中のファイル自体は検索対象外（相対パスの大文字小文字を区別しない比較）。ストリーミング型コレクター `Merge20ImpactCollector` が 1 行ずつフィードされ、(行, シンボル) ごとにヒットを作る。結果 `Merge20ImpactResult` はシンボル・ヒット（シンボル名／相対パス／ペイン／行／抜粋）・上限到達フラグ・推定フラグ・走査済み／対象ファイル数を持つ。
+- バックグラウンド検索 `Merge20ImpactSearch.h/.cpp`：`CMerge20ImpactSearch`＋シンク `IMerge20ImpactSearchSink`。D7 のワーカー方式をそのまま流用（Poco ThreadPool 1 ワーカー、フォルダ一覧順・80 件打ち切り正確、ファイル読み取りは `codepage_detect::Guess`＋`UniMemFile`、バイナリはスキップ）。ワーカーは CWnd／CMergeDoc に触らず、シンクのコールバックはワーカースレッドで走る（UI への転送はシンク側）。シンボルが空の場合はワーカーを起動せず空の結果を即返す。FORM 比較からは起動しない。
+- 注記の文言は PR1 で決定：`isTextSearchEstimate` フラグ（常に true）と `Merge20ImpactEstimateNoteMsgId` をデータ構造に含めた。msgid：`Estimated by text search; not a precise reference analysis.`、日本語訳（PR2 で .po に追加）：「テキスト検索による推定であり、厳密な参照解析ではありません。」
+
+### 79.2 変更内容（PR #75、9 コミット、9 ファイル、+934/−0）
+| ファイル | 内容 |
+|---|---|
+| `Src/Merge20/Merge20Impact.h/.cpp` | 純粋モジュール（シンボル一覧・コレクター・結果構造体） |
+| `Src/Merge20/Merge20ImpactSearch.h/.cpp` | バックグラウンド検索（ワーカー＋シンク） |
+| `Testing/GoogleTest/Merge20/Merge20Impact_test.cpp` | 単体テスト 19 件 |
+| `Src/Merge.vcxproj`／`.filters`、`Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | 登録 |
+
+- 純粋モジュールは `pch.h` グループ、ワーカーは既定 PCH `StdAfx.h`。MFC ワーカーは UnitTests には登録しない（`Merge20GrepDlg.h` と同じ扱い）。
+- **ID 割り当て**：新規コマンド ID・ダイアログ ID・コントロール ID はなし（UI を作らないため）。`_APS_NEXT_*` は 311／38988／1917 のまま。`.po` の変更もなし。
+
+### 79.3 検証レポート（コーディネーター検証済み）
+- **PR #75**：head `70afc725`、base master `f30e95ae`（B13 マージ＋NOTES §78）。9 コミット、変更ファイル 9 件（B5 PR1 の 9 ファイルのみ）。
+- **CI（ブランチ head）**：実行 46055026066、completed／success。全文ログ（3,626,574 バイト）を担当が取得・確認（`~/workspace/.coord/b5/ci-46055026066-full.log`）。コーディネーターも同ログの要所を確認：`Build succeeded`、`0 Error(s)`（431 Warning(s) は既存パターン。`Merge20Impact*` ファイル由来の warning／error は 0 件）、GoogleTest `[ PASSED ] 1042 tests.`（1023＋新規 19 件）、`[ FAILED ]` 0 件（ログ中の "FAILED" 4 件は .po の `IDS_FILESAVE_FAILED` 等の文字列 ID のみ）。成果物：`WinMerge-x64.zip` 26,794,580 バイト、`WinMerge-x64-Setup-x64.exe` 40,232,930 バイト、expire 2027-02-25。
+- **マージ**：マージコミット `ad189f3d`。マージコミット CI：実行 46057056837、completed／success。全文ログ（3,624,991 バイト、ジョブ `build` 140702017221）をコーディネーターが取得・確認（`~/workspace/.coord/b5/b5_pr1_merge_log.txt`）。GoogleTest `[ PASSED ] 1042 tests.`、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`、`Merge20 verify: 100 files x 500 lines, 51 ms total, 0 issues`。
+- **成果物（実行 46057056837）**：`WinMerge-x64.zip` 26,794,289 バイト、`WinMerge-x64-Setup-x64.exe` 40,230,001 バイト。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **受け入れ条件の照合（gap 分析 B5 のうち PR1 の範囲）**：
+  - (a) 他ファイルでの使用箇所をバックグラウンド検索で取得できること — エンジン側を固定（コレクター＋ワーカーの単体テストで固定）。表示と合わせた充足は PR2。
+  - (b) 使用箇所がないときは空の結果になること — 固定済み（シンボルあり・ヒット空と、シンボル自体なしを区別して返す。PR2 で「他ファイルでの使用なし」と表示する土台）。
+  - (c) 一覧の行クリックでジャンプ — **PR2 の範囲**。ヒットにジャンプに必要な情報（相対パス・ペイン・行）をすべて含め、diff index は D7 と同じくクリック時に解決する設計。
+  - (d) 注記の文言 — PR1 で決定（上記参照）。表示は PR2。
+  - (e) 検索中も判断操作ができること — ワーカー方式により UI を固まらせない設計（D7 と同じ単一ワーカープール、I/O は UI スレッド外）。**実機での確認は PR2 のチェックリストに含めた**。
+- **未検証（実機でしか確認できないもの）**：PR1 単体では画面に何も出ないため、以下は PR2 の実機チェックリストに含めた：差分表示時の他ファイル使用箇所の表示、行クリックでのジャンプ、「他ファイルでの使用なし」表示、注記の表示、100 ファイル規模での検索時間・検索中の UI 応答性、FORM 比較で検索が走らないこと。
+- **PR2 への引き継ぎ**：起点は `CMerge20FocusDock::ShowDiff(nDiff)`。注意点として、`Merge20ClassifyOneDiffRange` はリスク値しか返さないため、関数名入りの分類結果が要る PR2 では、分類結果を返す取得関数（`Merge20ClassifyOneDiffResult` 相当）を `Merge20ClassifyDoc` に小さく追加するか、`Merge20ClassifyFromRanges` に 1 範囲を渡す必要がある。検索の起動：ドックが `CMerge20ImpactSearch` をメンバーに持ち、`Start(files, symbols, currentRelPath, guessEncodingType, sink)` を呼ぶ。`files` は `CDirView::Merge20BuildGrepFiles()`（`CMergeDoc::GetDirDoc()`→フォルダ文書→`GetMainView()` の経路。パネル P3 と同じ経路）。`guessEncodingType` は `OPT_CP_DETECT`。差分が変わるたびに `Start` を呼び直す（内部で前回を join）。ドック破棄時は `Stop()` を呼ぶこと。結果の受け取り：ドックが `IMerge20ImpactSearchSink` を実装し、コールバックはワーカースレッドのため `PostMessage` で UI スレッドへ転送して一覧へ追加する（D7 と同じ形）。`limitReached` が true なら打ち切り表示、`hits` が空なら「他ファイルでの使用なし」を表示。`isTextSearchEstimate` が true のときは注記を常時出すこと（`.po` に日本語訳を追加）。ジャンプ：`Merge20ImpactHit` を `CDirView::Merge20OpenFileAtLine`（D7 のジャンプ経路）に渡す。スナイパー側も同じヒット構造・同じ経路を使うこと。**FORM 比較には適用しないこと。**
+
+### 79.4 次への移行
+- B5 PR2（ドック／スナイパーへの表示追加＋ジャンプ配線）を次に spawn する。
+- ID 割り当て状況（2026-11-27 19:30 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）、F7 が 308 を使用、B11 が 309 を使用（310 は `IDR_MARGIN_ICONS_PNG`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用、F7 が 1910–1912 を使用、B11 が 1913–1916 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、B10 PR1 が 38984–38985 を使用、B11 が 38986–38987 を使用。`_APS_NEXT_RESOURCE_VALUE` 311、`_APS_NEXT_COMMAND_VALUE` 38988、`_APS_NEXT_CONTROL_VALUE` 1917（B5 PR1 マージ時点）。
