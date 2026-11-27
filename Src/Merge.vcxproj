@@ -1047,6 +1047,7 @@
     <ClInclude Include="Merge20\Merge20Classify.h" />
     <ClInclude Include="Merge20\Merge20ClassifyDoc.h" />
     <ClInclude Include="Merge20\Merge20Conclusion.h" />
+    <ClInclude Include="Merge20\Merge20Undo.h" />
     <ClInclude Include="Merge20\Merge20Csv.h" />
     <ClInclude Include="Merge20\Merge20CsvExport.h" />
     <ClInclude Include="Merge20\Merge20CsvExportDlg.h" />
@@ -1433,6 +1434,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20Conclusion.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20Undo.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
