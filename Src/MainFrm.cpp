@@ -34,6 +34,7 @@
 #include "OpenDoc.h"
 #include "MergeDoc.h"
 #include "Merge20/Merge20LearnDoc.h"
+#include "Merge20/Merge20FormCompareDoc.h"
 #include "MergeEditView.h"
 #include "HexMergeDoc.h"
 #include "HexMergeView.h"
@@ -346,6 +347,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWnd)
 	// [Help] menu
 	ON_COMMAND(ID_HELP_CONTENTS, OnHelpContents)
 	ON_COMMAND(ID_MERGE20_USER_MANUAL, OnHelpWizManual)
+	ON_COMMAND(ID_MERGE20_FORM_COMPARE, OnMerge20FormCompare)
 	ON_COMMAND(ID_HELP_GNULICENSE, OnHelpGnulicense)
 	ON_COMMAND(ID_HELP_GETCONFIG, OnSaveConfigData)
 	ON_COMMAND(ID_HELP_RELEASENOTES, OnHelpReleasenotes)
@@ -2010,6 +2012,8 @@ void CMainFrame::UpdateResources()
 		pDoc->UpdateResources();
 	for (auto pDoc : GetAllOpenDocs())
 		pDoc->UpdateResources();
+	for (auto pDoc : GetAllFormCompareDocs())
+		pDoc->UpdateResources();
 	for (auto pFrame: GetAllImgMergeFrames())
 		pFrame->UpdateResources();
 	for (auto pFrame: GetAllWebPageDiffFrames())
@@ -2043,6 +2047,23 @@ void CMainFrame::OnHelpWizManual()
 		return;
 	}
 	shell::Open(sPath.c_str());
+}
+
+/**
+ * @brief Merge20 (Wave 5 F2, design section 3.2): FORM compare
+ * (view-only) standalone launch. No folder compare is open, so
+ * the two folders are picked with the folder picker (old first,
+ * then new). Cancelling either picker aborts the launch.
+ */
+void CMainFrame::OnMerge20FormCompare()
+{
+	String leftFolder;
+	if (!SelectFolder(leftFolder, nullptr, _("Select the old folder (locally collected)"), GetSafeHwnd()))
+		return;
+	String rightFolder;
+	if (!SelectFolder(rightFolder, nullptr, _("Select the new folder (package)"), GetSafeHwnd()))
+		return;
+	Merge20FormCompareOpenFolders(leftFolder, rightFolder);
 }
 
 /**
@@ -2175,6 +2196,12 @@ MergeDocList &CMainFrame::GetAllMergeDocs()
 DirDocList &CMainFrame::GetAllDirDocs()
 {
 	return static_cast<DirDocList &>(GetDocList(theApp.GetDirTemplate()));
+}
+
+/// Get list of FormCompareDocs (documents underlying a FORM compare)
+FormCompareDocList &CMainFrame::GetAllFormCompareDocs()
+{
+	return static_cast<FormCompareDocList &>(GetDocList(theApp.GetFormCompareTemplate()));
 }
 
 /// Get list of HexMergeDocs (documents underlying edit sessions)

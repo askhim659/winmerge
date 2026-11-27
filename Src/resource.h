@@ -891,6 +891,27 @@
 #define IDC_MERGE20_FILTERDECK_REVIEW_KEEP 1834
 #define IDC_MERGE20_FILTERDECK_PRESET       1835
 #define IDC_MERGE20_FILTERDECK_SHOW_ALL     1836
+#define IDC_MERGE20_FORM_HEADER             1837
+#define IDC_MERGE20_FORM_NOTICE             1838
+#define IDC_MERGE20_FORM_KPI_TOTAL          1839
+#define IDC_MERGE20_FORM_KPI_MISMATCH       1840
+#define IDC_MERGE20_FORM_KPI_MATCHED        1841
+#define IDC_MERGE20_FORM_KPI_AVG            1842
+#define IDC_MERGE20_FORM_KPI_WARNING        1843
+#define IDC_MERGE20_FORM_KPI_COORD          1844
+#define IDC_MERGE20_FORM_KPI_ADDDEL         1845
+#define IDC_MERGE20_FORM_TABS               1846
+#define IDC_MERGE20_FORM_SEARCH_LABEL       1847
+#define IDC_MERGE20_FORM_SEARCH             1848
+#define IDC_MERGE20_FORM_SORT_LABEL         1849
+#define IDC_MERGE20_FORM_SORT               1850
+#define IDC_MERGE20_FORM_RERUN              1851
+#define IDC_MERGE20_FORM_PREV               1852
+#define IDC_MERGE20_FORM_NEXT               1853
+#define IDC_MERGE20_FORM_NAV_TOGGLE         1854
+#define IDC_MERGE20_FORM_NAV                1855
+#define IDC_MERGE20_FORM_LIST               1856
+#define IDC_MERGE20_FORM_EMPTY              1857
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1874,6 +1895,7 @@
 #define ID_MERGE20_CONCLUSION_USE_BOTH  38973
 #define ID_MERGE20_CONCLUSION_REJECT    38974
 #define ID_MERGE20_CONCLUSION_KEEP      38975
+#define ID_MERGE20_FORM_COMPARE         38976
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2636,6 +2658,7 @@
 // show-all 1836) and command 38968 (deck bar toggle).
 // H-DOC consumes command 38969 (user manual menu item).
 // B1 consumes commands 38970-38975 (per-diff conclusion menu items).
+// F2 consumes command 38976 (FORM compare launch) and controls 1837-1857 (FORM compare view).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2648,8 +2671,8 @@
 //   are the D5 split/regroup commands; 38958-38959 are the D9
 //   diffs-only and slim commands; 38968 is the H-FILTER deck toggle;
 //   38969 is the H-DOC user manual command;
-//   38970-38975 are the B1 conclusion commands;
-//   _APS_NEXT_COMMAND_VALUE is now 38976), free up to 38976
+//   38970-38975 are the B1 conclusion commands; 38976 is the F2 FORM compare command;
+//   _APS_NEXT_COMMAND_VALUE is now 38978), free from 38978
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2659,8 +2682,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
-#define _APS_NEXT_COMMAND_VALUE         38976
-#define _APS_NEXT_CONTROL_VALUE         1837
+#define _APS_NEXT_COMMAND_VALUE         38978
+#define _APS_NEXT_CONTROL_VALUE         1858
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
