@@ -6717,3 +6717,55 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 75.4 次への移行
 - 次は **B11**（監査ログ）に進む。B11 の担当を spawn する。
 - ID 割り当て状況（2026-11-27 15:00 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）、F7 が 308 を使用。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用、F7 が 1910–1912 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、B10 PR1 が 38984–38985 を使用。`_APS_NEXT_RESOURCE_VALUE` 309、`_APS_NEXT_COMMAND_VALUE` 38986、`_APS_NEXT_CONTROL_VALUE` 1913（B10 PR2 マージ時点）。
+
+## 76. B11 — 監査ログ（PR #72）
+
+### 76.1 概要
+- B11（監査ログ）：判断の履歴を追記式のログに残す。B8 の検証レポート（出力の正しさの証拠）とは別物（監査ログは判断の履歴）。B10 の Undo 履歴（取り消しのための履歴）とも別物。
+- 1 件あたり「日時・ファイル（相対パス）・操作の種類（確認内容変更／出力切替／差分結論／一括チェック／学習候補の受け入れ・却下／分割・再結合）・旧値→新値・操作者 ID（学習の出典 ID `u-<GUID>` を流用）」。旧値／新値は表示文言ではなく安定したコードで保存し、表示時に日本語へ変換。
+- **形式：JSON Lines**（`Merge20Audit_<フォルダペアのハッシュ>.json`、セッションと同じ場所・同じハッシュ）。追記式で全体の読み直し・書き直しが不要、1 行 1 件で書き込み途中の破損が最後の 1 行だけに留まる。CSV は表示・出力用に生成。
+- フォルダ一覧の右クリックメニューから監査ログの一覧表示と CSV 出力ができる。一覧表示は古い順（時系列）。
+- **Undo は記録しない**（Undo は新しい判断ではない。Undo 経路は生の setter を通るためフックにかからず、既存の記録も消えない）。
+- **セッションの保存・復元は記録しない**（学習と同じく、復元は判断操作ではないため）。例外は S8 変更検出による TODO への復帰のみ（過去の判断を破棄するため。保存時すでに TODO なら変化なしで記録しない）。
+- 一括チェックはファイルごとに 1 行（kind BatchCheck）。追記失敗でも判断は成功する。
+- **S8 のセッション形式には触れていない**。学習 JSON とも別ファイルで、ダイアログ内に別物である旨を明記。マニュアル §18 を追加（§14・§15 から相互参照）。
+
+### 76.2 変更内容（PR #72、29 コミット、22 ファイル、+2213/−10）
+| ファイル | 内容 |
+|---|---|
+| `Src/Merge20/Merge20Audit.h/.cpp` | 監査ログの純粋モジュール（エントリ・JSON Lines 追記／読み込み・CSV 生成） |
+| `Src/Merge20/Merge20AuditDoc.h/.cpp` | MFC アダプタ（保存場所の決定・追記・一覧・CSV 出力） |
+| `Src/Merge20/Merge20AuditDlg.h/.cpp` | 一覧表示ダイアログ（IDD 309、古い順に表示） |
+| `Src/DirDoc.cpp` | 確認内容・出力切替のログ記録（転送メソッド `ApplyMerge20ReviewState`／`SetMerge20IncludeInOutput` へ移設。下記参照） |
+| `Src/DirView.h/.cpp` | 右クリックメニュー「監査ログ…」「監査ログを CSV 出力…」 |
+| `Src/Merge20/Merge20FileListBar.cpp` | パネル経路の記録 |
+| `Src/Merge20/Merge20SessionDoc.h/.cpp` | S8 変更検出による TODO 復帰の記録 |
+| `Src/MergeDocResultPane.cpp` | 差分結論・学習候補・分割・再結合の記録 |
+| `Docs/Users/WizMergeManual.html` | §18 を追加（§14・§15 から相互参照） |
+| `Src/Merge.rc` | `IDD_MERGE20_AUDIT` 追加 |
+| `Src/resource.h` | ダイアログ 309、コントロール 1913–1916、コマンド 38986–38987。`_APS_NEXT_*` は 311／38988／1917 へ（310 は `IDR_MARGIN_ICONS_PNG` 使用中のため 309→311） |
+| `Translations/WinMerge/Japanese.po` | 新規 msgid 29 件（メニューとダイアログ題名には接頭辞） |
+| `Src/Merge.vcxproj`／`.filters`、`Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | 登録 |
+| `Testing/GoogleTest/Merge20/Merge20Audit_test.cpp` | 単体テスト 12 件 |
+
+- **CI 失敗と修正（2 回）**：
+1. 実行 46031437993：92 エラー。`Merge20Audit.h` が `Merge20DiffConclusion`（`Merge20Conclusion.h`）の include を欠いていた。`Merge20Undo.h` と同じ include を追加して修正。
+2. 実行 46032749889：LNK2019 が 2 件。`CDiffContext` は GoogleTest にもコンパイルされるが、テスト側には MFC アダプタ（`Merge20AuditDoc.cpp` 等）がないため、アダプタを呼ぶフックはリンクできない。修正として、確認内容・出力切替のログを `CDirDoc` の転送メソッド（`ApplyMerge20ReviewState`／`SetMerge20IncludeInOutput`）へ移した。すべてのユーザー操作（フォルダ一覧キー、出力列クリック、パネル、専用バー／フォーカスドックの `PathContext` 版）は `CDirDoc` を通り `bRecordUndo=true` になるため、記録範囲は変わらない。バッチ（false）、結論連動（コンテキスト直接・false）、Undo（生の setter）、セッション復元（`SetMerge20SessionState` 直接）はいずれも `CDirDoc` を通らず、記録されないことを確認済み。
+- **教訓：`DiffContext.cpp` からは純粋モジュールの関数しか呼べない。** MFC アダプタを呼ぶフックは `CDirDoc` 側に置くこと。F2 の教訓（MFC には既定 PCH）と合わせて、純粋モジュールと MFC アダプタの境界を意識すること。
+
+### 76.3 検証レポート（コーディネーター検証済み）
+- **PR #72**：head `156688cb`、base master `33616888`（B10 PR2 マージ＋NOTES §75）。29 コミット、変更ファイル 22 件（B11 の 22 ファイルのみ）。
+- **CI（ブランチ head）**：実行 46035353752、completed／success。全文ログ（3,621,206 バイト）を担当が取得・確認（`~/workspace/.coord/b11/ci-46035353752-full.log`）。コーディネーターも同ログの要所を確認：`Build succeeded`、`0 Error(s)`、GoogleTest `[ PASSED] 1015 tests.`（1003＋新規 12 件）、`[ FAILED]` 0 件。`.po` 番兵通過（`<<<<<<<` 2 件は既存のヘルプ文言内の説明文で、混入ではないことを確認済み）。成果物：`WinMerge-x64.zip` 26,788,890 バイト、`WinMerge-x64-Setup-x64.exe` 40,220,808 バイト、expire 2027-02-25。
+- **マージ**：マージコミット `0bb25526`。マージコミット CI：実行 46037613631、completed／success。全文ログ（3,619,591 バイト、ジョブ `build` 140636897206）をコーディネーターが取得・確認（`~/workspace/.coord/b11/b11_merge_log.txt`）。GoogleTest `[ PASSED ] 1015 tests.`、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`、`Merge20 verify: 100 files x 500 lines, 90 ms total, 0 issues`。
+- **成果物（実行 46037613631）**：`WinMerge-x64.zip` 26,788,781 バイト、`WinMerge-x64-Setup-x64.exe` 40,235,524 バイト。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **受け入れ条件の照合（gap 分析 B11）**：
+- (a) 判断操作のたびにログが 1 行増えること — フックは Undo の記録箇所と同じ操作の発生箇所。テスト `AppendAndLoadKeepsOrder` で確認。**実機での行数確認は未検証**。
+- (b) ログに日時・旧値→新値・操作者 ID が含まれること — エントリ必須項目。テストで往復確認済み。
+- (c) ログの一覧表示で時系列に辿れること — ダイアログは古い順に表示。**実機未検証**。
+- (d) CSV 出力が Excel で読めること — バイト列はテスト `CsvFileStartsWithBom`・`CsvTextIsCrlfJoinedAndQuoted` で確認。**Excel での目視は実機未検証**。
+- (e) セッションの保存・復元が監査ログに記録されないこと — 復元は `ctxt.SetMerge20SessionState` を直接呼ぶためフックを通らない。**実機未検証**（復元後の行数の不変）。
+- **未検証（実機でしか確認できないもの）**：一覧表示の操作、判断ごとの行数増加、セッション保存・復元での行数不変、ファイル変更時の TODO 復帰の記録、Excel での目視、日本語表示、Undo で行数が増えない・消えないこと。
+
+### 76.4 次への移行
+- 次は **B12**（再開位置の完全復元）に進む。B12 の担当を spawn する。
+- ID 割り当て状況（2026-11-27 16:55 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）、F7 が 308 を使用、B11 が 309 を使用（310 は `IDR_MARGIN_ICONS_PNG`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用、F7 が 1910–1912 を使用、B11 が 1913–1916 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、B10 PR1 が 38984–38985 を使用、B11 が 38986–38987 を使用。`_APS_NEXT_RESOURCE_VALUE` 311、`_APS_NEXT_COMMAND_VALUE` 38988、`_APS_NEXT_CONTROL_VALUE` 1917（B11 マージ時点）。
