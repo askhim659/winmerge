@@ -12102,3 +12102,8 @@ msgstr "未確認ファイル：%1 件｜未判断差分：%2 件｜うち高リ
 msgid "Warning: %1 unreviewed file(s) and %2 undecided diff(s) remain, of which %3 high risk. Review them before closing."
 msgstr "警告：未確認ファイル %1 件と未判断差分 %2 件（うち高リスク %3 件）が残っています。閉じる前に確認してください。"
 
+#. Merge20 (B4): high-risk remainder line in the file-list panel header (Merge20FileListBar.cpp)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Undecided high risk: %1"
+msgstr "【Wiz】未判断の高リスク：%1 件"
+
