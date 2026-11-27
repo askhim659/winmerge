@@ -31,6 +31,12 @@ namespace
 	// least this height when the preview expands.
 	const int kFormPreviewFixedHeight = 640;
 	const int kFormMinListHeight = 120;
+	// Spotlight inspector banner (F4): old/new previews side by
+	// side (150 px each) with labels above them, the banner text
+	// and the four buttons.
+	const int kFormSpotlightHeight = 132;
+	const int kFormSpotPreviewWidth = 150;
+	const int kFormSpotLabelHeight = 18;
 
 	// Column widths of the card list (headers only in F2).
 	const int kFormColFileName = 180;
@@ -69,6 +75,10 @@ BEGIN_MESSAGE_MAP(CFormCompareView, CView)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_25, OnZoom25)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_FIT, OnZoomFit)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_VIEWPORT_TOGGLE, OnViewportToggle)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_SPOT_PREV, OnSpotPrev)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_SPOT_NEXT, OnSpotNext)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_SPOT_CLEAR, OnSpotClear)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_SPOT_GOTO, OnSpotGoto)
 	ON_CONTROL(MERGE20_FORM_CANVAS_SELCHANGE, IDC_MERGE20_FORM_CANVAS, OnCanvasShapeClicked)
 	ON_WM_HSCROLL()
 END_MESSAGE_MAP()
@@ -259,6 +269,73 @@ int CFormCompareView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create Merge20FormCompareView canvas\n");
 		return -1;
 	}
+	// Spotlight inspector banner (F4): created hidden; the panel
+	// is created first so it stays behind the other controls.
+	if (!m_stSpotPanel.Create(_T(""), WS_CHILD | WS_BORDER,
+		rc, this, IDC_MERGE20_FORM_SPOT_PANEL))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight panel\n");
+		return -1;
+	}
+	if (!m_stSpotOldLabel.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP | SS_CENTERIMAGE,
+		rc, this, IDC_MERGE20_FORM_SPOT_OLD_LABEL))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight old label\n");
+		return -1;
+	}
+	m_stSpotOldLabel.SetFont(pFont);
+	if (!m_wndSpotOld.Create(this, IDC_MERGE20_FORM_SPOT_OLD))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight old preview\n");
+		return -1;
+	}
+	if (!m_stSpotNewLabel.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP | SS_CENTERIMAGE,
+		rc, this, IDC_MERGE20_FORM_SPOT_NEW_LABEL))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight new label\n");
+		return -1;
+	}
+	m_stSpotNewLabel.SetFont(pFont);
+	if (!m_wndSpotNew.Create(this, IDC_MERGE20_FORM_SPOT_NEW))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight new preview\n");
+		return -1;
+	}
+	if (!m_stSpotText.Create(_T(""), WS_CHILD | SS_LEFT,
+		rc, this, IDC_MERGE20_FORM_SPOT_TEXT))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight text\n");
+		return -1;
+	}
+	m_stSpotText.SetFont(pFont);
+	if (!m_btnSpotPrev.Create(_T(""), WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_SPOT_PREV))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight previous button\n");
+		return -1;
+	}
+	m_btnSpotPrev.SetFont(pFont);
+	if (!m_btnSpotNext.Create(_T(""), WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_SPOT_NEXT))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight next button\n");
+		return -1;
+	}
+	m_btnSpotNext.SetFont(pFont);
+	if (!m_btnSpotClear.Create(_T(""), WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_SPOT_CLEAR))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight clear button\n");
+		return -1;
+	}
+	m_btnSpotClear.SetFont(pFont);
+	if (!m_btnSpotGoto.Create(_T(""), WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_SPOT_GOTO))
+	{
+		TRACE0("Failed to create Merge20FormCompareView spotlight go-to button\n");
+		return -1;
+	}
+	m_btnSpotGoto.SetFont(pFont);
 	return 0;
 }
 
@@ -375,10 +452,63 @@ void CFormCompareView::LayoutControls()
 	m_stZoomLabel.MoveWindow(xZoom, previewTop, zoomLabelWidth, kFormControlHeight);
 	xZoom += zoomLabelWidth + kFormRowGap;
 	m_btnViewportToggle.MoveWindow(xZoom, previewTop, viewportToggleWidth, kFormControlHeight);
-	const int canvasTop = previewTop + kFormControlHeight + kFormRowGap;
-	const int canvasHeight = (std::max)(0, previewTotal - kFormControlHeight - kFormRowGap);
+	const int spotlightHeight = m_bSpotlightVisible ? kFormSpotlightHeight : 0;
+	const int bannerTop = previewTop + kFormControlHeight + kFormRowGap;
+	const int canvasTop = bannerTop + (m_bSpotlightVisible ? spotlightHeight + kFormRowGap : 0);
+	const int canvasHeight = (std::max)(0, previewTotal - kFormControlHeight - kFormRowGap -
+		(m_bSpotlightVisible ? spotlightHeight + kFormRowGap : 0));
+	if (m_bSpotlightVisible)
+		LayoutSpotlightBanner(listLeft, bannerTop, listWidth);
+	const int spotShow = m_bSpotlightVisible ? SW_SHOW : SW_HIDE;
+	if (m_stSpotPanel.GetSafeHwnd() != nullptr)
+	{
+		m_stSpotPanel.ShowWindow(spotShow);
+		m_stSpotOldLabel.ShowWindow(spotShow);
+		m_wndSpotOld.ShowWindow(spotShow);
+		m_stSpotNewLabel.ShowWindow(spotShow);
+		m_wndSpotNew.ShowWindow(spotShow);
+		m_stSpotText.ShowWindow(spotShow);
+		m_btnSpotPrev.ShowWindow(spotShow);
+		m_btnSpotNext.ShowWindow(spotShow);
+		m_btnSpotClear.ShowWindow(spotShow);
+		m_btnSpotGoto.ShowWindow(spotShow);
+	}
 	m_wndCanvas.MoveWindow(listLeft, canvasTop, listWidth, canvasHeight);
 	UpdateZoomControls();
+}
+
+void CFormCompareView::LayoutSpotlightBanner(int left, int top, int width)
+{
+	if (m_stSpotPanel.GetSafeHwnd() == nullptr)
+		return;
+	m_stSpotPanel.MoveWindow(left, top, width, kFormSpotlightHeight);
+	const int btnPrevWidth = 96;
+	const int btnNextWidth = 96;
+	const int btnClearWidth = 130;
+	const int btnGotoWidth = 110;
+	const int btnHeight = 26;
+	const int btnTop = top + (kFormSpotlightHeight - btnHeight) / 2;
+	int xRight = left + width - kFormMargin;
+	m_btnSpotGoto.MoveWindow(xRight - btnGotoWidth, btnTop, btnGotoWidth, btnHeight);
+	xRight -= btnGotoWidth + kFormRowGap;
+	m_btnSpotClear.MoveWindow(xRight - btnClearWidth, btnTop, btnClearWidth, btnHeight);
+	xRight -= btnClearWidth + kFormRowGap;
+	m_btnSpotNext.MoveWindow(xRight - btnNextWidth, btnTop, btnNextWidth, btnHeight);
+	xRight -= btnNextWidth + kFormRowGap;
+	m_btnSpotPrev.MoveWindow(xRight - btnPrevWidth, btnTop, btnPrevWidth, btnHeight);
+	int x = left + kFormMargin;
+	m_stSpotOldLabel.MoveWindow(x, top + 2, kFormSpotPreviewWidth, kFormSpotLabelHeight);
+	m_wndSpotOld.MoveWindow(x, top + 2 + kFormSpotLabelHeight + 2,
+		kFormSpotPreviewWidth, kFormSpotlightHeight - kFormSpotLabelHeight - 8);
+	x += kFormSpotPreviewWidth + kFormRowGap;
+	m_stSpotNewLabel.MoveWindow(x, top + 2, kFormSpotPreviewWidth, kFormSpotLabelHeight);
+	m_wndSpotNew.MoveWindow(x, top + 2 + kFormSpotLabelHeight + 2,
+		kFormSpotPreviewWidth, kFormSpotlightHeight - kFormSpotLabelHeight - 8);
+	x += kFormSpotPreviewWidth + kFormRowGap;
+	// xRight already points at the previous button's left edge
+	// (it was moved past all four buttons above).
+	const int textWidth = (std::max)(0, xRight - x - kFormRowGap);
+	m_stSpotText.MoveWindow(x, top + 4, textWidth, kFormSpotlightHeight - 8);
 }
 
 void CFormCompareView::SetupColumns()
@@ -441,6 +571,15 @@ void CFormCompareView::UpdateResources()
 	m_btnZoom25.SetWindowText(_T("25%"));
 	m_btnZoomFit.SetWindowText(_("Fit").c_str());
 	m_btnViewportToggle.SetWindowText((m_bCanvasFullHeight ? _("Fixed height (640px)") : _("Expand to full height")).c_str());
+	// Spotlight banner texts (F4).
+	m_stSpotOldLabel.SetWindowText(_("Old (before)").c_str());
+	m_stSpotNewLabel.SetWindowText(_("New (after)").c_str());
+	m_btnSpotPrev.SetWindowText(_("Previous change").c_str());
+	m_btnSpotNext.SetWindowText(_("Next change").c_str());
+	m_btnSpotClear.SetWindowText(_("Clear spotlight").c_str());
+	m_btnSpotGoto.SetWindowText(_("Go to changed area").c_str());
+	if (m_bSpotlightVisible)
+		UpdateSpotlightBanner();
 	// Column headers (delete + re-insert keeps the order).
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
@@ -657,6 +796,11 @@ void CFormCompareView::OnRerun()
 	CFormCompareDoc* pDoc = GetDocument();
 	if (pDoc == nullptr || !pDoc->HasFolders())
 		return;
+	// Re-analysis replaces the results, so every per-file
+	// spotlight state (and the borrowed record pointer in the
+	// canvas) is dropped first.
+	m_spotlightByFile.clear();
+	HideSpotlightBanner();
 	CWaitCursor wait;
 	pDoc->RunAnalysis();
 }
@@ -726,6 +870,7 @@ void CFormCompareView::RefreshCanvas()
 		label = _("Select a form to preview it");
 	m_stPreviewLabel.SetWindowText(label.c_str());
 	UpdateZoomControls();
+	ApplySpotlight();
 }
 
 void CFormCompareView::UpdateZoomControls()
@@ -783,9 +928,217 @@ void CFormCompareView::OnViewportToggle()
 
 void CFormCompareView::OnCanvasShapeClicked()
 {
-	// F3: the canvas already stores the clicked shape and draws
-	// the selection outline. F4 (spotlight) reads the key with
-	// m_wndCanvas.GetSelectedShapeKey() here.
+	// A canvas click selects the shape; F4 turns it into a
+	// spotlight on the first visual record of that element.
+	// A click on empty space sends no notification, so the
+	// spotlight is left alone.
+	const std::wstring key = m_wndCanvas.GetSelectedShapeKey();
+	if (key.empty())
+		return;
+	const int recordIndex = FindRecordIndexForShapeKey(key);
+	if (recordIndex >= 0)
+		FocusDiffRecord(recordIndex);
+}
+
+void CFormCompareView::OnSpotPrev()
+{
+	StepSpotlight(-1);
+}
+
+void CFormCompareView::OnSpotNext()
+{
+	StepSpotlight(1);
+}
+
+void CFormCompareView::OnSpotClear()
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult != nullptr)
+		m_spotlightByFile.erase(pResult->fileName);
+	HideSpotlightBanner();
+}
+
+void CFormCompareView::OnSpotGoto()
+{
+	// The spotlighted shape when there is one, otherwise the
+	// first changed shape (HTML `scrollToChangedArea`).
+	m_wndCanvas.ScrollToChangedArea();
+}
+
+void CFormCompareView::FocusDiffRecord(int recordIndex)
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult == nullptr)
+		return;
+	Merge20FormSpotlightState state;
+	const auto it = m_spotlightByFile.find(pResult->fileName);
+	if (it != m_spotlightByFile.end())
+		state = it->second;
+	if (!Merge20FormSpotlightFocus(pResult->diffRecords, recordIndex, state))
+		return;
+	m_spotlightByFile[pResult->fileName] = state;
+	m_wndCanvas.SetSpotlight(&pResult->diffRecords[static_cast<size_t>(state.recordIndex)]);
+	m_bSpotlightVisible = true;
+	UpdateSpotlightBanner();
+	LayoutControls();
+	m_wndCanvas.ScrollToShapeKey(state.shapeKey);
+}
+
+void CFormCompareView::ApplySpotlight()
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult == nullptr)
+	{
+		HideSpotlightBanner();
+		return;
+	}
+	const auto it = m_spotlightByFile.find(pResult->fileName);
+	if (it == m_spotlightByFile.end() || !Merge20FormSpotlightIsActive(it->second))
+	{
+		HideSpotlightBanner();
+		return;
+	}
+	// The saved state must still match the current result
+	// (re-analysis is cleared in OnRerun, but be safe).
+	const Merge20FormSpotlightState& state = it->second;
+	if (state.recordIndex < 0 ||
+		state.recordIndex >= static_cast<int>(pResult->diffRecords.size()) ||
+		pResult->diffRecords[static_cast<size_t>(state.recordIndex)].element != state.shapeKey ||
+		!pResult->diffRecords[static_cast<size_t>(state.recordIndex)].hasVisual)
+	{
+		m_spotlightByFile.erase(pResult->fileName);
+		HideSpotlightBanner();
+		return;
+	}
+	m_wndCanvas.SetSpotlight(&pResult->diffRecords[static_cast<size_t>(state.recordIndex)]);
+	m_bSpotlightVisible = true;
+	UpdateSpotlightBanner();
+	LayoutControls();
+	m_wndCanvas.ScrollToShapeKey(state.shapeKey);
+}
+
+void CFormCompareView::HideSpotlightBanner()
+{
+	m_wndCanvas.ClearSpotlight();
+	if (m_wndSpotOld.GetSafeHwnd() != nullptr)
+	{
+		m_wndSpotOld.SetShape(nullptr, true);
+		m_wndSpotNew.SetShape(nullptr, false);
+	}
+	m_bSpotlightVisible = false;
+	LayoutControls();
+}
+
+void CFormCompareView::UpdateSpotlightBanner()
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult == nullptr)
+		return;
+	const auto it = m_spotlightByFile.find(pResult->fileName);
+	if (it == m_spotlightByFile.end())
+		return;
+	const Merge20FormSpotlightState& state = it->second;
+	if (state.recordIndex < 0 ||
+		state.recordIndex >= static_cast<int>(pResult->diffRecords.size()))
+		return;
+	const Merge20FormDiffRecord& record =
+		pResult->diffRecords[static_cast<size_t>(state.recordIndex)];
+	// Old/new side-by-side previews (design section 6 (4)).
+	const int oldIndex = Merge20FormSpotlightFindShapeIndex(pResult->oldShapes, state.shapeKey);
+	const int newIndex = Merge20FormSpotlightFindShapeIndex(pResult->newShapes, state.shapeKey);
+	const Merge20FormShape* pOldShape = (oldIndex >= 0) ?
+		&pResult->oldShapes[static_cast<size_t>(oldIndex)] : nullptr;
+	const Merge20FormShape* pNewShape = (newIndex >= 0) ?
+		&pResult->newShapes[static_cast<size_t>(newIndex)] : nullptr;
+	if (m_wndSpotOld.GetSafeHwnd() != nullptr)
+	{
+		m_wndSpotOld.SetShape(pOldShape, true);
+		m_wndSpotNew.SetShape(pNewShape, false);
+	}
+	// Banner text: element + description, old -> new coordinates
+	// with deltas, then every attribute of the element.
+	String text = _("Spotlight") + _T("  ") + record.element +
+		_T("\r\n") + record.desc;
+	String coordLine;
+	if (pOldShape != nullptr && pNewShape != nullptr)
+	{
+		const int dx = static_cast<int>(std::lround(pNewShape->x - pOldShape->x));
+		const int dy = static_cast<int>(std::lround(pNewShape->y - pOldShape->y));
+		const int dw = static_cast<int>(std::lround(
+			(pNewShape->x2 - pNewShape->x) - (pOldShape->x2 - pOldShape->x)));
+		const int dh = static_cast<int>(std::lround(
+			(pNewShape->y2 - pNewShape->y) - (pOldShape->y2 - pOldShape->y)));
+		coordLine = _("Old (before)") + _T(" X:") +
+			std::to_wstring(static_cast<int>(std::lround(pOldShape->x))) + _T(" Y:") +
+			std::to_wstring(static_cast<int>(std::lround(pOldShape->y))) +
+			_T("  \u2192  ") + _("New (after)") + _T(" X:") +
+			std::to_wstring(static_cast<int>(std::lround(pNewShape->x))) + _T(" Y:") +
+			std::to_wstring(static_cast<int>(std::lround(pNewShape->y))) +
+			_T("  \u0394X:") + (dx >= 0 ? _T("+") : _T("")) + std::to_wstring(dx) +
+			_T(" \u0394Y:") + (dy >= 0 ? _T("+") : _T("")) + std::to_wstring(dy);
+		if (dw != 0 || dh != 0)
+		{
+			coordLine += _T("  \u0394W:") + (dw >= 0 ? _T("+") : _T("")) + std::to_wstring(dw) +
+				_T(" \u0394H:") + (dh >= 0 ? _T("+") : _T("")) + std::to_wstring(dh);
+		}
+	}
+	else if (pNewShape != nullptr)
+	{
+		coordLine = _("New (after)") + _T(" X:") +
+			std::to_wstring(static_cast<int>(std::lround(pNewShape->x))) + _T(" Y:") +
+			std::to_wstring(static_cast<int>(std::lround(pNewShape->y)));
+	}
+	else if (pOldShape != nullptr)
+	{
+		coordLine = _("Old (before)") + _T(" X:") +
+			std::to_wstring(static_cast<int>(std::lround(pOldShape->x))) + _T(" Y:") +
+			std::to_wstring(static_cast<int>(std::lround(pOldShape->y)));
+	}
+	if (!coordLine.empty())
+		text += _T("\r\n") + coordLine;
+	String attrLine;
+	bool firstAttr = true;
+	for (const Merge20FormDiffRecord& elemRecord : pResult->diffRecords)
+	{
+		if (elemRecord.element != state.shapeKey)
+			continue;
+		if (!firstAttr)
+			attrLine += _T("   ");
+		firstAttr = false;
+		attrLine += elemRecord.attr + _T(": ") + elemRecord.oldVal +
+			_T(" \u2192 ") + elemRecord.newVal;
+	}
+	if (!attrLine.empty())
+		text += _T("\r\n") + _("Changed attributes: ") + attrLine;
+	m_stSpotText.SetWindowText(text.c_str());
+}
+
+void CFormCompareView::StepSpotlight(int dir)
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult == nullptr)
+		return;
+	Merge20FormSpotlightState state;
+	const auto it = m_spotlightByFile.find(pResult->fileName);
+	if (it != m_spotlightByFile.end())
+		state = it->second;
+	const int next = Merge20FormSpotlightStep(pResult->diffRecords, state, dir);
+	if (next >= 0)
+		FocusDiffRecord(next);
+}
+
+int CFormCompareView::FindRecordIndexForShapeKey(const std::wstring& key) const
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult == nullptr)
+		return -1;
+	for (size_t i = 0; i < pResult->diffRecords.size(); ++i)
+	{
+		const Merge20FormDiffRecord& record = pResult->diffRecords[i];
+		if (record.element == key && record.hasVisual)
+			return static_cast<int>(i);
+	}
+	return -1;
 }
 
 void CFormCompareView::OnHScroll(UINT /*nCode*/, UINT /*nPos*/, CScrollBar* pScrollBar)
