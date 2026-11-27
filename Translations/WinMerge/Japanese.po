@@ -11737,3 +11737,213 @@ msgstr "変更された行の数。ファイルを開いた後に表示します
 #: Src/DirViewColItems.cpp
 msgid "Number of lines added in the new file. Shown only after the file has been opened; unopened files show Not calculated."
 msgstr "新ファイルで追加された行の数。ファイルを開いた後に表示します。未開封のファイルは「未計算」と表示します."
+
+#. Merge20 (Wave 5 F2): FORM compare menu item (Merge.rc) and folder compare context menu (DirView.cpp, design section 3.2)
+#: Src/Merge.rc
+msgid "FORM Compare (view only)..."
+msgstr "FORM比較（見るだけ）..."
+
+#. Merge20 (Wave 5 F2): FORM compare document title / window caption (design section 1.4)
+#: Src/Merge20/Merge20FormCompareDoc.cpp
+msgid "FORM Compare (view only)"
+msgstr "FORM比較（見るだけ）"
+
+#. Merge20 (Wave 5 F2): KPI label, total files (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Total files"
+msgstr "総ファイル数"
+
+#. Merge20 (Wave 5 F2): KPI label, changed files (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Changed files"
+msgstr "変更あり"
+
+#. Merge20 (Wave 5 F2): KPI label, identical files (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Identical files (hidden)"
+msgstr "完全一致（非表示）"
+
+#. Merge20 (Wave 5 F2): KPI label, average numeric change (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Average numeric change"
+msgstr "平均数値変動"
+
+#. Merge20 (Wave 5 F2): KPI label and filter tab, large changes (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Large changes"
+msgstr "大幅変動"
+
+#. Merge20 (Wave 5 F2): KPI label, files with coordinate changes (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Files with coordinate changes"
+msgstr "座標変動あり"
+
+#. Merge20 (Wave 5 F2): KPI label, files with element/file changes (HTML updateKpiBadges)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Files with element/file changes"
+msgstr "要素・ファイル増減あり"
+
+#. Merge20 (Wave 5 F2): filter tab, all forms (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Show all forms"
+msgstr "すべて表示"
+
+#. Merge20 (Wave 5 F2): filter tab, coordinate/size changes (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Coordinate/size changes"
+msgstr "座標・サイズ変動"
+
+#. Merge20 (Wave 5 F2): filter tab, element/file changes (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Element/file changes"
+msgstr "要素・ファイル増減"
+
+#. Merge20 (Wave 5 F2): filter tab, layout-breaking severity only (design section 6 (4))
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Layout-breaking only"
+msgstr "レイアウト破壊のみ"
+
+#. Merge20 (Wave 5 F2): card list column, form name (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Form name"
+msgstr "帳票名"
+
+#. Merge20 (Wave 5 F2): card list column, change tendency (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Change tendency"
+msgstr "変更傾向"
+
+#. Merge20 (Wave 5 F2): card list column, one-line summary (design section 6 (4))
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "One-line summary"
+msgstr "一行要約"
+
+#. Merge20 (Wave 5 F2): card list column, numeric change total (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Numeric change total"
+msgstr "数値変動合計"
+
+#. Merge20 (Wave 5 F2): card list column, change count (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Change count"
+msgstr "変更箇所数"
+
+#. Merge20 (Wave 5 F2): card list column, severity (design section 5.4)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Severity"
+msgstr "深刻度"
+
+#. Merge20 (Wave 5 F2): card list column, warning badge (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Warning"
+msgstr "警告"
+
+#. Merge20 (Wave 5 F2): severity value, layout-breaking (design section 5.4)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Layout-breaking"
+msgstr "レイアウト破壊"
+
+#. Merge20 (Wave 5 F2): severity value, visual only (design section 5.4)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Visual only"
+msgstr "見た目だけ"
+
+#. Merge20 (Wave 5 F2): severity value, informational (design section 5.4)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Information"
+msgstr "情報"
+
+#. Merge20 (Wave 5 F2): large-change badge in the card list (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Needs attention"
+msgstr "★要注意"
+
+#. Merge20 (Wave 5 F2): empty state, no changed files at all
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "No changed files"
+msgstr "変更のあるファイルがありません"
+
+#. Merge20 (Wave 5 F2): empty state, nothing matches the filter or search
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "No files match the filter or search text."
+msgstr "条件に一致する帳票がありません"
+
+#. Merge20 (Wave 5 F2): previous-form button (design section 2.5 navigateCards)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Previous form"
+msgstr "前の帳票"
+
+#. Merge20 (Wave 5 F2): next-form button (design section 2.5 navigateCards)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Next form"
+msgstr "次の帳票"
+
+#. Merge20 (Wave 5 F2): navigator toggle button, hide (design section 2.5 toggleSidebar)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Hide navigator"
+msgstr "ナビゲータを隠す"
+
+#. Merge20 (Wave 5 F2): navigator toggle button, show (design section 2.5 toggleSidebar)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Show navigator"
+msgstr "ナビゲータを表示"
+
+#. Merge20 (Wave 5 F2): re-run analysis button (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Re-run analysis"
+msgstr "再解析"
+
+#. Merge20 (Wave 5 F2): header label, old folder (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Old folder:"
+msgstr "旧フォルダ："
+
+#. Merge20 (Wave 5 F2): header label, new folder (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "New folder:"
+msgstr "新フォルダ："
+
+#. Merge20 (Wave 5 F2): sort label (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Sort by"
+msgstr "並び替え："
+
+#. Merge20 (Wave 5 F2): view-only notice (design section 1.4)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "View only: this window shows differences and never merges."
+msgstr "見るだけ：この画面は差分を表示するのみで、マージはしません。"
+
+#. Merge20 (Wave 5 F2): sort order, file name (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "File name order"
+msgstr "ファイル名順"
+
+#. Merge20 (Wave 5 F2): sort order, numeric change ascending (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Numeric change (ascending)"
+msgstr "数値変動の昇順"
+
+#. Merge20 (Wave 5 F2): sort order, numeric change descending (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Numeric change (descending)"
+msgstr "数値変動の降順"
+
+#. Merge20 (Wave 5 F2): sort order, change count descending (design section 7.1)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Change count (descending)"
+msgstr "変更箇所数の降順"
+
+#. Merge20 (Wave 5 F2): sort order, severity (design section 6 (4))
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Severity order"
+msgstr "深刻度順"
+
+#. Merge20 (Wave 5 F2): standalone launch, old-folder picker title (design section 3.2)
+#: Src/MainFrm.cpp
+msgid "Select the old folder (locally collected)"
+msgstr "旧フォルダ（現地吸い上げ）を選択してください"
+
+#. Merge20 (Wave 5 F2): standalone launch, new-folder picker title (design section 3.2)
+#: Src/MainFrm.cpp
+msgid "Select the new folder (package)"
+msgstr "新フォルダ（パッケージ）を選択してください"
