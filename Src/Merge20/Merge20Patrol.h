@@ -115,9 +115,16 @@ std::vector<int> Merge20BuildRiskOrder(const std::vector<Merge20RiskRank>& ranks
  *             D3 patrol).
  * @param [in] current Index of the current row/diff, or -1 when none
  *             is current. A current row/diff that is not in the
- *             order (e.g. a reviewed file while TODO-only is on)
- *             counts as no current row: forward starts at the first
- *             entry of the order, backward at the last one.
+ *             order (e.g. a reviewed file while TODO-only is on,
+ *             or a directory row) steps from its list/diff
+ *             position, like Merge20FindNextTarget scans from the
+ *             current row: forward takes the first entry of the
+ *             order past that position, backward the last entry
+ *             before it. For a list-ordered order this is exactly
+ *             Merge20FindNextTarget, so the plain D3 patrol is
+ *             unchanged; for a risk-ordered order the risk
+ *             priority still rules (the scan follows the patrol
+ *             sequence, not the list).
  * @param [in] direction +1 for the next target, -1 for the previous
  *             one. Any other value returns -1.
  * @param [in] wrap True wraps around both ends (the D3 TODO-only
