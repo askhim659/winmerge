@@ -97,6 +97,9 @@ public:
 	/** @brief Recompute the visible list from the current state. */
 	void RefreshVisible();
 
+	/** @brief Re-apply _() texts after a GUI language change. */
+	void UpdateResources();
+
 protected:
 	virtual BOOL OnNewDocument() override;
 	virtual void DeleteContents() override;
