@@ -2790,12 +2790,19 @@ void CDirView::OpenNextFile()
 	// through CDirDoc::MoveToNextFile), so all of them patrol TODO
 	// files while the option is on, in dedicated mode and in normal
 	// mode alike.
+	// Merge20 (best-workflow B3): the patrol order comes from
+	// Merge20BuildPatrolOrder: list order when risk-order patrol
+	// is off (the D3 order, unchanged), risk order (High, Medium,
+	// None, unclassified last) when it is on. The stepping (wrap)
+	// is the same D3 rule. With TODO-only off and risk order on,
+	// all displayed files are visited in risk order instead,
+	// without wrapping (the plain patrol never wraps).
 	if (GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY))
 	{
 		if (currentInd < 0)
 			return;
-		const std::vector<bool> targets = Merge20BuildPatrolTargets(true);
-		const int nextInd = Merge20FindNextTarget(targets, currentInd, 1);
+		const std::vector<int> order = Merge20BuildPatrolOrder(true);
+		const int nextInd = Merge20FindNextInOrder(order, currentInd, 1, true);
 		if (nextInd == -1)
 		{
 			// No unreviewed file at all: stay, and say so in the
@@ -2806,6 +2813,19 @@ void CDirView::OpenNextFile()
 		}
 		if (nextInd == currentInd)
 			return; // The current file is the only unreviewed one.
+		MoveFocus(currentInd, nextInd, 1);
+		m_pList->EnsureVisible(nextInd, FALSE);
+		OpenSelection();
+		return;
+	}
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER))
+	{
+		if (currentInd < 0)
+			return;
+		const std::vector<int> order = Merge20BuildPatrolOrder(false);
+		const int nextInd = Merge20FindNextInOrder(order, currentInd, 1, false);
+		if (nextInd == -1 || nextInd == currentInd)
+			return; // Last file in risk order, or the only file.
 		MoveFocus(currentInd, nextInd, 1);
 		m_pList->EnsureVisible(nextInd, FALSE);
 		OpenSelection();
@@ -2837,8 +2857,8 @@ void CDirView::OpenPrevFile()
 	{
 		if (currentInd < 0)
 			return;
-		const std::vector<bool> targets = Merge20BuildPatrolTargets(true);
-		const int prevInd = Merge20FindNextTarget(targets, currentInd, -1);
+		const std::vector<int> order = Merge20BuildPatrolOrder(true);
+		const int prevInd = Merge20FindNextInOrder(order, currentInd, -1, true);
 		if (prevInd == -1)
 		{
 			GetParentFrame()->SetStatus(_("No unreviewed files").c_str());
@@ -2846,6 +2866,21 @@ void CDirView::OpenPrevFile()
 		}
 		if (prevInd == currentInd)
 			return; // The current file is the only unreviewed one.
+		MoveFocus(currentInd, prevInd, 1);
+		m_pList->EnsureVisible(prevInd, FALSE);
+		OpenSelection();
+		return;
+	}
+	// Merge20 (best-workflow B3): see OpenNextFile. Previous file
+	// in risk order, without wrapping.
+	if (GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER))
+	{
+		if (currentInd < 0)
+			return;
+		const std::vector<int> order = Merge20BuildPatrolOrder(false);
+		const int prevInd = Merge20FindNextInOrder(order, currentInd, -1, false);
+		if (prevInd == -1 || prevInd == currentInd)
+			return; // First file in risk order, or the only file.
 		MoveFocus(currentInd, prevInd, 1);
 		m_pList->EnsureVisible(prevInd, FALSE);
 		OpenSelection();
@@ -2895,6 +2930,45 @@ std::vector<bool> CDirView::Merge20BuildPatrolTargets(bool bTodoOnly) const
 }
 
 /**
+ * @brief Merge20 (Phase 4 D3): patrol order of the displayed rows.
+ * @param [in] bTodoOnly False takes every displayed file row, true
+ *             takes only the unreviewed (TODO) file rows (same set
+ *             as Merge20BuildPatrolTargets).
+ * @return The target row indices in patrol order: list order when
+ *         risk-order patrol is off (the D3 order), risk order when
+ *         it is on. The rank of a row comes from its S4
+ *         classification (Merge20RiskRankOfFile); directories and
+ *         the ".." parent row are never targets, so their rank is
+ *         never read.
+ */
+std::vector<int> CDirView::Merge20BuildPatrolOrder(bool bTodoOnly) const
+{
+	const std::vector<bool> targets = Merge20BuildPatrolTargets(bTodoOnly);
+	if (!GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER))
+	{
+		std::vector<int> order;
+		for (size_t i = 0; i < targets.size(); ++i)
+		{
+			if (targets[i])
+				order.push_back(static_cast<int>(i));
+		}
+		return order;
+	}
+	const CDirDoc* pDoc = GetDocument();
+	const CDiffContext& ctxt = pDoc->GetDiffContext();
+	std::vector<Merge20RiskRank> ranks(targets.size(), Merge20RiskRank::UNCLASSIFIED);
+	for (size_t i = 0; i < targets.size(); ++i)
+	{
+		if (!targets[i])
+			continue;
+		const DIFFITEM& di = GetDiffItem(static_cast<int>(i));
+		const Merge20FileState& state = ctxt.GetMerge20FileStates().GetState(di.getItemRelativePath());
+		ranks[static_cast<size_t>(i)] = Merge20RiskRankOfFile(state.classified, state.risk);
+	}
+	return Merge20BuildRiskOrder(ranks, targets);
+}
+
+/**
  * @brief Merge20 (Phase 4 D3): move the focus to the previous/next
  * TODO file (Up/Down-key patrol in the folder list). The file is not
  * opened: Up/Down move the selection, as they always did.
@@ -2903,14 +2977,19 @@ std::vector<bool> CDirView::Merge20BuildPatrolTargets(bool bTodoOnly) const
  * @return False when there is no TODO file at all, or the current
  *         file is the only TODO file (the caller then shows
  *         "No unreviewed files" in the status bar).
+ *
+ * Merge20 (best-workflow B3): the move follows the patrol order
+ * (Merge20BuildPatrolOrder), so with risk-order patrol on the
+ * Up/Down keys visit the TODO files in risk order, like
+ * OpenNextFile/OpenPrevFile do.
  */
 bool CDirView::Merge20MoveFocusToTodo(int direction)
 {
 	const int currentInd = GetFocusedItem();
 	if (currentInd < 0)
 		return false;
-	const std::vector<bool> targets = Merge20BuildPatrolTargets(true);
-	const int nextInd = Merge20FindNextTarget(targets, currentInd, direction);
+	const std::vector<int> order = Merge20BuildPatrolOrder(true);
+	const int nextInd = Merge20FindNextInOrder(order, currentInd, direction, true);
 	if (nextInd == -1 || nextInd == currentInd)
 		return false;
 	MoveFocus(currentInd, nextInd, GetSelectedCount());
@@ -2926,7 +3005,9 @@ bool CDirView::Merge20MoveFocusToTodo(int direction)
  * @param [in] di The file to locate.
  * @param [out] nPos 1-based ordinal among the patrol set (0 when the
  *              file is not in it, e.g. TODO-only is on but the file
- *              is already reviewed).
+ *              is already reviewed). Merge20 (best-workflow B3):
+ *              the ordinal is counted in the patrol order, so with
+ *              risk-order patrol on it is the risk-order position.
  * @param [out] nTotal Number of files in the patrol set.
  * @param [in] bTodoOnly False counts all displayed files, true counts
  *             only the unreviewed (TODO) files.
@@ -2936,8 +3017,12 @@ bool CDirView::Merge20GetFilePosition(const DIFFITEM& di, int& nPos, int& nTotal
 {
 	nPos = 0;
 	nTotal = 0;
-	const std::vector<bool> targets = Merge20BuildPatrolTargets(bTodoOnly);
-	nTotal = Merge20CountTargets(targets);
+	// Merge20 (best-workflow B3): the position is counted in the
+	// patrol order (list order when risk-order patrol is off, risk
+	// order when it is on), so the dedicated bar's (n/m) follows
+	// the order the Prev/Next buttons actually visit.
+	const std::vector<int> order = Merge20BuildPatrolOrder(bTodoOnly);
+	nTotal = static_cast<int>(order.size());
 	const String relPath = di.getItemRelativePath();
 	const int n = m_pList->GetItemCount();
 	for (int i = 0; i < n; ++i)
@@ -2950,7 +3035,7 @@ bool CDirView::Merge20GetFilePosition(const DIFFITEM& di, int& nPos, int& nTotal
 			continue;
 		if (row.getItemRelativePath() == relPath)
 		{
-			nPos = Merge20OrdinalOfTarget(targets, i);
+			nPos = Merge20OrdinalInOrder(order, i);
 			return true;
 		}
 	}
