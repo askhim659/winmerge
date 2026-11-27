@@ -11,7 +11,7 @@
  * review-state buttons (TODO/DONE/HOLD/SPECIAL/KEEP, same effect as
  * the S2 keys 1-5), the pin toggle, the unreviewed-only and sniper
  * toggles (display + state only; D3/D6 add the behaviour), the zoom
- * display (click to reset to 75%), and the exit button. D9 adds the diffs-only toggle button (F key; same effect as View > Diff Context > 0 Lines). D3 adds the
+ * display (click to reset to 75%), and the exit button. D9 adds the diffs-only toggle button (F key; same effect as View > Diff Context > 0 Lines). Best-workflow B3 adds the risk-order toggle button (same effect as View > Risk-order patrol). D3 adds the
  * file-info label at the left end: the current file name and its
  * position (n/m) in the patrol set (all files, or only the TODO files
  * while unreviewed-only is on). The bar itself owns no state: button
@@ -67,6 +67,7 @@ public:
 	void SetPrevNextEnabled(bool bPrev, bool bNext);
 	void SetPinned(bool bPinned);
 	void SetTodoOnly(bool bTodoOnly);
+	void SetRiskOrder(bool bRiskOrder);
 	void SetSniperOn(bool bSniperOn);
 	void SetDiffsOnly(bool bDiffsOnly);
 	void SetZoomText(int nZoom);
@@ -101,12 +102,14 @@ private:
 	// separately from m_btn* in Merge20DedBar.cpp.
 	CStatic m_stFileInfo;
 	// Buttons, in bar order (spec section 5.2): Prev/Next file, the
-	// five review states, pin, unreviewed-only, sniper, zoom, exit.
+	// five review states, pin, unreviewed-only, risk order, sniper,
+	// diffs-only, zoom, exit.
 	CButton m_btnPrev;
 	CButton m_btnNext;
 	CButton m_btnReview[5];
 	CButton m_btnPin;
 	CButton m_btnTodoOnly;
+	CButton m_btnRiskOrder;
 	CButton m_btnSniper;
 	CButton m_btnDiffsOnly;
 	CButton m_btnZoom;
