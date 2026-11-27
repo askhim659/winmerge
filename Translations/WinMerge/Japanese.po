@@ -7651,6 +7651,36 @@ msgstr "%1に保存されたセッションがこのフォルダ組に見つか�
 msgid "The file compare \"%1\" that was open last time will also be opened."
 msgstr "前回開いていたファイル比較「%1」も開きます。"
 
+#. Merge20 (best-workflow B13): restore offer, heading (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "A saved session was found for these folders."
+msgstr "このフォルダ組の保存されたセッションが見つかりました。"
+
+#. Merge20 (best-workflow B13): resume summary, saved-at line (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Saved at: %1"
+msgstr "保存日時：%1"
+
+#. Merge20 (best-workflow B13): resume summary, counts line (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Unreviewed: %1 files, undecided diffs: %2, output targets: %3 (of %4 files)"
+msgstr "未確認 %1 件・未判断差分 %2 件・出力対象 %3 件（全 %4 件）"
+
+#. Merge20 (best-workflow B13): resume summary, resume line with position (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "The file compare \"%1\" that was open last time will also be opened (diff %2, line %3)."
+msgstr "前回開いていたファイル比較「%1」も開きます（差分 %2 番目、行 %3）。"
+
+#. Merge20 (best-workflow B13): resume summary, no resume target (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "No file compare was open last time."
+msgstr "前回開いていたファイル比較はありません。"
+
+#. Merge20 (best-workflow B13): restore offer, question (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "Restore the review states, output checks, memos and merge judgments?"
+msgstr "確認内容・出力チェック・メモ・差分判定を復元しますか？"
+
 #. Merge20 (S8): compare option name, recursive (Merge20SessionDoc)
 #: Src/Merge20/Merge20SessionDoc.cpp
 msgid "Recursive"
