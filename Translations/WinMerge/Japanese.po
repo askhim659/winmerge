@@ -12779,3 +12779,28 @@ msgstr "【Wiz】監査ログ"
 msgid "Export as CSV..."
 msgstr "CSV で出力…"
 
+#. Merge20 (best-workflow B5): impact list title in the focus dock and the sniper overlay (Merge20ImpactList.cpp)
+#: Src/Merge20/Merge20ImpactList.cpp
+msgid "Uses in other files"
+msgstr "【Wiz】他ファイルでの使用"
+
+#. Merge20 (best-workflow B5): estimate note shown above the impact list at all times; the msgid is the PR1 constant Merge20ImpactEstimateNoteMsgId (Merge20Impact.h)
+#: Src/Merge20/Merge20Impact.h
+msgid "Estimated by text search; not a precise reference analysis."
+msgstr "テキスト検索による推定であり、厳密な参照解析ではありません。"
+
+#. Merge20 (best-workflow B5): impact-list status when the search finished with no hits (Merge20ImpactList.cpp)
+#: Src/Merge20/Merge20ImpactList.cpp
+msgid "No uses in other files"
+msgstr "他ファイルでの使用なし"
+
+#. Merge20 (best-workflow B5): impact-list status when the diff changed no symbol S4 could name, so no search runs (Merge20ImpactList.cpp)
+#: Src/Merge20/Merge20ImpactList.cpp
+msgid "No symbol to search for in this diff"
+msgstr "この差分には検索するシンボルがありません"
+
+#. Merge20 (best-workflow B5): impact-list column header (Merge20ImpactList.cpp)
+#: Src/Merge20/Merge20ImpactList.cpp
+msgid "Symbol"
+msgstr "シンボル"
+

@@ -123,6 +123,14 @@ BOOL CMerge20SniperDlg::OnInitDialog()
 		m_pView[i]->SendMessage(WM_INITIALUPDATE);
 	}
 
+	// Merge20 (best-workflow B5): the impact list at the bottom of
+	// the overlay (created here, laid out in LayoutPanels).
+	if (!m_wndImpactList.Create(this))
+	{
+		TRACE0("Failed to create CMerge20SniperDlg impact list\n");
+		return FALSE;
+	}
+
 	ApplyFont();
 	LayoutAll();
 	UpdateHeader();
@@ -164,6 +172,10 @@ void CMerge20SniperDlg::CloseSniper()
 {
 	if (m_hWnd == nullptr || !IsWindowVisible())
 		return;
+	// Merge20 (best-workflow B5): hiding the overlay stops its
+	// impact search (the dock keeps its own search for the same
+	// diff while the overlay is closed).
+	m_wndImpactList.StopSearch();
 	ShowWindow(SW_HIDE);
 	if (CWnd* pParent = GetParent())
 		pParent->SetFocus();
@@ -277,6 +289,9 @@ void CMerge20SniperDlg::ShowDiff(int nDiff)
 	if (m_pView[2] != nullptr && m_pView[2]->GetSafeHwnd() != nullptr)
 		m_pView[2]->SetSegmentText(sMerged);
 	UpdateHeader();
+	// Merge20 (best-workflow B5): the impact search follows the
+	// shown diff (same list, same jump route as the focus dock).
+	m_wndImpactList.StartForDiff(m_pDoc, nDiff);
 }
 
 void CMerge20SniperDlg::MoveDiff(int nDirection)
@@ -409,6 +424,10 @@ void CMerge20SniperDlg::LayoutPanels(int cx, int cy)
 	if (m_pView[0] == nullptr || m_pView[0]->GetSafeHwnd() == nullptr)
 		return;
 	const int nTop = SniperHeaderHeight;
+	// Merge20 (best-workflow B5): the impact list takes a fixed
+	// strip at the bottom of the overlay; the panels take the rest.
+	const int nImpactH = 140;
+	const int nPanelsBottom = cy - nImpactH;
 	if (m_layout == Merge20SniperLayout::Columns)
 	{
 		const int nColWidth = cx / 3;
@@ -417,20 +436,22 @@ void CMerge20SniperDlg::LayoutPanels(int cx, int cy)
 			const int nX = i * nColWidth;
 			const int nW = (i == 2) ? (cx - nX) : nColWidth;
 			m_stLabel[i].MoveWindow(nX + 4, nTop, nW - 8, SniperLabelHeight);
-			m_pView[i]->MoveWindow(nX, nTop + SniperLabelHeight, nW, cy - nTop - SniperLabelHeight);
+			m_pView[i]->MoveWindow(nX, nTop + SniperLabelHeight, nW, nPanelsBottom - nTop - SniperLabelHeight);
 		}
 	}
 	else
 	{
-		const int nRowHeight = (cy - nTop) / 3;
+		const int nRowHeight = (nPanelsBottom - nTop) / 3;
 		for (int i = 0; i < 3; ++i)
 		{
 			const int nY = nTop + i * nRowHeight;
-			const int nH = (i == 2) ? (cy - nY) : nRowHeight;
+			const int nH = (i == 2) ? (nPanelsBottom - nY) : nRowHeight;
 			m_stLabel[i].MoveWindow(4, nY, cx - 8, SniperLabelHeight);
 			m_pView[i]->MoveWindow(0, nY + SniperLabelHeight, cx, nH - SniperLabelHeight);
 		}
 	}
+	if (m_wndImpactList.GetSafeHwnd() != nullptr)
+		m_wndImpactList.MoveWindow(0, nPanelsBottom, cx, nImpactH);
 }
 
 void CMerge20SniperDlg::UpdateHeader()

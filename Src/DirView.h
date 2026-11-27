@@ -25,6 +25,7 @@
 #include "FileOpenFlags.h"
 #include "7zCommon.h"
 #include "Merge20/Merge20GrepDlg.h"
+#include "Merge20/Merge20Impact.h"
 #include "Merge20/Merge20BulkClassifyDlg.h"
 
 class FileActionScript;
@@ -162,6 +163,11 @@ public:
 	// Merge20 (Phase 4 D10): bulk classification file list for the dialog.
 	std::vector<Merge20BulkClassifyFile> Merge20BuildBulkClassifyFiles();
 	void Merge20OpenFileAtLine(const Merge20GrepHit& hit);
+	// Merge20 (best-workflow B5): same jump from an impact-list
+	// hit (the symbol is not needed: the diff index is resolved
+	// at click time from the opened compare document, like a
+	// Grep hit).
+	void Merge20OpenFileAtLine(const Merge20ImpactHit& hit);
 
 	void SetActivePane(int pane);
 

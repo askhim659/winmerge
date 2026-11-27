@@ -972,6 +972,13 @@
 #define IDC_MERGE20_AUDIT_NOTE          1914
 #define IDC_MERGE20_AUDIT_LIST          1915
 #define IDC_MERGE20_AUDIT_EXPORT        1916
+// Merge20 (best-workflow B5): impact list shared by the focus
+// dock and the sniper overlay (title, estimate note, hit list,
+// status line).
+#define IDC_MERGE20_IMPACT_TITLE        1917
+#define IDC_MERGE20_IMPACT_NOTE         1918
+#define IDC_MERGE20_IMPACT_LIST         1919
+#define IDC_MERGE20_IMPACT_STATUS       1920
 #define IDC_MERGE20_CLOSE_WARN_COUNTS       1882
 #define IDC_MERGE20_CLOSE_WARN_WARNING      1883
 #define IDC_MERGE20_CLOSE_WARN_TODO_ONLY    1884
@@ -2799,11 +2806,12 @@
 //   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1917 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1921 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
 //   F4 takes 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1888,
 //   B14 takes 1889-1892, B7 takes 1893-1897 (reserves 1893-1902), F5 takes 1903-1904,
-//   F6 takes 1905-1909, F7 takes 1910-1912, B11 takes 1913-1916.
+//   F6 takes 1905-1909, F7 takes 1910-1912, B11 takes 1913-1916,
+//   B5 takes 1917-1920.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2826,7 +2834,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        311
 #define _APS_NEXT_COMMAND_VALUE         38988
-#define _APS_NEXT_CONTROL_VALUE         1917
+#define _APS_NEXT_CONTROL_VALUE         1921
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
