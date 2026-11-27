@@ -142,6 +142,11 @@ int CMerge20ImpactList::OnCreate(LPCREATESTRUCT lpCreateStruct)
 
 void CMerge20ImpactList::StartForDiff(CMergeDoc* pDoc, int nDiff)
 {
+	// The list control needs its window (the list rows and the
+	// status live there): a ShowDiff before creation is a no-op,
+	// the next ShowDiff starts the search.
+	if (GetSafeHwnd() == nullptr)
+		return;
 	// A previous search (finished or still running) is joined
 	// here so the new run starts clean and the list never shows
 	// another diff's hits.
