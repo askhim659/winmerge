@@ -105,6 +105,8 @@ protected:
 	afx_msg void OnHScroll(UINT nCode, UINT nPos, CScrollBar* pScrollBar);
 	/** @brief Diff table row clicked (F5). */
 	afx_msg void OnTableItemChanged(NMHDR* pNMHDR, LRESULT* pResult);
+	/** @brief Diff table clicked: group rows expand/collapse (F5). */
+	afx_msg void OnTableClick(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
