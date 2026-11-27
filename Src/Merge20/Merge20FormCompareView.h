@@ -16,9 +16,13 @@
  * F3 adds the visual-preview pane under the card list: the
  * selected file's canvas (Merge20FormCanvas) with the zoom
  * controls (100% / 25% / fit / slider 10-200%) and the viewport
- * height toggle (640 px fixed / full). The diff table (F5)
- * replaces the card list rows with card windows later; the
- * document and the list module stay the same.
+ * height toggle (640 px fixed / full). F4 adds the spotlight
+ * inspector banner under the zoom row (old/new side-by-side
+ * previews, previous / next stepping, clear, go-to-changed-area)
+ * and the public FocusDiffRecord hook the F5 diff table will
+ * call when a row is clicked. The diff table (F5) replaces the
+ * card list rows with card windows later; the document and the
+ * list module stay the same.
  *
  * The view never changes the document except through the
  * document's SetFilter / SetSearchText / SetSortOrder (which
@@ -29,9 +33,12 @@
  */
 #pragma once
 
+#include <map>
 #include "Merge20/Merge20FormCanvas.h"
 #include "Merge20/Merge20FormCompareDoc.h"
 #include "Merge20/Merge20FormList.h"
+#include "Merge20/Merge20FormSpotlight.h"
+#include "Merge20/Merge20FormSpotPreview.h"
 
 class CFormCompareView : public CView
 {
@@ -44,6 +51,16 @@ public:
 
 	/** @brief Re-apply all _() texts (language change). */
 	void UpdateResources();
+
+	/**
+	 * @brief Focus a diff record for the spotlight (F4).
+	 * Public hook for F5: the structured diff table calls this
+	 * when a row is clicked (design section 2.7). Only a record
+	 * with `hasVisual` is focused; other indices are ignored.
+	 * The selection is kept per file card, so switching files
+	 * and coming back restores it.
+	 */
+	void FocusDiffRecord(int recordIndex);
 
 protected:
 	virtual void OnInitialUpdate() override;
@@ -72,6 +89,14 @@ protected:
 	afx_msg void OnViewportToggle();
 	/** @brief Canvas shape click (F3 selection; F4 spotlight reads the key). */
 	afx_msg void OnCanvasShapeClicked();
+	/** @brief Spotlight: previous change (F4). */
+	afx_msg void OnSpotPrev();
+	/** @brief Spotlight: next change (F4). */
+	afx_msg void OnSpotNext();
+	/** @brief Spotlight: clear (F4). */
+	afx_msg void OnSpotClear();
+	/** @brief Spotlight: go to the changed area (F4). */
+	afx_msg void OnSpotGoto();
 	/** @brief Zoom slider (F3). */
 	afx_msg void OnHScroll(UINT nCode, UINT nPos, CScrollBar* pScrollBar);
 	//}}AFX_MSG
@@ -89,6 +114,18 @@ private:
 	void RefreshNavigator();
 	/** @brief Show the selected file in the preview canvas (F3). */
 	void RefreshCanvas();
+	/** @brief Apply the selected file's spotlight state to the canvas and the banner (F4). */
+	void ApplySpotlight();
+	/** @brief Hide the spotlight banner and clear the canvas spotlight (F4). */
+	void HideSpotlightBanner();
+	/** @brief Rebuild the banner text and the old/new previews from the current spotlight state (F4). */
+	void UpdateSpotlightBanner();
+	/** @brief Step the spotlight to the previous (-1) or next (+1) visual record (F4). */
+	void StepSpotlight(int dir);
+	/** @brief Lay out the spotlight banner controls (F4). */
+	void LayoutSpotlightBanner(int left, int top, int width);
+	/** @brief First visual record whose element is this shape key, or -1 (F4). */
+	int FindRecordIndexForShapeKey(const std::wstring& key) const;
 	/** @brief Sync the slider position and the zoom % label with the canvas scale (F3). */
 	void UpdateZoomControls();
 	/** @brief Selected file result, or nullptr when nothing is selected (F3). */
@@ -122,6 +159,19 @@ private:
 	CStatic m_stZoomLabel; /**< Zoom % label (F3). */
 	CButton m_btnViewportToggle; /**< Viewport height toggle (F3). */
 	CMerge20FormCanvas m_wndCanvas; /**< Visual-preview canvas (F3). */
+	CStatic m_stSpotPanel; /**< Spotlight banner background (F4). */
+	CStatic m_stSpotOldLabel; /**< Old preview label (F4). */
+	CMerge20FormSpotPreview m_wndSpotOld; /**< Old-shape preview (F4). */
+	CStatic m_stSpotNewLabel; /**< New preview label (F4). */
+	CMerge20FormSpotPreview m_wndSpotNew; /**< New-shape preview (F4). */
+	CStatic m_stSpotText; /**< Spotlight banner text (F4). */
+	CButton m_btnSpotPrev; /**< Previous change (F4). */
+	CButton m_btnSpotNext; /**< Next change (F4). */
+	CButton m_btnSpotClear; /**< Clear spotlight (F4). */
+	CButton m_btnSpotGoto; /**< Go to changed area (F4). */
+	bool m_bSpotlightVisible = false; /**< Spotlight banner shown (F4). */
+	/** @brief Spotlight state per file card, keyed by file name (design section 2.7, F4). */
+	std::map<std::wstring, Merge20FormSpotlightState> m_spotlightByFile;
 	bool m_bNavVisible = true; /**< Navigator shown. */
 	bool m_bCanvasFullHeight = false; /**< Canvas takes the full bottom area (F3). */
 	bool m_bSyncingSelection = false; /**< List <-> navigator sync guard. */

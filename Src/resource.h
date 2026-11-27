@@ -929,6 +929,16 @@
 #define IDC_MERGE20_SUMMARY_LIST            1869
 #define IDC_MERGE20_SUMMARY_TODO_ONLY       1870
 #define IDC_MERGE20_SUMMARY_CONFIRM         1871
+#define IDC_MERGE20_FORM_SPOT_PANEL         1872
+#define IDC_MERGE20_FORM_SPOT_OLD_LABEL     1873
+#define IDC_MERGE20_FORM_SPOT_OLD           1874
+#define IDC_MERGE20_FORM_SPOT_NEW_LABEL     1875
+#define IDC_MERGE20_FORM_SPOT_NEW           1876
+#define IDC_MERGE20_FORM_SPOT_TEXT          1877
+#define IDC_MERGE20_FORM_SPOT_PREV          1878
+#define IDC_MERGE20_FORM_SPOT_NEXT          1879
+#define IDC_MERGE20_FORM_SPOT_CLEAR         1880
+#define IDC_MERGE20_FORM_SPOT_GOTO          1881
 #define IDC_MERGE20_CLOSE_WARN_COUNTS       1882
 #define IDC_MERGE20_CLOSE_WARN_WARNING      1883
 #define IDC_MERGE20_CLOSE_WARN_TODO_ONLY    1884
@@ -2704,10 +2714,12 @@
 // F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
 // zoom slider, zoom label, viewport height toggle).
 // B9 consumes dialog 301, controls 1866-1871 and command 38979 (end-of-session summary dialog).
+// F4 consumes controls 1872-1881 (FORM compare spotlight: banner panel, old/new preview
+// labels + previews, banner text, previous / next / clear / go-to-changed-area buttons).
 // B2 stage 1 consumes dialog 303 and controls 1882-1885 (close-warning dialog: counts, warning,
 // show-unreviewed-only and proceed buttons). It uses no command ID: the warning is automatic on
-// close. Command 38981 is held for the B2 stage 2 output gates (S7/S5); controls 1872-1881 are
-// held for F4.
+// close. Command 38981 is held for the B2 stage 2 output gates (S7/S5); F4 consumes
+// controls 1872-1881 (see above).
 // B4 consumes control 1886 (file-list panel high-risk remainder line). It uses no command ID:
 // the remainder is a display, not a menu item.
 // B3 consumes command 38982 (risk-order patrol toggle: View menu +
@@ -2729,7 +2741,7 @@
 //   IDs must skip those values.
 // - controls (IDC_*): from 1893 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
-//   F4 holds 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1888,
+//   F4 takes 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1888,
 //   B14 takes 1889-1892.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
