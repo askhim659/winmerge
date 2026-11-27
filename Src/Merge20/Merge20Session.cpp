@@ -721,6 +721,13 @@ namespace
 		out.diffIdx = static_cast<int>(diffIdx);
 		out.op = static_cast<int>(op);
 		out.state = static_cast<int>(state);
+		// Merge20 (best-workflow B1): the conclusion is an optional
+		// field (v1 files have none, which means Undecided). An
+		// out-of-range value fails the entry, like the other fields.
+		int64_t conclusion = 0;
+		if (!GetIntField(value, L"conclusion", conclusion, 0, 5))
+			return false;
+		out.conclusion = static_cast<int>(conclusion);
 		const Merge20JsonValue* begin = value.Find(L"begin");
 		const Merge20JsonValue* end = value.Find(L"end");
 		if (begin != nullptr)
@@ -924,6 +931,7 @@ namespace
 			{ L"end", Merge20JsonArray(std::move(end)) },
 			{ L"state", Merge20JsonInt(judgment.state) },
 			{ L"srcPanes", Merge20JsonArray(std::move(srcPanes)) },
+			{ L"conclusion", Merge20JsonInt(judgment.conclusion) },
 		});
 	}
 

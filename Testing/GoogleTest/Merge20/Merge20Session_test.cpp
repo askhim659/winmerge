@@ -314,6 +314,49 @@ TEST(Merge20Session, SplitsRoundTrip)
 	EXPECT_EQ(back.files[0].splits[0].rows, 5);
 }
 
+TEST(Merge20Session, ConclusionRoundTrip)
+{
+	// Merge20 (best-workflow B1): the per-diff conclusion survives
+	// a save/load cycle, so a restore can put the conclusions back.
+	Merge20Session session = MakeSession();
+	ASSERT_EQ(session.files[0].diffs.size(), 2u);
+	session.files[0].diffs[0].conclusion = 2; // UseNew
+	session.files[0].diffs[1].conclusion = 5; // Keep
+	std::string json;
+	ASSERT_TRUE(Merge20SessionToJson(session, json));
+	EXPECT_NE(json.find("\"conclusion\": 2"), std::string::npos);
+	EXPECT_NE(json.find("\"conclusion\": 5"), std::string::npos);
+	Merge20Session back;
+	std::string err;
+	int skipped = -1;
+	ASSERT_TRUE(Merge20SessionFromJson(json, back, err, skipped));
+	EXPECT_TRUE(err.empty());
+	EXPECT_EQ(skipped, 0);
+	ASSERT_EQ(back.files[0].diffs.size(), 2u);
+	EXPECT_EQ(back.files[0].diffs[0].conclusion, 2);
+	EXPECT_EQ(back.files[0].diffs[1].conclusion, 5);
+	// A file saved before B1 has no "conclusion" member and still
+	// loads, with the conclusion at its default (Undecided).
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,\"files\":["
+		"{\"path\":\"f.txt\",\"diffs\":["
+		"{\"diffIdx\":0,\"op\":4,\"begin\":[10,12,-1],\"end\":[12,14,-1],\"state\":2,\"srcPanes\":[1]}]}]}",
+		back, err, skipped));
+	ASSERT_EQ(back.files.size(), 1u);
+	ASSERT_EQ(back.files[0].diffs.size(), 1u);
+	EXPECT_EQ(back.files[0].diffs[0].conclusion, 0);
+	// A bad conclusion inside a good file drops that diff only.
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,\"files\":["
+		"{\"path\":\"f.txt\",\"diffs\":["
+		"{\"diffIdx\":0,\"op\":4,\"begin\":[10,12,-1],\"end\":[12,14,-1],\"state\":2,\"srcPanes\":[1],\"conclusion\":3},"
+		"{\"diffIdx\":1,\"op\":1,\"begin\":[20,20,-1],\"end\":[20,20,-1],\"state\":3,\"srcPanes\":[],\"conclusion\":6}]}]}",
+		back, err, skipped));
+	ASSERT_EQ(back.files.size(), 1u);
+	ASSERT_EQ(back.files[0].diffs.size(), 1u);
+	EXPECT_EQ(back.files[0].diffs[0].conclusion, 3);
+}
+
 TEST(Merge20Session, DisplayFieldsBackwardCompat)
 {
 	// Merge20 (Phase 4 D11, design section 4.1(b)): a file saved

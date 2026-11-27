@@ -378,7 +378,20 @@ void CMerge20FocusDock::UpdateHeader()
 	if (!m_bResultBuilt)
 		sLabel = _("No merge session");
 	else if (m_nCurrentDiff < 0)
+	{
 		sLabel = _("No difference selected");
+		// Merge20 (best-workflow B1b): the progress is visible even
+		// before a diff is selected (e.g. right after a session
+		// restore, when the conclusions are back but no diff is
+		// current yet).
+		if (m_pDoc != nullptr)
+		{
+			int nJudged = 0, nTotal = 0;
+			m_pDoc->Merge20GetConclusionProgress(nJudged, nTotal);
+			sLabel += _T("・") + strutils::format_string2(_("Judged %1 of %2 diffs"),
+				strutils::to_str(nJudged), strutils::to_str(nTotal));
+		}
+	}
 	else
 	{
 		// Merge20 (best-workflow B1): the header shows the current

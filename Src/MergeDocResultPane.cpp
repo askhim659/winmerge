@@ -1458,6 +1458,23 @@ void CMergeDoc::Merge20GetConclusionProgress(int& nJudged, int& nTotal) const
 	}
 }
 
+void CMergeDoc::Merge20SetDiffConclusionRestored(int nDiff, Merge20DiffConclusion conclusion)
+{
+	// Store only: no result change, no learning record, no linkage.
+	// Used by the session restore (the saved review state and output
+	// checkbox are restored separately) and by the learning
+	// acceptance (the result was already rewritten by the caller).
+	// Merge20SetDiffConclusion above is the single entry point for
+	// new conclusions; this one only replays a stored conclusion.
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize() ||
+		!m_diffList.IsDiffSignificant(nDiff))
+		return;
+	if (conclusion == Merge20DiffConclusion::Undecided)
+		m_merge20DiffConclusions.erase(nDiff);
+	else
+		m_merge20DiffConclusions[nDiff] = conclusion;
+}
+
 bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion, bool bSaveLearn /*= true*/)
 {
 	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize() ||
@@ -1474,10 +1491,7 @@ bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclu
 	if (Merge20ConclusionChangesResult(conclusion))
 		ResultChooseSources(nDiff, Merge20ConclusionSrcPanes(conclusion, m_nBuffers, static_cast<int>(pRange->op)));
 	// Store the conclusion (an Undecided diff has no entry).
-	if (conclusion == Merge20DiffConclusion::Undecided)
-		m_merge20DiffConclusions.erase(nDiff);
-	else
-		m_merge20DiffConclusions[nDiff] = conclusion;
+	Merge20SetDiffConclusionRestored(nDiff, conclusion);
 	// Record the explicit judgment for learning, like a judgement
 	// made in the result pane (OnMergeChooseSource): only when the
 	// conclusion actually changed to a chosen strategy. Keep records
@@ -2286,7 +2300,9 @@ void CMergeDoc::OnUpdateMergeChooseAllConflicts(CCmdUI* pCmdUI)
 // Merge20 (Phase 3 L3, design section 2.3): learning candidate commands
 // (result pane context menu). Accepting applies the candidate's own
 // strategy to the diff; dismissing hides the candidate until the next
-// recompute. Neither command changes the review state.
+// recompute. Accepting also sets the diff's conclusion and applies the
+// one B1 linkage rule (best-workflow B1b); dismissing still changes
+// nothing else.
 
 bool CMergeDoc::GetMerge20LearnTargetDiffs(int& firstDiff, int& lastDiff)
 {
@@ -2328,6 +2344,28 @@ static void UpdateMerge20LearnCommandUI(CMergeDoc& doc, CCmdUI* pCmdUI)
 	pCmdUI->SetCheck(FALSE);
 }
 
+// Map a learning candidate's strategy to the B1 conclusion it
+// expresses (best-workflow B1b, gap analysis section 4.2 B1 (e)):
+// the acceptance is a conclusion, so it rides the same linkage
+// rule. KeepNew on a deleted block is Reject (the new side has no
+// lines, so keeping it means adopting nothing); KeepNew anywhere
+// else is UseNew.
+static Merge20DiffConclusion Merge20ConclusionFromLearnStrategy(Merge20LearnStrategy strategy, int op)
+{
+	switch (strategy)
+	{
+	case Merge20LearnStrategy::InsertOld:
+	case Merge20LearnStrategy::ReplaceWithOld:
+		return Merge20DiffConclusion::UseOld;
+	case Merge20LearnStrategy::BothOldNew:
+		return Merge20DiffConclusion::UseBoth;
+	case Merge20LearnStrategy::KeepNew:
+	default:
+		return op == Merge20ConclusionOpOldOnly ?
+			Merge20DiffConclusion::Reject : Merge20DiffConclusion::UseNew;
+	}
+}
+
 void CMergeDoc::OnMerge20LearnApply()
 {
 	int firstDiff = -1, lastDiff = -1;
@@ -2352,7 +2390,20 @@ void CMergeDoc::OnMerge20LearnApply()
 		// Copy the panes first: ResultChooseSources erases the
 		// candidate from the map.
 		const std::vector<int> srcPanes = it->second.srcPanes;
+		// Merge20 (best-workflow B1b): the acceptance is a conclusion
+		// too. Store it before ResultChooseSources, so the focus
+		// dock header and the margin markers refresh with the right
+		// conclusion, and apply the one linkage rule. The learning
+		// record is NOT done here: the record loop below counts the
+		// acceptance once, and Merge20SetDiffConclusion is not used
+		// because it would rewrite the result a second time.
+		const DIFFRANGE* pRange = m_diffList.DiffRangeAt(nDiff);
+		const Merge20DiffConclusion conclusion = pRange != nullptr ?
+			Merge20ConclusionFromLearnStrategy(it->second.strategy, static_cast<int>(pRange->op)) :
+			Merge20DiffConclusion::Undecided;
+		Merge20SetDiffConclusionRestored(nDiff, conclusion);
 		ResultChooseSources(nDiff, srcPanes, bGroupWithPrevious);
+		ApplyMerge20ConclusionLinkage(*this, conclusion);
 		appliedDiffs.push_back(nDiff);
 		bGroupWithPrevious = true;
 	}

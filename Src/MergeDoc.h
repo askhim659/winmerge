@@ -402,6 +402,8 @@ public:
 	bool Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion, bool bSaveLearn = true);
 	/** @brief Merge20 (best-workflow B1): judged/total significant diffs of this file ("judged X of Y diffs"). */
 	void Merge20GetConclusionProgress(int& nJudged, int& nTotal) const;
+	/** @brief Merge20 (best-workflow B1b): replay a stored conclusion (session restore, learning acceptance): store it in the map only, with no result change, no learning record and no file linkage. The caller already rewrote the result (learning acceptance) or restores the file state separately (session restore). */
+	void Merge20SetDiffConclusionRestored(int nDiff, Merge20DiffConclusion conclusion);
 	/** @brief Merge20 (best-workflow B1): set the conclusions of the targeted diffs (result pane context menu, Diff conclusion submenu). The target rule is the same as the learning commands: the current diff when nothing is selected, else the selected diffs. */
 	void OnMerge20SetConclusion(UINT nID);
 	void OnUpdateMerge20SetConclusion(CCmdUI* pCmdUI);
