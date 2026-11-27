@@ -912,6 +912,14 @@
 #define IDC_MERGE20_FORM_NAV                1855
 #define IDC_MERGE20_FORM_LIST               1856
 #define IDC_MERGE20_FORM_EMPTY              1857
+#define IDC_MERGE20_FORM_CANVAS             1858
+#define IDC_MERGE20_FORM_PREVIEW_LABEL      1859
+#define IDC_MERGE20_FORM_ZOOM_100           1860
+#define IDC_MERGE20_FORM_ZOOM_25            1861
+#define IDC_MERGE20_FORM_ZOOM_FIT           1862
+#define IDC_MERGE20_FORM_ZOOM_SLIDER        1863
+#define IDC_MERGE20_FORM_ZOOM_LABEL         1864
+#define IDC_MERGE20_FORM_VIEWPORT_TOGGLE    1865
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2660,6 +2668,8 @@
 // H-DOC consumes command 38969 (user manual menu item).
 // B1 consumes commands 38970-38975 (per-diff conclusion menu items).
 // F2 consumes command 38976 (FORM compare launch) and controls 1837-1857 (FORM compare view).
+// F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
+// zoom slider, zoom label, viewport height toggle).
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
@@ -2686,7 +2696,9 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
 #define _APS_NEXT_COMMAND_VALUE         38979
-#define _APS_NEXT_CONTROL_VALUE         1858
+#define _APS_NEXT_CONTROL_VALUE         1866
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
+
+

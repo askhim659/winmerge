@@ -11210,6 +11210,7 @@ msgstr "未確認ファイルがありません"
 #: Src/DirView.cpp
 msgid "%1 displayed, %2 checked, %3 unreviewed"
 msgstr "表示 %1 件中 %2 件チェック、未確認 %3 件"
+
 #. Merge20 (D4): focus dock judgement buttons (CMerge20FocusDock)
 #: Src/Merge20/Merge20FocusDock.cpp
 msgid "Insert old lines"
@@ -11295,6 +11296,7 @@ msgstr "差分が選択されていません"
 #: Src/Merge20/Merge20FocusDock.cpp
 msgid "(No lines)"
 msgstr "（行なし）"
+
 #. Merge20 (D6): sniper overlay title (CMerge20SniperDlg)
 #: Src/Merge20/Merge20SniperDlg.cpp
 msgid "Auto Sniper"
@@ -11988,6 +11990,36 @@ msgstr "旧フォルダ（現地吸い上げ）を選択してください"
 msgid "Select the new folder (package)"
 msgstr "新フォルダ（パッケージ）を選択してください"
 
+#. Merge20 (Wave 5 F3): preview pane label (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Visual preview"
+msgstr "ビジュアルプレビュー"
+
+#. Merge20 (Wave 5 F3): preview label when nothing is selected (design section 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Select a form to preview it"
+msgstr "帳票を選択するとプレビューを表示します"
+
+#. Merge20 (Wave 5 F3): zoom fit button (design section 2.8)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Fit"
+msgstr "フィット"
+
+#. Merge20 (Wave 5 F3): viewport height toggle, expand (design section 2.6)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Expand to full height"
+msgstr "枠高さ：全開"
+
+#. Merge20 (Wave 5 F3): viewport height toggle, fixed 640px (design section 2.6)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Fixed height (640px)"
+msgstr "枠高さ：640pxに固定"
+
+#. Merge20 (Wave 5 F3): font approximation note in the canvas corner (design section 6 (6))
+#: Src/Merge20/Merge20FormCanvas.cpp
+msgid "Font is shown approximately."
+msgstr "フォントは近似表示です"
+
 #. Merge20 (UI U1): brand header menu item (Merge.rc) and bar caption (Merge20BrandBar.cpp)
 #: Src/Merge.rc
 #: Src/Merge20/Merge20BrandBar.cpp
@@ -11998,3 +12030,6 @@ msgstr "【Wiz】ブランドヘッダ"
 #: Src/Merge20/Merge20BrandBar.cpp
 msgid "File Compare"
 msgstr "ファイル比較"
+
+
+

@@ -26,6 +26,11 @@ namespace
 	const int kFormKpiHeight = 18;
 	const int kFormControlHeight = 26;
 	const int kFormNavWidth = 250;
+	// Preview pane (F3): the HTML viewport is 640 px fixed, or
+	// fully expanded (toggleViewportHeight); the list keeps at
+	// least this height when the preview expands.
+	const int kFormPreviewFixedHeight = 640;
+	const int kFormMinListHeight = 120;
 
 	// Column widths of the card list (headers only in F2).
 	const int kFormColFileName = 180;
@@ -60,6 +65,12 @@ BEGIN_MESSAGE_MAP(CFormCompareView, CView)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_NAV_TOGGLE, OnNavToggle)
 	ON_LBN_SELCHANGE(IDC_MERGE20_FORM_NAV, OnNavSelChanged)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_MERGE20_FORM_LIST, OnListItemChanged)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_100, OnZoom100)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_25, OnZoom25)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_FIT, OnZoomFit)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_VIEWPORT_TOGGLE, OnViewportToggle)
+	ON_CONTROL(MERGE20_FORM_CANVAS_SELCHANGE, IDC_MERGE20_FORM_CANVAS, OnCanvasShapeClicked)
+	ON_WM_HSCROLL()
 END_MESSAGE_MAP()
 
 CFormCompareView::CFormCompareView()
@@ -191,6 +202,63 @@ int CFormCompareView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_stEmpty.SetFont(pFont);
+	if (!m_stPreviewLabel.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP | SS_CENTERIMAGE | SS_ENDELLIPSIS,
+		rc, this, IDC_MERGE20_FORM_PREVIEW_LABEL))
+	{
+		TRACE0("Failed to create Merge20FormCompareView preview label\n");
+		return -1;
+	}
+	m_stPreviewLabel.SetFont(pFont);
+	if (!m_btnZoom100.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_ZOOM_100))
+	{
+		TRACE0("Failed to create Merge20FormCompareView zoom 100% button\n");
+		return -1;
+	}
+	m_btnZoom100.SetFont(pFont);
+	if (!m_btnZoom25.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_ZOOM_25))
+	{
+		TRACE0("Failed to create Merge20FormCompareView zoom 25% button\n");
+		return -1;
+	}
+	m_btnZoom25.SetFont(pFont);
+	if (!m_btnZoomFit.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_ZOOM_FIT))
+	{
+		TRACE0("Failed to create Merge20FormCompareView zoom fit button\n");
+		return -1;
+	}
+	m_btnZoomFit.SetFont(pFont);
+	if (!m_wndZoomSlider.Create(WS_CHILD | WS_VISIBLE | WS_TABSTOP | TBS_HORZ | TBS_AUTOTICKS,
+		rc, this, IDC_MERGE20_FORM_ZOOM_SLIDER))
+	{
+		TRACE0("Failed to create Merge20FormCompareView zoom slider\n");
+		return -1;
+	}
+	m_wndZoomSlider.SetRange(10, 200, TRUE);
+	m_wndZoomSlider.SetPos(100);
+	m_wndZoomSlider.SetPageSize(5);
+	m_wndZoomSlider.SetTicFreq(10);
+	if (!m_stZoomLabel.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP | SS_CENTERIMAGE,
+		rc, this, IDC_MERGE20_FORM_ZOOM_LABEL))
+	{
+		TRACE0("Failed to create Merge20FormCompareView zoom label\n");
+		return -1;
+	}
+	m_stZoomLabel.SetFont(pFont);
+	if (!m_btnViewportToggle.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_VIEWPORT_TOGGLE))
+	{
+		TRACE0("Failed to create Merge20FormCompareView viewport toggle\n");
+		return -1;
+	}
+	m_btnViewportToggle.SetFont(pFont);
+	if (!m_wndCanvas.Create(this, IDC_MERGE20_FORM_CANVAS))
+	{
+		TRACE0("Failed to create Merge20FormCompareView canvas\n");
+		return -1;
+	}
 	return 0;
 }
 
@@ -264,18 +332,53 @@ void CFormCompareView::LayoutControls()
 	x += 220 + kFormRowGap;
 	m_btnRerun.MoveWindow(x, y, 90, kFormControlHeight);
 	y += kFormControlHeight + kFormMargin;
-	// Bottom area: navigator (left) + card list (rest).
+	// Bottom area: navigator (left) + card list (top) + preview pane (bottom, F3).
 	const int navWidth = m_bNavVisible ? kFormNavWidth : 0;
-	const int listTop = y;
-	const int listHeight = (std::max)(0, height - listTop - kFormMargin);
-	if (m_bNavVisible)
-		m_wndNav.MoveWindow(kFormMargin, listTop, navWidth, listHeight);
-	else
-		m_wndNav.MoveWindow(kFormMargin, listTop, 0, listHeight);
+	const int bottomTop = y;
+	const int bottomHeight = (std::max)(0, height - bottomTop - kFormMargin);
 	const int listLeft = kFormMargin + navWidth + (m_bNavVisible ? kFormRowGap : 0);
 	const int listWidth = (std::max)(0, width - listLeft - kFormMargin);
-	m_wndList.MoveWindow(listLeft, listTop, listWidth, listHeight);
-	m_stEmpty.MoveWindow(listLeft, listTop, listWidth, listHeight);
+	// Preview pane height: 640 px fixed (HTML toggleViewportHeight)
+	// or the full bottom area minus a minimal list strip.
+	const int previewTotal = (std::max)(0, (std::min)(
+		m_bCanvasFullHeight ? bottomHeight - kFormMinListHeight :
+			kFormPreviewFixedHeight + kFormControlHeight + kFormRowGap,
+		bottomHeight - kFormMinListHeight));
+	const int listHeight = (std::max)(0, bottomHeight - previewTotal - (previewTotal > 0 ? kFormRowGap : 0));
+	if (m_bNavVisible)
+		m_wndNav.MoveWindow(kFormMargin, bottomTop, navWidth, bottomHeight);
+	else
+		m_wndNav.MoveWindow(kFormMargin, bottomTop, 0, bottomHeight);
+	m_wndList.MoveWindow(listLeft, bottomTop, listWidth, listHeight);
+	m_stEmpty.MoveWindow(listLeft, bottomTop, listWidth, listHeight);
+	// Preview pane (F3): label + zoom row, then the canvas.
+	const int previewTop = bottomTop + listHeight + (previewTotal > 0 ? kFormRowGap : 0);
+	const int zoomBtn100Width = 56;
+	const int zoomBtn25Width = 56;
+	const int zoomBtnFitWidth = 72;
+	const int zoomSliderWidth = 130;
+	const int zoomLabelWidth = 52;
+	const int viewportToggleWidth = 150;
+	const int zoomRowWidth = zoomBtn100Width + zoomBtn25Width + zoomBtnFitWidth +
+		zoomSliderWidth + zoomLabelWidth + viewportToggleWidth + 5 * kFormRowGap;
+	const int labelWidth = (std::max)(0, listWidth - zoomRowWidth - kFormRowGap);
+	m_stPreviewLabel.MoveWindow(listLeft, previewTop, labelWidth, kFormControlHeight);
+	int xZoom = listLeft + labelWidth + kFormRowGap;
+	m_btnZoom100.MoveWindow(xZoom, previewTop, zoomBtn100Width, kFormControlHeight);
+	xZoom += zoomBtn100Width + kFormRowGap;
+	m_btnZoom25.MoveWindow(xZoom, previewTop, zoomBtn25Width, kFormControlHeight);
+	xZoom += zoomBtn25Width + kFormRowGap;
+	m_btnZoomFit.MoveWindow(xZoom, previewTop, zoomBtnFitWidth, kFormControlHeight);
+	xZoom += zoomBtnFitWidth + kFormRowGap;
+	m_wndZoomSlider.MoveWindow(xZoom, previewTop, zoomSliderWidth, kFormControlHeight);
+	xZoom += zoomSliderWidth + kFormRowGap;
+	m_stZoomLabel.MoveWindow(xZoom, previewTop, zoomLabelWidth, kFormControlHeight);
+	xZoom += zoomLabelWidth + kFormRowGap;
+	m_btnViewportToggle.MoveWindow(xZoom, previewTop, viewportToggleWidth, kFormControlHeight);
+	const int canvasTop = previewTop + kFormControlHeight + kFormRowGap;
+	const int canvasHeight = (std::max)(0, previewTotal - kFormControlHeight - kFormRowGap);
+	m_wndCanvas.MoveWindow(listLeft, canvasTop, listWidth, canvasHeight);
+	UpdateZoomControls();
 }
 
 void CFormCompareView::SetupColumns()
@@ -333,6 +436,11 @@ void CFormCompareView::UpdateResources()
 		m_wndTabs.SetCurSel(static_cast<int>(pDoc->GetFilter()));
 		m_wndSort.SetCurSel(static_cast<int>(pDoc->GetSortOrder()));
 	}
+	// Preview pane texts (F3). "100%" / "25%" need no translation.
+	m_btnZoom100.SetWindowText(_T("100%"));
+	m_btnZoom25.SetWindowText(_T("25%"));
+	m_btnZoomFit.SetWindowText(_("Fit").c_str());
+	m_btnViewportToggle.SetWindowText((m_bCanvasFullHeight ? _("Fixed height (640px)") : _("Expand to full height")).c_str());
 	// Column headers (delete + re-insert keeps the order).
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
@@ -349,6 +457,7 @@ void CFormCompareView::RefreshAll()
 	RefreshKpi();
 	RefreshList();
 	RefreshNavigator();
+	RefreshCanvas();
 }
 
 void CFormCompareView::RefreshHeader()
@@ -482,6 +591,7 @@ void CFormCompareView::SelectVisibleIndex(int visibleIndex)
 	if (m_wndNav.GetSafeHwnd() != nullptr && visibleIndex < m_wndNav.GetCount())
 		m_wndNav.SetCurSel(visibleIndex);
 	m_bSyncingSelection = false;
+	RefreshCanvas();
 }
 
 int CFormCompareView::GetSelectedVisibleIndex() const
@@ -597,7 +707,94 @@ void CFormCompareView::OnListItemChanged(NMHDR* pNMHDR, LRESULT* pResult)
 		if (m_wndNav.GetSafeHwnd() != nullptr && pInfo->iItem < m_wndNav.GetCount())
 			m_wndNav.SetCurSel(pInfo->iItem);
 		m_bSyncingSelection = false;
+		RefreshCanvas();
 	}
 	if (pResult != nullptr)
 		*pResult = 0;
+}
+
+void CFormCompareView::RefreshCanvas()
+{
+	if (m_wndCanvas.GetSafeHwnd() == nullptr)
+		return;
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	m_wndCanvas.SetResult(pResult);
+	String label;
+	if (pResult != nullptr)
+		label = _("Visual preview") + _T(" \u2014 ") + pResult->fileName;
+	else
+		label = _("Select a form to preview it");
+	m_stPreviewLabel.SetWindowText(label.c_str());
+	UpdateZoomControls();
+}
+
+void CFormCompareView::UpdateZoomControls()
+{
+	if (m_wndZoomSlider.GetSafeHwnd() == nullptr || m_stZoomLabel.GetSafeHwnd() == nullptr)
+		return;
+	const double scale = m_wndCanvas.GetScale();
+	const int percent = static_cast<int>(std::lround(scale * 100.0));
+	m_wndZoomSlider.SetPos(static_cast<int>(Merge20FormCanvasClampSliderPercent(static_cast<double>(percent))));
+	m_stZoomLabel.SetWindowText((std::to_wstring(percent) + L"%").c_str());
+}
+
+const Merge20FormFileResult* CFormCompareView::GetSelectedResult() const
+{
+	CFormCompareDoc* pDoc = GetDocument();
+	if (pDoc == nullptr)
+		return nullptr;
+	const int selected = GetSelectedVisibleIndex();
+	if (selected < 0)
+		return nullptr;
+	const std::vector<size_t>& visible = pDoc->GetVisibleIndices();
+	if (selected >= static_cast<int>(visible.size()))
+		return nullptr;
+	const std::vector<Merge20FormFileResult>& results = pDoc->GetResults();
+	const size_t index = visible[static_cast<size_t>(selected)];
+	if (index >= results.size())
+		return nullptr;
+	return &results[index];
+}
+
+void CFormCompareView::OnZoom100()
+{
+	m_wndCanvas.SetZoomMode(Merge20FormZoomMode::Percent100);
+	UpdateZoomControls();
+}
+
+void CFormCompareView::OnZoom25()
+{
+	m_wndCanvas.SetZoomMode(Merge20FormZoomMode::Percent25);
+	UpdateZoomControls();
+}
+
+void CFormCompareView::OnZoomFit()
+{
+	m_wndCanvas.SetZoomMode(Merge20FormZoomMode::Fit);
+	UpdateZoomControls();
+}
+
+void CFormCompareView::OnViewportToggle()
+{
+	m_bCanvasFullHeight = !m_bCanvasFullHeight;
+	m_btnViewportToggle.SetWindowText((m_bCanvasFullHeight ? _("Fixed height (640px)") : _("Expand to full height")).c_str());
+	LayoutControls();
+}
+
+void CFormCompareView::OnCanvasShapeClicked()
+{
+	// F3: the canvas already stores the clicked shape and draws
+	// the selection outline. F4 (spotlight) reads the key with
+	// m_wndCanvas.GetSelectedShapeKey() here.
+}
+
+void CFormCompareView::OnHScroll(UINT /*nCode*/, UINT /*nPos*/, CScrollBar* pScrollBar)
+{
+	if (pScrollBar != nullptr && pScrollBar->GetDlgCtrlID() == IDC_MERGE20_FORM_ZOOM_SLIDER)
+	{
+		m_wndCanvas.SetSliderPercent(static_cast<double>(m_wndZoomSlider.GetPos()));
+		UpdateZoomControls();
+		return;
+	}
+	CView::OnHScroll(0, 0, pScrollBar);
 }

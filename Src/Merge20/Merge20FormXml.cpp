@@ -579,6 +579,7 @@ namespace
 
 			double point = 10.0;
 			const std::wstring* pointText = FindAttr(attrs, L"point", L"fontsize", nullptr);
+			const std::wstring* fontText = FindAttr(attrs, L"fontname", L"font", L"fontName");
 			if (pointText != nullptr)
 			{
 				double v = 0.0;
@@ -608,6 +609,7 @@ namespace
 			shape.x2 = x2;
 			shape.y2 = y2;
 			shape.point = point;
+			shape.fontName = (fontText != nullptr) ? *fontText : std::wstring();
 			shape.isLine = ToLowerAscii(element.tag).find(L"line") != std::wstring::npos;
 			shape.text = element.text;
 			shape.isEstimated = estimated;
@@ -792,3 +794,4 @@ Merge20FormParseResult Merge20ParseFormXml(const std::wstring& xml)
 	parser.Parse(result);
 	return result;
 }
+
