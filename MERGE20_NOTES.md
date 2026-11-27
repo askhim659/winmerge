@@ -5841,3 +5841,62 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 57.5 次への移行
 - F3（ビジュアルプレビュー）はブランチ `merge20/form-f3`（base `df925a7c`）で進行中。F4・F5 は F3 のキャンバスの上に載せるため、F3 のマージ後に起動する。
 - U1（`merge20/ui-u1`）は進行中（CI 実行中）。B9（`merge20/wf-b9`）は進行中。
+
+## §58 UI 見直し U1 — WizMerge ブランド帯（アプリ内ヘッダ）— マージ・CI 検証済み（2026-11-27）
+
+### 58.1 内容（UI 見直し設計書 §4 U1。最優先）
+- 新規 `Src/Merge20/Merge20BrandBar.h/.cpp`（`CSizingControlBarCF` 派生。`SCBS_EDGETOP | SCBS_EDGEBOTTOM`、高さ 30px 固定。`LoadState`／`CalcFixedLayout` で 30px にクランプする。D1／D2 の教訓：保存値・ドラッグによる肥大化を防ぐ）。
+- `OnPaint` でオーナードロー：左端に光るドット（HTML のトップバーと同じシアンの丸）＋太字「WizMerge」＋バージョン（`theApp` のバージョン文字列を流用）＋右端に進捗サマリ（アクティブなフォルダ比較があれば「未確認 N件／済 M件」。S3 の `GetMerge20StatusCountText()` と同じ定義。フォルダ比較がなければ「ファイル比較」等の状態文言または空欄）。ダーク時は §2.1 のダーク配色、ライト時はライト配色。下線 2px はアクセント色。U0 の `Merge20Theme` ヘルパーを使う。
+- `CMainFrame::OnCreate` で ReBar（`CreateToolbar()`）より先に生成し、最上部（`AFX_IDW_DOCKBAR_TOP`）へドックする。既存の ReBar・タブバー・ステータスバーの生成順は変えない。
+- 新規オプションキー `OPT_MERGE20_BRAND_HEADER`（`Merge20/BrandHeader`、既定 true）。View メニューに「ブランドヘッダ」トグルを追加（既存の `OnBarCheck`／`OnUpdateControlBarMenu` の前例で表示／非表示＋チェック表示。トグルは専用キーに保存）。非表示時は `OPT_REBAR_STATE` 等の既存の保存状態に影響しないこと（ブランド帯の表示状態は専用キーだけで管理する）。
+- 右端の進捗サマリは 500ms タイマで更新する。ブランド帯は DedBar と同じく下辺ドラッグが可能だが、高さは 30px にクランプされるためクライアント領域を奪えない。下部ドックへの移動は DedBar と同じ扱い（ドラッグ可、クリックで再ドック）。
+
+### 58.2 変更一覧（ブランチ `merge20/ui-u1`、base 当初 `e2bed6dc`→現 master `b13b7ab0` へリベース→マージコミットで現 master `66c4fee4` を取り込み。12 コミット＋マージ 1 件）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/resource.h` | `e4fa799c` | `ID_VIEW_MERGE20_BRAND_HEADER` **38978** を追加（当初 38976。リベース時に変更。§58.3 を参照）。`_APS_NEXT_COMMAND_VALUE` を 38978→38979 へ更新。予約コメントを更新 |
+| 2 | `Src/OptionsDef.h` | `39e43cb1` | `OPT_MERGE20_BRAND_HEADER`（`Merge20/BrandHeader`）を追加 |
+| 3 | `Src/OptionsInit.cpp` | `1c359b50` | 既定 true で初期化 |
+| 4 | `Src/Merge20/Merge20BrandBar.h` | `0376b9a5` | 新規。`CSizingControlBarCF` 派生、30px 固定 |
+| 5 | `Src/Merge20/Merge20BrandBar.cpp` | `bec950e1` | 新規。オーナードロー（光るドット＋太字「WizMerge」＋バージョン＋右端進捗サマリ、500ms タイマで更新） |
+| 6 | `Src/DirView.h` | `54c666c2` | `GetMerge20StatusCountText()` を private から public へ移動（実装変更なし） |
+| 7 | `Src/MainFrm.h` | `40b66641` | `m_wndBrandBar` メンバ、`OnBarCheck` override 宣言、ヘッダ include |
+| 8 | `Src/MainFrm.cpp` | `43834dd0` | `OnCreate` で ReBar より先に生成・最上部へドック、`OnBarCheck`（専用キーへ保存）、`ShowOutputPane`／`SavePosition`／`UpdateResources` への配線 |
+| 9 | `Src/Merge.rc` | `d459b905` | 3 つの View メニュー（IDR_MAINFRAME／IDR_DIRDOCTYPE／IDR_MERGEDOCTYPE）に「Brand Header」を「Status Bar」の直後へ追加 |
+| 10 | `Translations/WinMerge/Japanese.po` | `e8717784` | 新規 2 件：`Brand Header` → `ブランドヘッダ`、`File Compare` → `ファイル比較`（msgid 2178→2180 件） |
+| 11 | `Src/Merge.vcxproj` | `609efa43` | 新規ファイル 2 件を登録 |
+| 12 | `Src/Merge.vcxproj.filters` | `11fd97dd` | 新規ファイル 2 件を Merge20 フィルタへ登録（ブランチ head） |
+| 13 | （マージ） | `bf11f517` | master `66c4fee4` をブランチにマージ。競合解消は §58.3 のとおり |
+
+### 58.3 リベースとコマンド ID の競合解消（調整役の決定）
+- 初版は base `e2bed6dc`（U0 マージコミット）で作成したが、その後に master が進み（PR #50／#51 マージ）、PR が `mergeable: false`（競合）となり CI が起動しなかった。原因は `resource.h`（B1 のコマンド ID）、`Merge.rc`（Diff conclusion メニュー）、`Japanese.po`、`Merge.vcxproj`／`.filters` の競合。
+- 現 master `b13b7ab0` へリベースした（ブランチを force-reset して 12 コミットを再適用）。リセット直後に差分が空になり PR が GitHub により自動クローズされたため、再開（reopen）している。再コミット後に `mergeable: true` を確認済み。
+- その後さらに master が進み（F2 マージ `df925a7c`）、`ID_VIEW_MERGE20_BRAND_HEADER` に使っていた 38976 が F2 の `ID_MERGE20_FORM_COMPARE` と重複したため、PR は再び `mergeable: false`（dirty）になった。
+- **調整役の決定：`ID_VIEW_MERGE20_BRAND_HEADER` は 38978 を使うこと。** 38977 は `IDS_SPLASH_GPLTEXT` のため使わない。`_APS_NEXT_COMMAND_VALUE` を 38978→38979 に更新し、D0 の予約コメントも更新する（38978 は U1 使用済み、次は 38979 から空き、38977 は `IDS_SPLASH_GPLTEXT` のため使用不可、と明記）。
+- フォローアップの子が master `66c4fee4` をブランチにマージ（マージコミット `bf11f517`。リベースなし、force-push なし。U1 の 12 コミットは全てそのまま残っている）し、ID を 38976→38978 に変更した。`MainFrm.cpp`／`MainFrm.h`／`DirView.h`／`Merge.rc`／`Merge.vcxproj`／`.filters` は 3-way マージでクリーンマージ（U1 のブランド帯追加＋F2 の FORM 比較追加の両方が残っている）。master 側のみの変更 15 ファイルは master の blob をそのまま採用した。
+- **コマンド ID の空きはこれで枯渇した。** `_APS_NEXT_COMMAND_VALUE` は 38979 になったが、38977 は `IDS_SPLASH_GPLTEXT` の値である（`_APS_NEXT_*` はリソースエディタ用のヒント値であり実リソースではないため、ビルド上の重複リソースは生じない。resource.h の予約コメントに明記済み）。**今後コマンド ID が要るスライスは、調整役の判断が必要。** 並行ブランチではコマンド ID の割り当てを調整役が事前に調整すること（§57.3 の教訓と同じ）。
+
+### 58.4 master の `Japanese.po` 末尾の diff3 残骸（F2 マージ時の解消漏れ）
+- **master の `Japanese.po` 最終行（11,990 行目）に diff3 の残骸 `||||||| base/Translations_WinMerge_Japanese.po` が残っていた**（調整役が blob API で直接確認済み。F2 マージ時の解消漏れと思われる）。この行は.po として不正な行である。
+- U1 のマージでは U1 追加分を付ける際に当該行を除去したため、PR #52 のマージで master 側も直る。
+- **教訓**：マージコミットでの競合解消は、解消後のファイル全体を目視・構文確認すること。特に `.po` は末尾まで確認すること。CI の番兵は文字列の存在だけを確認し、.po の構文不正は検出しない（msgfmt による厳密な構文チェックはこの VM には msgfmt がないため未実施。CI の番兵＋ビルド成功が代わりの証拠）。
+
+### 58.5 検証レポート（コーディネーター検証済み）
+- **PR #52**：open・mergeable=true・mergeable_state=clean、head `bf11f517`、base master。13 コミット（U1 の 12＋マージ 1）、+447/−7、変更ファイル 12 件。
+- **CI（ブランチ head）**：実行 45947297955、completed／success。全文ログ（3,569,274 バイト、ジョブ `build` 140334818447）で GoogleTest `[ PASSED] 814 tests.`（前回の 794 件から +20 件＝F2 の FormList テスト分）、`[ FAILED]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。番兵「Merge20 strings present in the bundled Japanese.po.」も通過。全文ログは `~/workspace/.coord/u1r_final_log.txt` に保存。
+- **成果物（実行 45947297955）**：`WinMerge-x64.zip` 26,565,829 バイト、`WinMerge-x64-Setup-x64.exe` 40,024,452 バイト。いずれも未失効。
+- **`.po` の件数監査（子の確認値）**：msgid 数：基底 2,178 → master 2,220（F2 +42 件）→ ブランチ 2,180（U1 +2 件）→ **マージ後 2,222 件（+44 件）**。マージ後の msgid 集合 ＝ 基底 ∪ F2 追加分 ∪ U1 追加分、と完全一致を確認。B1 の 7 件（`Diff conclusion`／`Undecided`／`Adopt old lines`／`Adopt new lines`／`Adopt both`／`Reject this diff`／`Judged %1 of %2 diffs`）は基底から引き継がれ、すべて残っている。F2 の 42 件・U1 の 2 件（`Brand Header`→`ブランドヘッダ`、`File Compare`→`ファイル比較`）もすべて残っている。構造チェック（全行がコメント／msgid／msgstr／継続行／空行であること）も通過。
+- **マージ**：マージコミット `6d1767aa`。マージコミット CI：実行 45948536756、completed／success（head_sha=6d1767aa と一致）。
+- **受け入れ条件の照合（設計書 §4 U1）**：
+- (a) 起動直後に最上部にブランド帯が表示され、「WizMerge」が太字で読める — コード上は満たす。**実機未検証**。
+- (b) フォルダ比較を開くと右端に進捗サマリが表示され、確認内容の変更で数が変わる — コード上は満たす（500ms タイマで再読込）。**実機未検証**。
+- (c) View メニューで OFF／ON の永続化 — コード上は満たす（専用キーで永続化）。**実機未検証**。
+- (d) ツールバー・メニューバー・タブバーの表示／非表示・サイズ変更でもレイアウトが崩れない — コード上は満たす。**実機未検証**。
+- (e) 既存のファイル比較・フォルダ比較・専用モードが従来どおり動く — コード上は満たす。**実機未検証**。
+- **未検証（実機でしか確認できないもの）**：(a)〜(e) すべて実機未検証。実機確認チェックリストは PR 本文に記載（起動直後の帯表示・ライト／ダーク両テーマ、フォルダ比較での件数表示と「済」による減少、ファイル比較時の「ファイル比較」表示と開始画面での空欄、OFF／ON の再起動後の永続化、ツールバー等の表示切替・サイズ変更、タブのタイトルバー表示 ON／OFF 両方、専用モード中の帯表示、出力ペイン切替時の帯表示状態）。CI の緑バッジ＋成果物確認は「ビルドが通った」ことの証拠であり、「見た目が変わった」ことの証拠ではないため、実機スクリーンショット相当の確認が必要。
+- **既知の制限**：ブランド帯は DedBar と同じく下辺ドラッグが可能だが、高さは 30px にクランプされるためクライアント領域を奪えない。下部ドックへの移動は DedBar と同じ扱い（ドラッグ可、クリックで再ドック）。実機でのドラッグ挙動は未検証。
+
+### 58.6 次への移行
+- U5（バーのアクセント統一）はブランチ `merge20/ui-u5`（base `6d1767aa`）で進行中。
+- F3（`merge20/form-f3`）は CI 失敗が 1 回あり、子エージェントに原因（`Merge20FormCanvasGeom_test.cpp:234` のアサーション構文）を伝えて修正中。
+- B9（`merge20/wf-b9`）は進行中（CI 実行中）。
