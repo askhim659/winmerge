@@ -98,6 +98,8 @@ BOOL CMerge20FormCanvas::Create(CWnd* pParentWnd, UINT nID)
 
 void CMerge20FormCanvas::SetResult(const Merge20FormFileResult* pResult)
 {
+	if (pResult == m_pResult)
+		return; // Same file: keep the scroll offset and the selection.
 	m_pResult = pResult;
 	m_selectedShapeKey.clear();
 	m_scrollX = 0;
