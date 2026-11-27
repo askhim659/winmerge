@@ -153,10 +153,14 @@ std::string NormalizeLine(const std::string& line, bool ignoreWhitespace, bool i
 /**
  * @brief Intern normalized lines to integer ids, so the LCS
  * compares ids (exact, no hash collisions) instead of strings.
+ * The id map is shared by the caller across BOTH sides of one
+ * diff (result and NEW): interning each side with its own map
+ * would give the same line different ids on the two sides and
+ * the LCS would match lines by accident of first-seen order.
  */
-std::vector<int> InternLines(const std::vector<std::string>& lines, bool ignoreWhitespace, bool ignoreCase)
+std::vector<int> InternLines(const std::vector<std::string>& lines, bool ignoreWhitespace, bool ignoreCase,
+	std::unordered_map<std::string, int>& ids)
 {
-	std::unordered_map<std::string, int> ids;
 	std::vector<int> out;
 	out.reserve(lines.size());
 	for (const std::string& line : lines)
@@ -368,11 +372,18 @@ void DiffPaneRange(const Merge20VerifyDiffInput& diff, int pane, int newPane, in
 	}
 }
 
-/** @brief Whether the diff's result range must equal NEW. */
+/** @brief Whether the diff's result range must equal NEW. A
+ * Conflict/Unresolved segment saves the conflict section, not
+ * NEW content, and an Edited segment is a deliberate hand edit:
+ * neither is a claim that the result equals NEW, so the re-diff
+ * stays silent there and the consistency check judges them. */
 bool DiffMustEqualNew(const Merge20VerifyDiffInput& diff, int newPane)
 {
 	if (diff.op == Merge20ConclusionOpNone)
 		return true;
+	if (diff.segState == Merge20VerifySegConflict || diff.segState == Merge20VerifySegUnresolved ||
+		diff.segState == Merge20VerifySegEdited)
+		return false;
 	if (diff.conclusion == static_cast<int>(Merge20DiffConclusion::UseNew))
 		return true;
 	if ((diff.segState == Merge20VerifySegAuto || diff.segState == Merge20VerifySegChosen) &&
@@ -561,8 +572,11 @@ std::vector<Merge20VerifyIssue> CheckRediff(const Merge20VerifyFileInput& input)
 	if (input.newPane < 0 || input.newPane >= static_cast<int>(input.panes.size()))
 		return issues;
 	const std::vector<std::string>& newLines = input.panes[static_cast<size_t>(input.newPane)];
-	const std::vector<int> aIds = InternLines(input.resultLines, input.ignoreWhitespace, input.ignoreCase);
-	const std::vector<int> bIds = InternLines(newLines, input.ignoreWhitespace, input.ignoreCase);
+	// One shared id map for both sides, so equal lines get equal
+	// ids (see InternLines).
+	std::unordered_map<std::string, int> lineIds;
+	const std::vector<int> aIds = InternLines(input.resultLines, input.ignoreWhitespace, input.ignoreCase, lineIds);
+	const std::vector<int> bIds = InternLines(newLines, input.ignoreWhitespace, input.ignoreCase, lineIds);
 	const std::vector<DiffHunk> hunks = ComputeRediffHunks(aIds, bIds);
 	const int resultSize = static_cast<int>(input.resultLines.size());
 
