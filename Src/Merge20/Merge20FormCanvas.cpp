@@ -544,8 +544,7 @@ void CMerge20FormCanvas::DrawShapeText(CDC& dc, const Merge20FormShape& shape, C
 	const int availW = rc.Width();
 	auto TextWidth = [&](int chars) {
 		const std::wstring shown = Merge20FormCanvasTruncateText(shape.text, static_cast<size_t>(chars));
-		CSize size(0, 0);
-		dc.GetTextExtentPoint32(shown.c_str(), static_cast<int>(shown.size()), &size);
+		const CSize size = dc.GetTextExtent(shown.c_str(), static_cast<int>(shown.size()));
 		return size.cx;
 	};
 	int lo = 0;
