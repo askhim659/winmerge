@@ -151,8 +151,7 @@ int Merge20FindNextInOrder(const std::vector<int>& order, int current, int direc
 	if (order.empty())
 		return -1;
 	// Position of the current row/diff in the order (-1 when it is
-	// not a patrol target: it counts as no current row, like the
-	// out-of-range current in Merge20FindNextTarget).
+	// not a patrol target).
 	int pos = -1;
 	for (size_t i = 0; i < order.size(); ++i)
 	{
@@ -162,17 +161,43 @@ int Merge20FindNextInOrder(const std::vector<int>& order, int current, int direc
 			break;
 		}
 	}
-	if (pos < 0)
+	if (pos >= 0)
+	{
+		const int nextPos = pos + direction;
+		if (nextPos >= 0 && nextPos < static_cast<int>(order.size()))
+			return order[static_cast<size_t>(nextPos)];
+		if (!wrap)
+			return -1;
+		// Wrap around: the first entry forward, the last one
+		// backward. With a single target that is the current
+		// row/diff itself, exactly like Merge20FindNextTarget.
 		return direction > 0 ? order.front() : order.back();
-	const int nextPos = pos + direction;
-	if (nextPos >= 0 && nextPos < static_cast<int>(order.size()))
-		return order[static_cast<size_t>(nextPos)];
-	if (!wrap)
-		return -1;
-	// Wrap around: the first entry forward, the last one backward.
-	// With a single target that is the current row/diff itself,
-	// exactly like Merge20FindNextTarget.
-	return direction > 0 ? order.front() : order.back();
+	}
+	// The current row/diff is not a patrol target (e.g. a reviewed
+	// file while TODO-only is on, or a directory row): step from
+	// its list/diff position, like Merge20FindNextTarget scans
+	// from the current row. Forward takes the first entry of the
+	// order past the current position, backward the last entry
+	// before it; with no such entry the patrol wraps (or stops
+	// when wrapping is off). For a list-ordered order this is
+	// exactly Merge20FindNextTarget, so the plain D3 patrol is
+	// unchanged; for a risk-ordered order the risk priority still
+	// rules (the scan follows the patrol sequence, not the list).
+	if (direction > 0)
+	{
+		for (size_t i = 0; i < order.size(); ++i)
+		{
+			if (order[i] > current)
+				return order[i];
+		}
+		return wrap ? order.front() : -1;
+	}
+	for (size_t i = order.size(); i-- > 0;)
+	{
+		if (order[i] < current)
+			return order[i];
+	}
+	return wrap ? order.back() : -1;
 }
 
 int Merge20OrdinalInOrder(const std::vector<int>& order, int current)
