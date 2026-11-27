@@ -299,6 +299,27 @@ Merge20FileState Merge20ClassifyFromRanges(const std::vector<Merge20BulkRange>& 
 	return ClassifyBuiltLines(BuildDiffLines(ranges, getLine), riskKeywords);
 }
 
+RiskLevel Merge20ClassifyOneDiffRange(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords)
+{
+	if (doc.m_nBuffers != 2 || nDiff < 0 || nDiff >= doc.m_diffList.GetSize())
+		return RiskLevel::NONE;
+	const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff);
+	if (pRange == nullptr || pRange->op == OP_NONE)
+		return RiskLevel::NONE;
+	Merge20BulkRange range;
+	range.op = pRange->op;
+	range.beginOld = pRange->begin[0];
+	range.endOld = pRange->end[0];
+	range.beginNew = pRange->begin[1];
+	range.endNew = pRange->end[1];
+	const CDiffTextBuffer& oldBuf = *doc.m_ptBuf[0];
+	const CDiffTextBuffer& newBuf = *doc.m_ptBuf[1];
+	const LineAccessor getLine = [&](int pane, int realLine, String& text) {
+		return pane == 0 ? GetBufferLine(oldBuf, realLine, text) : GetBufferLine(newBuf, realLine, text);
+	};
+	return Merge20ClassifyDiffRisk(BuildDiffLines({ range }, getLine), riskKeywords);
+}
+
 String Merge20FormatSummary(const Merge20ClassifyResult& result)
 {
 	// Warning sign, as in the HTML tool's insight strings. Written as

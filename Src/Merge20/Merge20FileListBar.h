@@ -66,6 +66,19 @@
  * status-bar duplicate. The pure trigger module
  * (Merge20HighRiskRemain) decides whether a Refresh needs to
  * touch the control at all.
+ *
+ * B3 (best-workflow, gap analysis sections 3.5 and 4.2 B3 (c))
+ * adds the risk filter as a second tab row directly under the
+ * action-category tabs: "All risks" plus High / Medium / None
+ * (the S4 risk values). The filter lives here alone, in the
+ * panel header next to the B4 remainder line: no filter deck on
+ * the folder-compare side (gap analysis section 3.5, P-R10
+ * direction "move the filter deck to the panel side"), and no
+ * second copy to keep in sync. A tab row, not a combo box: a
+ * combo's window height carries its drop-down height, so it
+ * cannot be laid out in this bar's fixed rows; the tab row reuses
+ * the P2 tabs (owner-drawn pills, TCN_SELCHANGE) and the same
+ * persistence pattern (OPT_MERGE20_FILELIST_RISK_FILTER).
  */
 #pragma once
 
@@ -155,6 +168,7 @@ public:
 	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
 	afx_msg void OnSearchChanged();
 	afx_msg void OnFilterTabChanged(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnRiskTabChanged(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnMerge20BatchCheck();
 	afx_msg void OnExpandAll();
 	afx_msg void OnCollapseAll();
@@ -177,6 +191,13 @@ private:
 	 * enum order. Literal _() calls (see SetupColumns): the .pot
 	 * generator only scans literal arguments. */
 	void SetupFilterTabs();
+	/** @brief (Re-)insert the four risk-tab labels (B3): "All
+	 * risks" plus High / Medium / None, in patrol order (High
+	 * first). The tab index maps to the filter value by the item
+	 * data (-1 / 2 / 1 / 0), so the order is free: High, Medium,
+	 * None are the S4 risk values, shown in the same order the
+	 * patrol visits them. Literal _() calls (see SetupColumns). */
+	void SetupRiskTabs();
 	/** @brief Show the context menu for a displayed directory row
 	 * (P2, P-R5): fold/unfold and check/uncheck everything below
 	 * the folder. File rows get no menu. */
@@ -220,14 +241,17 @@ private:
 	void ApplySlimState(bool slim);
 	/** @brief Owner-draw one filter tab (U5, HTML .pill.on):
 	 * the selected tab gets an accent border + opaque tinted
-	 * fill, unselected tabs a muted outline and muted text. */
-	void DrawFilterTab(LPDRAWITEMSTRUCT lpDrawItemStruct);
+	 * fill, unselected tabs a muted outline and muted text.
+	 * Shared by the action-category tabs and the B3 risk tabs. */
+	void DrawFilterTab(CTabCtrl& wndTabs, LPDRAWITEMSTRUCT lpDrawItemStruct);
 
 	HWND m_hwndFrame; //*< Frame window handle */
 	CDirDoc* m_pDirDoc; /**< Folder document (owned by the folder compare, not by this bar) */
 	CStatic m_stSearchLabel; /**< P2 search label: "Search file name or folder:" */
 	CEdit m_wndSearch; /**< P2 search box (P-R4): filters the panel by file/folder name */
 	CTabCtrl m_wndFilterTabs; /**< P2 filter tabs (P-R10): "all" plus the seven action categories */
+	CTabCtrl m_wndRiskTabs; /**< B3 risk tabs: "All risks" plus High / Medium / None */
+	int m_nSelectedRiskTab = 0; /**< B3: selected risk tab (0 = all risks) */
 	CButton m_btnBatch; /**< P2 "Batch check..." button (P-R3): opens the S3 dialog for the displayed rows */
 	CButton m_btnExpandAll; /**< P2 "Expand all" button (P-R5) */
 	CButton m_btnCollapseAll; /**< P2 "Collapse all" button (P-R5) */

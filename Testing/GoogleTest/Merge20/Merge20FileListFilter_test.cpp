@@ -20,7 +20,8 @@ namespace
 {
 	Merge20FileListFilterRow FileRow(const wchar_t* relPath, int depth,
 		bool classified = true,
-		ActionCategory action = ActionCategory::NO_ACTION_IDENTICAL)
+		ActionCategory action = ActionCategory::NO_ACTION_IDENTICAL,
+		RiskLevel risk = RiskLevel::NONE)
 	{
 		Merge20FileListFilterRow row;
 		row.relPath = relPath;
@@ -28,6 +29,7 @@ namespace
 		row.depth = depth;
 		row.classified = classified;
 		row.action = action;
+		row.risk = risk;
 		return row;
 	}
 
@@ -42,9 +44,9 @@ namespace
 	}
 
 	std::vector<bool> Visible(const std::vector<Merge20FileListFilterRow>& rows,
-		const wchar_t* searchText = L"", int actionFilter = -1)
+		const wchar_t* searchText = L"", int actionFilter = -1, int riskFilter = -1)
 	{
-		return Merge20ComputeFileListVisibility(rows, searchText, actionFilter);
+		return Merge20ComputeFileListVisibility(rows, searchText, actionFilter, riskFilter);
 	}
 }
 
@@ -223,6 +225,90 @@ TEST(Merge20FileListFilter, SearchIgnoresCollapse)
 	EXPECT_TRUE(visible[0]); // src: has a visible descendant
 	EXPECT_TRUE(visible[1]);
 	EXPECT_FALSE(visible[2]);
+}
+
+TEST(Merge20FileListFilter, RiskFilterShowsOnlyHigh)
+{
+	// "High only" shows only the High file; a directory stays
+	// when a High file remains below it (acceptance (c)).
+	const std::vector<Merge20FileListFilterRow> rows =
+	{
+		DirRow(L"src", 0),
+		FileRow(L"src\\a.txt", 1, true, ActionCategory::REVIEW_MIXED, RiskLevel::HIGH),
+		FileRow(L"src\\b.txt", 1, true, ActionCategory::REVIEW_MOD_ONLY, RiskLevel::MEDIUM),
+		FileRow(L"c.txt", 0, true, ActionCategory::NO_MERGE_NEW_ADD, RiskLevel::NONE),
+	};
+	const std::vector<bool> visible = Visible(rows, L"", -1,
+		static_cast<int>(RiskLevel::HIGH));
+	EXPECT_TRUE(visible[0]); // src: a.txt remains below it
+	EXPECT_TRUE(visible[1]);
+	EXPECT_FALSE(visible[2]);
+	EXPECT_FALSE(visible[3]);
+	// "Medium only" and "None only" pick their own level.
+	const std::vector<bool> medium = Visible(rows, L"", -1,
+		static_cast<int>(RiskLevel::MEDIUM));
+	EXPECT_FALSE(medium[1]);
+	EXPECT_TRUE(medium[2]);
+	EXPECT_FALSE(medium[3]);
+	const std::vector<bool> none = Visible(rows, L"", -1,
+		static_cast<int>(RiskLevel::NONE));
+	EXPECT_FALSE(none[1]);
+	EXPECT_FALSE(none[2]);
+	EXPECT_TRUE(none[3]);
+}
+
+TEST(Merge20FileListFilter, UnclassifiedFileHiddenByRiskFilter)
+{
+	// An unclassified file (never opened) matches no risk level,
+	// only "all" (same rule as the action tabs).
+	const std::vector<Merge20FileListFilterRow> rows =
+	{
+		FileRow(L"a.txt", 0, false, ActionCategory::NO_ACTION_IDENTICAL, RiskLevel::HIGH),
+		FileRow(L"b.txt", 0, true, ActionCategory::REVIEW_MOD_ONLY, RiskLevel::HIGH),
+	};
+	const std::vector<bool> byRisk = Visible(rows, L"", -1,
+		static_cast<int>(RiskLevel::HIGH));
+	EXPECT_FALSE(byRisk[0]);
+	EXPECT_TRUE(byRisk[1]);
+	const std::vector<bool> all = Visible(rows);
+	EXPECT_TRUE(all[0]);
+	EXPECT_TRUE(all[1]);
+}
+
+TEST(Merge20FileListFilter, RiskFilterCombinesWithSearchAndActionTab)
+{
+	// The risk filter intersects with the search and the action
+	// tab: a file shows only when all three match.
+	const std::vector<Merge20FileListFilterRow> rows =
+	{
+		FileRow(L"tax.cpp", 0, true, ActionCategory::REVIEW_MIXED, RiskLevel::HIGH),
+		FileRow(L"tax2.cpp", 0, true, ActionCategory::REVIEW_MOD_ONLY, RiskLevel::HIGH),
+		FileRow(L"util.cpp", 0, true, ActionCategory::REVIEW_MIXED, RiskLevel::HIGH),
+		FileRow(L"tax3.cpp", 0, true, ActionCategory::REVIEW_MIXED, RiskLevel::MEDIUM),
+	};
+	// Search "tax" + High: tax.cpp and tax2.cpp.
+	const std::vector<bool> searched = Visible(rows, L"tax", -1,
+		static_cast<int>(RiskLevel::HIGH));
+	EXPECT_TRUE(searched[0]);
+	EXPECT_TRUE(searched[1]);
+	EXPECT_FALSE(searched[2]);
+	EXPECT_FALSE(searched[3]);
+	// Action tab REVIEW_MIXED + High: tax.cpp and util.cpp.
+	const std::vector<bool> byTab = Visible(rows, L"",
+		static_cast<int>(ActionCategory::REVIEW_MIXED),
+		static_cast<int>(RiskLevel::HIGH));
+	EXPECT_TRUE(byTab[0]);
+	EXPECT_FALSE(byTab[1]);
+	EXPECT_TRUE(byTab[2]);
+	EXPECT_FALSE(byTab[3]);
+	// All three: only tax.cpp.
+	const std::vector<bool> allThree = Visible(rows, L"tax",
+		static_cast<int>(ActionCategory::REVIEW_MIXED),
+		static_cast<int>(RiskLevel::HIGH));
+	EXPECT_TRUE(allThree[0]);
+	EXPECT_FALSE(allThree[1]);
+	EXPECT_FALSE(allThree[2]);
+	EXPECT_FALSE(allThree[3]);
 }
 
 TEST(Merge20FileListFilter, CollapsedJoinEmptyIsEmpty)

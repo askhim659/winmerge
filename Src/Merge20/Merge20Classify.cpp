@@ -149,6 +149,14 @@ std::vector<String> Merge20ParseRiskKeywords(const String& text)
 	return keywords;
 }
 
+RiskLevel Merge20ClassifyDiffRisk(const std::vector<Merge20DiffLine>& lines, const std::vector<String>& riskKeywords)
+{
+	// The S4 file rule applied to one range: see the header comment
+	// for the per-range table. Reusing Merge20ClassifyDiffLines
+	// keeps the two definitions identical by construction.
+	return Merge20ClassifyDiffLines(lines, riskKeywords).risk;
+}
+
 Merge20ClassifyResult Merge20ClassifyDiffLines(const std::vector<Merge20DiffLine>& lines, const std::vector<String>& riskKeywords)
 {
 	Merge20ClassifyResult result;

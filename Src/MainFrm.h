@@ -515,6 +515,11 @@ protected:
 	afx_msg void OnUpdateViewMenuBar(CCmdUI* pCmdUI);
 	afx_msg void OnViewOutputBar();
 	afx_msg void OnUpdateViewOutputBar(CCmdUI* pCmdUI);
+	// Merge20 (best-workflow B3): risk-order patrol toggle (View
+	// menu in the folder compare frame; the file compare frame has
+	// the same command, so one menu item toggles the shared option).
+	afx_msg void OnMerge20RiskOrder();
+	afx_msg void OnUpdateMerge20RiskOrder(CCmdUI* pCmdUI);
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
 	afx_msg void OnMergingMode();

@@ -67,6 +67,7 @@ namespace
 		72, // KEEP
 		60, // Pin
 		110, // Unreviewed only
+		110, // Risk order
 		84, // Sniper
 		84, // Diffs only
 		76, // Zoom
@@ -85,6 +86,7 @@ namespace
 		IDC_MERGE20_DED_REVIEW_KEEP,
 		IDC_MERGE20_DED_PIN,
 		IDC_MERGE20_DED_TODO_ONLY,
+		IDC_MERGE20_DED_RISK_ORDER,
 		IDC_MERGE20_DED_SNIPER,
 		IDC_MERGE20_DED_DIFFS_ONLY,
 		IDC_MERGE20_DED_ZOOM,
@@ -196,6 +198,9 @@ BEGIN_MESSAGE_MAP(CMerge20DedBar, CSizingControlBarCF)
 	// Merge20 (Phase 4 D9): the diffs-only button (IDC 1805) is outside
 	// the contiguous 1745-1756 range above, so it gets its own range.
 	ON_CONTROL_RANGE(BN_CLICKED, IDC_MERGE20_DED_DIFFS_ONLY, IDC_MERGE20_DED_DIFFS_ONLY, OnButtonClicked)
+	// Merge20 (best-workflow B3): the risk-order button (IDC 1888)
+	// is outside that range too, like the diffs-only button.
+	ON_CONTROL_RANGE(BN_CLICKED, IDC_MERGE20_DED_RISK_ORDER, IDC_MERGE20_DED_RISK_ORDER, OnButtonClicked)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -243,10 +248,10 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// The check state is still held by the button itself
 	// (SetCheck/GetCheck, ODS_CHECKED in DrawItem), so the frame
 	// setters work unchanged; only the painting is custom. Push
-	// vs toggle is a drawing decision now (indexes 2-10 are the
-	// toggles: five review states, pin, unreviewed-only, sniper,
-	// diffs-only; Prev/Next, the zoom display and exit are plain
-	// push buttons).
+	// vs toggle is a drawing decision now (indexes 2-11 are the
+	// toggles: five review states, pin, unreviewed-only, risk
+	// order, sniper, diffs-only; Prev/Next, the zoom display and
+	// exit are plain push buttons).
 	const DWORD dwButtonStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW;
 	CRect rc(0, 0, 0, 0);
 	// Merge20 (Phase 4 D3): the file-info label (current file name +
@@ -265,7 +270,7 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	{
 		&m_btnPrev, &m_btnNext,
 		&m_btnReview[0], &m_btnReview[1], &m_btnReview[2], &m_btnReview[3], &m_btnReview[4],
-		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnDiffsOnly, &m_btnZoom, &m_btnExit,
+		&m_btnPin, &m_btnTodoOnly, &m_btnRiskOrder, &m_btnSniper, &m_btnDiffsOnly, &m_btnZoom, &m_btnExit,
 	};
 	for (size_t i = 0; i < std::size(pButtons); ++i)
 	{
@@ -428,13 +433,14 @@ void CMerge20DedBar::DrawDedButton(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	const bool bFocused = (lpDrawItemStruct->itemState & ODS_FOCUS) != 0;
 
 	// Role by control ID (resource.h: review 1748-1752 in
-	// ReviewState order, exit 1745, toggles 1753-1755 + 1805).
+	// ReviewState order, exit 1745, toggles 1753-1755 + 1805 + 1888).
 	int nReview = -1;
 	if (nID >= IDC_MERGE20_DED_REVIEW_TODO && nID <= IDC_MERGE20_DED_REVIEW_KEEP)
 		nReview = static_cast<int>(nID) - IDC_MERGE20_DED_REVIEW_TODO;
 	const bool bExit = (nID == IDC_MERGE20_DED_EXIT);
 	const bool bToggle = (nID == IDC_MERGE20_DED_PIN ||
 		nID == IDC_MERGE20_DED_TODO_ONLY ||
+		nID == IDC_MERGE20_DED_RISK_ORDER ||
 		nID == IDC_MERGE20_DED_SNIPER ||
 		nID == IDC_MERGE20_DED_DIFFS_ONLY);
 
@@ -583,7 +589,7 @@ void CMerge20DedBar::LayoutButtons()
 	{
 		&m_btnPrev, &m_btnNext,
 		&m_btnReview[0], &m_btnReview[1], &m_btnReview[2], &m_btnReview[3], &m_btnReview[4],
-		&m_btnPin, &m_btnTodoOnly, &m_btnSniper, &m_btnDiffsOnly, &m_btnZoom, &m_btnExit,
+		&m_btnPin, &m_btnTodoOnly, &m_btnRiskOrder, &m_btnSniper, &m_btnDiffsOnly, &m_btnZoom, &m_btnExit,
 	};
 	for (size_t i = 0; i < std::size(pButtons); ++i)
 	{
@@ -608,6 +614,16 @@ void CMerge20DedBar::OnButtonClicked(UINT nID)
 	{
 		if (CWnd* pParent = GetParent())
 			pParent->PostMessage(WM_COMMAND, ID_MERGE20_DED_DIFFS_ONLY);
+		return;
+	}
+	// Merge20 (best-workflow B3): the risk-order button (IDC 1888)
+	// is outside that range too, so it is forwarded explicitly.
+	// The frame command is the shared View-menu command
+	// ID_MERGE20_RISK_ORDER, not a dedicated-bar command.
+	if (nID == IDC_MERGE20_DED_RISK_ORDER)
+	{
+		if (CWnd* pParent = GetParent())
+			pParent->PostMessage(WM_COMMAND, ID_MERGE20_RISK_ORDER);
 		return;
 	}
 	const size_t idx = static_cast<size_t>(nID) - IDC_MERGE20_DED_EXIT;
@@ -656,6 +672,8 @@ void CMerge20DedBar::UpdateResources()
 	m_btnPin.SetWindowText(sText.c_str());
 	sText = _("Unreviewed only");
 	m_btnTodoOnly.SetWindowText(sText.c_str());
+	sText = _("Risk order");
+	m_btnRiskOrder.SetWindowText(sText.c_str());
 	sText = _("Sniper");
 	m_btnSniper.SetWindowText(sText.c_str());
 	sText = _("Diffs only");
@@ -705,6 +723,13 @@ void CMerge20DedBar::SetTodoOnly(bool bTodoOnly)
 	if (m_btnTodoOnly.GetSafeHwnd() == nullptr)
 		return;
 	m_btnTodoOnly.SetCheck(bTodoOnly ? BST_CHECKED : BST_UNCHECKED);
+}
+
+void CMerge20DedBar::SetRiskOrder(bool bRiskOrder)
+{
+	if (m_btnRiskOrder.GetSafeHwnd() == nullptr)
+		return;
+	m_btnRiskOrder.SetCheck(bRiskOrder ? BST_CHECKED : BST_UNCHECKED);
 }
 
 void CMerge20DedBar::SetSniperOn(bool bSniperOn)

@@ -12157,3 +12157,20 @@ msgstr "警告：未確認ファイル %1 件と未判断差分 %2 件（うち�
 msgid "Undecided high risk: %1"
 msgstr "【Wiz】未判断の高リスク：%1 件"
 
+#. Merge20 (best-workflow B3): risk-order patrol toggle, View menu (Merge.rc, MainFrm.cpp, MergeEditFrm.cpp)
+#: Src/Merge.rc
+#: Src/MainFrm.cpp
+#: Src/MergeEditFrm.cpp
+msgid "Risk-order patrol"
+msgstr "【Wiz】リスク順巡回"
+
+#. Merge20 (best-workflow B3): risk-order toggle button on the dedicated bar (Merge20DedBar.cpp)
+#: Src/Merge20/Merge20DedBar.cpp
+msgid "Risk order"
+msgstr "【Wiz】リスク順"
+
+#. Merge20 (best-workflow B3): risk filter tab, all risks (Merge20FileListBar.cpp)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "All risks"
+msgstr "すべてのリスク"
+

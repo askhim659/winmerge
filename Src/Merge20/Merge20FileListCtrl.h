@@ -139,6 +139,12 @@ public:
 	 * category, otherwise static_cast<int>(ActionCategory) of the
 	 * selected tab. Unclassified files match no tab, only -1. */
 	void SetActionFilter(int actionFilter);
+	/** @brief Risk filter (B3, gap analysis section 4.2 B3 (c)):
+	 * -1 shows every risk level, otherwise
+	 * static_cast<int>(RiskLevel) of the selected combo item.
+	 * Unclassified files match no level, only -1. Panel-only: the
+	 * folder compare list is not filtered. */
+	void SetRiskFilter(int riskFilter);
 	/** @brief Fold or unfold one directory row (P2, P-R5), keyed
 	 * by its relative path. The bar drives this from the buttons,
 	 * the double-click and the context menu. */
@@ -221,6 +227,7 @@ private:
 	std::set<String> m_collapsed; /**< P2: relative paths of folded directories (default: all unfolded) */
 	String m_searchText; /**< P2: raw search text (trimmed and lower-cased by the filter module) */
 	int m_actionFilter = -1; /**< P2: -1 = all action categories, otherwise static_cast<int>(ActionCategory) */
+	int m_riskFilter = -1; /**< B3: -1 = all risk levels, otherwise static_cast<int>(RiskLevel) */
 	bool m_bSlim = false; /**< P4: slim display (file name + review state only) */
 	int m_savedColWidths[COL_COUNT] = {}; /**< P4: column widths remembered while slim */
 };

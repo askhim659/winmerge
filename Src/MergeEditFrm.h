@@ -141,6 +141,8 @@ private:
 	afx_msg void OnMerge20DedReview(UINT nID);
 	afx_msg void OnMerge20DedPin();
 	afx_msg void OnMerge20DedTodoOnly();
+	afx_msg void OnMerge20RiskOrder();
+	afx_msg void OnUpdateMerge20RiskOrder(CCmdUI* pCmdUI);
 	afx_msg void OnMerge20DedSniper();
 	afx_msg void OnMerge20DedDiffsOnly();
 	afx_msg void OnMerge20DedZoomReset();
