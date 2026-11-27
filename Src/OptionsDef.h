@@ -403,6 +403,10 @@ inline const String OPT_MERGE20_FILELIST_VISIBLE {_T("Merge20/FileListVisible"s)
 // (OPT_REBAR_STATE / "Settings-MainFrame"), so hiding it never leaks
 // into the saved layout of the other bars.
 inline const String OPT_MERGE20_BRAND_HEADER {_T("Merge20/BrandHeader"s)};
+// Merge20 (UI U2, design section 4/U2): show the folder-compare
+// progress ("WizMerge - <N> unreviewed - <doc>") in the main-frame
+// title bar. A dedicated key; off restores the stock title.
+inline const String OPT_MERGE20_TITLE_PROGRESS {_T("Merge20/TitleProgress"s)};
 // Merge20 (Panel P4, design section 12.7): the file-list panel
 // state saved and restored with the frame. Four dedicated keys:
 // the search string (P-R4, deferred from P2), the selected
