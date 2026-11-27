@@ -93,6 +93,8 @@ BEGIN
             MENUITEM "Reject this diff", ID_MERGE20_CONCLUSION_REJECT
             MENUITEM "Keep as is", ID_MERGE20_CONCLUSION_KEEP
         END
+        MENUITEM "Undo Judgment", ID_MERGE20_UNDO_JUDGMENT
+        MENUITEM "Redo Judgment", ID_MERGE20_REDO_JUDGMENT
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
@@ -128,6 +130,8 @@ BEGIN
             MENUITEM "Reject this diff", ID_MERGE20_CONCLUSION_REJECT
             MENUITEM "Keep as is", ID_MERGE20_CONCLUSION_KEEP
         END
+        MENUITEM "Undo Judgment", ID_MERGE20_UNDO_JUDGMENT
+        MENUITEM "Redo Judgment", ID_MERGE20_REDO_JUDGMENT
         MENUITEM "A&uto Merge\tCtrl+Alt+M",     ID_AUTO_MERGE
         MENUITEM SEPARATOR
         MENUITEM "&Undo\tCtrl+Z",               ID_EDIT_UNDO
