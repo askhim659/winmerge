@@ -932,6 +932,8 @@
 #define IDC_MERGE20_CLOSE_WARN_WARNING      1883
 #define IDC_MERGE20_CLOSE_WARN_TODO_ONLY    1884
 #define IDC_MERGE20_CLOSE_WARN_PROCEED      1885
+// Merge20 (B4): high-risk remainder line in the file-list panel header.
+#define IDC_MERGE20_FILELIST_HIGHRISK     1886
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2688,6 +2690,8 @@
 // show-unreviewed-only and proceed buttons). It uses no command ID: the warning is automatic on
 // close. Command 38981 is held for the B2 stage 2 output gates (S7/S5); controls 1872-1881 are
 // held for F4.
+// B4 consumes control 1886 (file-list panel high-risk remainder line). It uses no command ID:
+// the remainder is a display, not a menu item.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 304 (_APS_NEXT_RESOURCE_VALUE). The numeric
@@ -2696,9 +2700,9 @@
 //   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1886 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1887 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
-//   F4 holds 1872-1881, B2 takes 1882-1885.
+//   F4 holds 1872-1881, B2 takes 1882-1885, B4 takes 1886.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2717,7 +2721,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        304
 #define _APS_NEXT_COMMAND_VALUE         38980
-#define _APS_NEXT_CONTROL_VALUE         1886
+#define _APS_NEXT_CONTROL_VALUE         1887
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
