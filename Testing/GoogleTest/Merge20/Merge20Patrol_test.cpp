@@ -205,6 +205,48 @@ TEST(Merge20Patrol, FindNextInOrderNoCurrentOrOnlyTarget)
 	EXPECT_EQ(Merge20FindNextInOrder(order, 1, 2, true), -1);
 }
 
+TEST(Merge20Patrol, FindNextInOrderFromNonTarget)
+{
+	// The current row is not a target (row 2 is DONE here): the
+	// step starts from its list position, like FindNextTarget.
+	// Order without row 2: [1, 4, 3, 0] (High 1, 4, Medium 3, None 0).
+	const std::vector<int> order =
+		Merge20BuildRiskOrder(MixedRanks(), { true, true, false, true, true });
+	ASSERT_EQ(order, std::vector<int>({ 1, 4, 3, 0 }));
+	// Forward from 2: the first entry of the order past 2 is 4
+	// (the next High); backward: the last entry before 2 is 0
+	// (the scan follows the patrol sequence, not the list).
+	EXPECT_EQ(Merge20FindNextInOrder(order, 2, 1, true), 4);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 2, -1, true), 0);
+	// Past the last list position: wraps to the first entry, or
+	// stops when wrapping is off.
+	EXPECT_EQ(Merge20FindNextInOrder(order, 5, 1, true), 1);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 5, 1, false), -1);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 5, -1, true), 0);
+}
+
+TEST(Merge20Patrol, FindNextInOrderMatchesFindNextTargetInListOrder)
+{
+	// In list order the two functions agree everywhere, including
+	// from a non-target current row: the D3 behaviour the B3
+	// patrol must not regress (acceptance (f)).
+	const Targets targets = Mixed(); // [TODO, DONE, TODO, DONE]
+	std::vector<int> order;
+	for (int i = 0; i < 4; ++i)
+	{
+		if (targets[static_cast<size_t>(i)])
+			order.push_back(i);
+	}
+	ASSERT_EQ(order, std::vector<int>({ 0, 2 }));
+	for (int current = -1; current <= 3; ++current)
+	{
+		EXPECT_EQ(Merge20FindNextInOrder(order, current, 1, true),
+			Merge20FindNextTarget(targets, current, 1)) << "current " << current;
+		EXPECT_EQ(Merge20FindNextInOrder(order, current, -1, true),
+			Merge20FindNextTarget(targets, current, -1)) << "current " << current;
+	}
+}
+
 TEST(Merge20Patrol, OrdinalInOrder)
 {
 	const std::vector<int> order = MixedRiskOrder(); // [1, 4, 3, 0, 2]
