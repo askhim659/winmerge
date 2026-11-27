@@ -11998,3 +11998,8 @@ msgstr "【Wiz】ブランドヘッダ"
 #: Src/Merge20/Merge20BrandBar.cpp
 msgid "File Compare"
 msgstr "ファイル比較"
+
+#. Merge20 (UI U2): title-bar progress (CMainFrame::OnUpdateFrameTitle)
+#: Src/MainFrm.cpp
+msgid "WizMerge - %1 unreviewed - %2"
+msgstr "WizMerge - 未確認 %1件 - %2"
