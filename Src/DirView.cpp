@@ -62,6 +62,7 @@
 #include "Merge20/Merge20VerifyGate.h"
 #include "Merge20/Merge20VerifyReportExport.h"
 #include "Merge20/Merge20HighRiskConfirmDlg.h"
+#include "Merge20/Merge20ImpactView.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
@@ -4784,6 +4785,15 @@ std::vector<Merge20BulkClassifyFile> CDirView::Merge20BuildBulkClassifyFiles()
  * the current filter has no list row to select, so the jump is
  * refused with an explanation instead of opening the wrong file.
  */
+void CDirView::Merge20OpenFileAtLine(const Merge20ImpactHit& hit)
+{
+	// Merge20 (best-workflow B5): an impact hit jumps like a Grep
+	// hit. The symbol is not part of the jump (see
+	// Merge20ImpactHitToGrepHit): the diff index is resolved at
+	// click time from the opened compare document.
+	Merge20OpenFileAtLine(Merge20ImpactHitToGrepHit(hit));
+}
+
 void CDirView::Merge20OpenFileAtLine(const Merge20GrepHit& hit)
 {
 	CDiffContext& ctxt = GetDiffContext();
