@@ -91,8 +91,7 @@ std::pair<double, double> Merge20FormCanvasContentSize(double nativeW, double na
 
 bool Merge20FormCanvasGridLineIsMajor(double xmlCoord)
 {
-	const double offset = std::fmod(xmlCoord - kMerge20FormCanvasOriginOffset,
-		kMerge20FormCanvasGridMajorStep);
+	const double offset = std::fmod(xmlCoord, kMerge20FormCanvasGridMajorStep);
 	return offset == 0.0;
 }
 
