@@ -50,6 +50,7 @@ class CWebPageDiffFrame;
 class DirWatcher;
 class COutputDoc;
 class CTempPathContext;
+class CFormCompareDoc;
 
 typedef std::shared_ptr<TempFile> TempFilePtr;
 typedef std::shared_ptr<TempFolder> TempFolderPtr;
@@ -59,6 +60,7 @@ typedef CTypedPtrList<CPtrList, COpenDoc *> OpenDocList;
 typedef CTypedPtrList<CPtrList, CMergeDoc *> MergeDocList;
 typedef CTypedPtrList<CPtrList, CDirDoc *> DirDocList;
 typedef CTypedPtrList<CPtrList, CHexMergeDoc *> HexMergeDocList;
+typedef CTypedPtrList<CPtrList, CFormCompareDoc *> FormCompareDocList;
 
 class PackingInfo;
 class PrediffingInfo;
@@ -245,6 +247,7 @@ public:
 	void AddTempFolder(const TempFolderPtr& pTempFolder) { m_tempFolders.push_back(pTempFolder); }
 	MergeDocList &GetAllMergeDocs();
 	DirDocList &GetAllDirDocs();
+	FormCompareDocList &GetAllFormCompareDocs();
 	std::vector<IMergeDoc*> GetAllMergeDocuments();
 	void OnToolsGenerateReport();
 
@@ -425,6 +428,8 @@ protected:
 	afx_msg void OnViewUsedefaultfont();
 	afx_msg void OnHelpContents();
 	afx_msg void OnHelpWizManual();
+	// Merge20 (Wave 5 F2): FORM compare (view-only) standalone launch
+	afx_msg void OnMerge20FormCompare();
 	afx_msg void OnClose();
 	afx_msg void OnToolsGeneratePatch();
 	afx_msg void OnToolsGenerateArchive();
