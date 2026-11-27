@@ -649,6 +649,7 @@ BEGIN
         MENUITEM "&Output Pane",                ID_VIEW_OUTPUT_BAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
         MENUITEM "Brand Header",                ID_VIEW_MERGE20_BRAND_HEADER
+        MENUITEM "Risk-order patrol",          ID_MERGE20_RISK_ORDER
         MENUITEM SEPARATOR
         MENUITEM "Com&pare Statistics...",      ID_VIEW_DIR_STATISTICS
         MENUITEM SEPARATOR
@@ -906,6 +907,7 @@ BEGIN
         MENUITEM "Merge Result Pane",           ID_VIEW_MERGE_RESULT_BAR
         MENUITEM "Dedicated Compare Mode",     ID_VIEW_MERGE20_DEDICATED_MODE
         MENUITEM "File List Panel",            ID_VIEW_MERGE20_FILELIST_PANEL
+        MENUITEM "Risk-order patrol",          ID_MERGE20_RISK_ORDER
         MENUITEM "Output Pane",                 ID_VIEW_OUTPUT_BAR
         MENUITEM SEPARATOR
         MENUITEM "Refresh\tF5",                 ID_REFRESH
