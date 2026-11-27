@@ -1060,6 +1060,13 @@ bool Merge20SessionToJson(const Merge20Session& session, std::string& outUtf8)
 			{ L"hiddenItems", Merge20JsonArray(std::move(hiddenItems)) },
 			{ L"focusedPath", Merge20JsonText(session.display.focusedPath) },
 			{ L"topIndex", Merge20JsonInt(session.display.topIndex) },
+			// Merge20 (best-workflow B12): the file compare that was
+			// open at save time, with its current diff and first
+			// visible line, so a restore can reopen it at the same
+			// position.
+			{ L"resumeRelPath", Merge20JsonText(session.display.resumeRelPath) },
+			{ L"resumeDiff", Merge20JsonInt(session.display.resumeDiff) },
+			{ L"resumeTopLine", Merge20JsonInt(session.display.resumeTopLine) },
 		}) },
 		{ L"files", Merge20JsonArray(std::move(files)) },
 	});
@@ -1200,6 +1207,19 @@ bool Merge20SessionFromJson(const std::string& utf8, Merge20Session& out, std::s
 		if (!GetIntField(*display, L"topIndex", topIndex, 0, INT32_MAX))
 			return false;
 		session.display.topIndex = static_cast<int>(topIndex);
+		// Merge20 (best-workflow B12): absent in files saved before
+		// B12, so the Get*Field helpers leave the defaults (empty /
+		// -1 / 0) and nothing is forced. A resumeDiff below -1 or a
+		// negative resumeTopLine fails the load, like topIndex does.
+		if (!GetTextField(*display, L"resumeRelPath", session.display.resumeRelPath))
+			return false;
+		int64_t resumeDiff = -1, resumeTopLine = 0;
+		if (!GetIntField(*display, L"resumeDiff", resumeDiff, -1, INT32_MAX))
+			return false;
+		if (!GetIntField(*display, L"resumeTopLine", resumeTopLine, 0, INT32_MAX))
+			return false;
+		session.display.resumeDiff = static_cast<int>(resumeDiff);
+		session.display.resumeTopLine = static_cast<int>(resumeTopLine);
 		const Merge20JsonValue* reviewFilter = display->Find(L"reviewFilter");
 		if (reviewFilter != nullptr)
 		{
