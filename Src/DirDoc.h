@@ -19,10 +19,12 @@
 #include "IMDITab.h"
 #include "IDirDoc.h"
 #include "Merge20/Merge20Types.h"
+#include "Merge20/Merge20Undo.h"
 #include "Merge20/Merge20CloseWarn.h"
 #include "Merge20/Merge20Session.h"
 
 class CDirView;
+class CMergeDoc;
 struct IMergeDoc;
 typedef CTypedPtrList<CPtrList, IMergeDoc *> MergeDocPtrList;
 class DirDocFilterGlobal;
@@ -105,8 +107,29 @@ public:
 	// Merge20 (S2): output checkbox flag of one item, and the review
 	// setter with the output-flag linkage of spec section 4(b).
 	bool GetMerge20IncludeInOutput(const DIFFITEM& di) const;
-	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include);
-	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, bool bRecordUndo = true);
+	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state, bool bRecordUndo = true);
+	// Merge20 (best-workflow B10, gap analysis section 4.2 B10):
+	// judgment undo / redo of this folder compare (review state,
+	// output flag, per-diff conclusion). The history lives in the
+	// CDiffContext stack (one per folder compare); a standalone
+	// file compare has no folder doc, so its judgments are not
+	// recorded. Session restore clears the history (see
+	// Merge20SessionDoc.cpp). Undo applies the old values, redo
+	// re-applies the new ones; an entry whose current values no
+	// longer match is stale and is dropped, never applied.
+	/** @brief True when a judgment undo step is available. */
+	bool Merge20CanUndo() const;
+	/** @brief True when a judgment redo step is available. */
+	bool Merge20CanRedo() const;
+	/** @brief Undo the newest judgment operation (or report why it cannot be done). */
+	Merge20UndoApplyResult Merge20Undo();
+	/** @brief Redo the newest undone judgment operation (or report why it cannot be done). */
+	Merge20UndoApplyResult Merge20Redo();
+	/** @brief Apply one undo / redo entry (bUndo: rewind to the old values, else re-apply the new ones). */
+	Merge20UndoApplyResult Merge20ApplyUndoEntry(const Merge20UndoEntry& entry, bool bUndo);
+	/** @brief Open merge doc showing this file, or nullptr when the file is not open. */
+	CMergeDoc* Merge20FindOpenMergeDoc(const String& relPath);
 	// Merge20 (Phase 4 D2, IDirDoc): review state of the file a merge
 	// doc shows, found by the merge doc's paths (same lookup, incl. the
 	// swapped-paths fallback, as SetMerge20Classification). The

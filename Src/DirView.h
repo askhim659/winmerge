@@ -440,6 +440,11 @@ protected:
 	afx_msg void OnMerge20MemoEdit();
 	afx_msg void OnMerge20DirCheckAll();
 	afx_msg void OnMerge20DirUncheckAll();
+	// Merge20 (best-workflow B10): judgment undo / redo (folder compare context menu + Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y).
+	afx_msg void OnMerge20UndoJudgment();
+	afx_msg void OnUpdateMerge20UndoJudgment(CCmdUI* pCmdUI);
+	afx_msg void OnMerge20RedoJudgment();
+	afx_msg void OnUpdateMerge20RedoJudgment(CCmdUI* pCmdUI);
 	afx_msg void OnUpdateMerge20DirCheck(CCmdUI* pCmdUI);
 	afx_msg void OnMarkedRescan();
 	afx_msg void OnUpdateStatusNum(CCmdUI* pCmdUI);

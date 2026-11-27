@@ -29,6 +29,7 @@
 #include <optional>
 #include <set>
 #include "Merge20/Merge20Conclusion.h"
+#include "Merge20/Merge20Undo.h"
 #include "Merge20/Merge20Learn.h"
 #include "Merge20/Merge20Types.h"
 
@@ -414,6 +415,14 @@ public:
 	void Merge20GetConclusionProgress(int& nJudged, int& nTotal) const;
 	/** @brief Merge20 (best-workflow B1b): replay a stored conclusion (session restore, learning acceptance): store it in the map only, with no result change, no learning record and no file linkage. The caller already rewrote the result (learning acceptance) or restores the file state separately (session restore). */
 	void Merge20SetDiffConclusionRestored(int nDiff, Merge20DiffConclusion conclusion);
+	/** @brief Merge20 (best-workflow B10): apply one conclusion undo / redo step. Rewrites the result segment for the target conclusion (or leaves it untouched for Keep), stores it without any learning record, and restores the file's review state and output checkbox through the folder doc's raw setters. Returns Stale when the diff is gone, no longer significant, no longer holds the expected conclusion, or its identity (op / first / last real lines) moved on; the caller (CDirDoc) drops such an entry. */
+	Merge20UndoApplyResult Merge20ApplyConclusionUndo(const Merge20UndoEntry& entry, bool bUndo);
+	/** @brief Merge20 (best-workflow B10): undo the newest judgment of this folder compare (result pane context menu). Disabled without a folder doc or when there is nothing to undo. */
+	void OnMerge20UndoJudgment();
+	void OnUpdateMerge20UndoJudgment(CCmdUI* pCmdUI);
+	/** @brief Merge20 (best-workflow B10): redo the newest undone judgment (result pane context menu). */
+	void OnMerge20RedoJudgment();
+	void OnUpdateMerge20RedoJudgment(CCmdUI* pCmdUI);
 	/** @brief Merge20 (best-workflow B1): set the conclusions of the targeted diffs (result pane context menu, Diff conclusion submenu). The target rule is the same as the learning commands: the current diff when nothing is selected, else the selected diffs. */
 	void OnMerge20SetConclusion(UINT nID);
 	void OnUpdateMerge20SetConclusion(CCmdUI* pCmdUI);

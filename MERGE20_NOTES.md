@@ -6581,3 +6581,55 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - F6 はこれで完了。Wave 5 は F7（CSV 出力＋受け入れテスト・文書化）を残すのみ。F7 の担当を spawn する。
 - B10 PR1（判断の取消／やり直し）は着手済み（ブランチ `merge20/wf-b10`）。完了報告待ち。
 - ID 割り当て状況（2026-11-27 13:05 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、F5 用に 38984 を予約済み（未使用）。`_APS_NEXT_RESOURCE_VALUE` 308、`_APS_NEXT_COMMAND_VALUE` 38984、`_APS_NEXT_CONTROL_VALUE` 1910（F6 マージ時点）。
+
+## 73. B10 PR1 — 判断の取消／やり直し（Undo 基盤＋基本 3 種）（PR #69）
+
+### 73.1 概要
+- B10（判断の取消／やり直し）の PR1：Undo エンジン（純粋モジュール）＋基本 3 種の Undo。PR2（D5 分割・再結合、学習候補の受け入れ／却下の Undo、セッション保存・復元との相互作用の残り）は別途。
+- Undo 対象（3 種）：(1) 確認内容の変更（キー 1〜5・Space・パネル循環。S2 連動の出力フラグも前後で一緒に記録）、(2) 出力チェックの切替、(3) 差分単位の結論（B1。結論＋連動する確認内容・出力フラグを記録。差分同一性 op／begin／end で陳腐化を検出）。
+- 履歴はフォルダ比較単位（`CDiffContext` が保持）。履歴の深さの上限は **100 件**（超えた古いものから消える）。no-op は積まない。新規 push で redo を消す。
+- Ctrl+Z／Ctrl+Shift+Z／Ctrl+Y で戻る／進む。両方の右クリックメニューに「判断の取り消し／やり直し」。
+- **設計上の決定**：ファイル比較では Ctrl+Z はテキスト編集の Undo のまま（判断 Undo はメニューのみ）。Ctrl+Z がテキスト編集と衝突するため。文言で別系統であることを明記。フォルダ一覧では Ctrl+Z／Ctrl+Shift+Z／Ctrl+Y が判断 Undo として効く。
+- 一括チェックは記録しない（`bRecordUndo=false`）。学習不変は構造で保証（Undo 経路は `Merge20SetDiffConclusionRestored`＋生 setter＋`ResultChooseSources` のみ）。
+- **セッション復元は履歴を消す**（`ApplySessionStates` 開始時にクリア、保存では消さない）。マニュアル §17 と PR 本文に明記。
+- B15：ショートカット一覧はマニュアル（`Docs/Users/WizMergeManual.html`）§16 の表にのみ存在したため、そこに Ctrl+Z／Ctrl+Shift+Z／Ctrl+Y の 2 行を追加（アプリ内一覧はなし）。§17 に制限事項も追加。
+
+### 73.2 変更内容（PR #69、30 コミット、22 ファイル、+1206/−21）
+| ファイル | 内容 |
+|---|---|
+| `Src/Merge20/Merge20Undo.h/.cpp` | Undo エンジン（純粋モジュール。スタック・上限 100 件・no-op 除外・redo 消去） |
+| `Testing/GoogleTest/Merge20/Merge20Undo_test.cpp` | 単体テスト 10 件 |
+| `Src/DiffContext.h/.cpp` | 履歴の保持（フォルダ比較単位） |
+| `Src/DirDoc.h/.cpp` | Undo／Redo の実行・メニュー・Ctrl+Z 配線 |
+| `Src/DirView.h/.cpp` | 右クリックメニュー「判断の取り消し／やり直し」 |
+| `Src/MergeDoc.h/.cpp`、`Src/MergeDocResultPane.cpp` | B1 結論の Undo 対応（結論＋連動フラグの記録・復元、陳腐化の検出） |
+| `Src/Merge20/Merge20FileListBar.cpp` | パネル循環の Undo 記録 |
+| `Src/Merge20/Merge20SessionDoc.cpp` | セッション復元時の履歴クリア |
+| `Docs/Users/WizMergeManual.html` | §16 ショートカット一覧に Ctrl+Z／Ctrl+Shift+Z／Ctrl+Y を追加、§17 に制限事項を追加 |
+| `Src/Merge.rc` | メニュー項目追加 |
+| `Src/resource.h` | コマンド `ID_MERGE20_UNDO_JUDGMENT` 38984、`ID_MERGE20_REDO_JUDGMENT` 38985。`_APS_NEXT_COMMAND_VALUE` を 38986 へ |
+| `Translations/WinMerge/Japanese.po` | 新規 msgid（付き） |
+| `Src/Merge.vcxproj`／`.filters`、`Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | 登録 |
+
+- **ID 割り当ての経緯**：38984 は F5 の予約（未使用）だったが、F5 は既にマージ済みで実際には使っていないため、B10 PR1 が採用した（B8 が B7 の予約 38983 を採用したのと同じ経緯。§71.2 の教訓どおり、master と F6 ブランチの両方で空きを確認済み）。これで F5 の予約 38984 は消費済みとなった。
+- 検証中に見つけた 2 件の不具合を修正：`GetNextDiffPosition` が `const DIFFITEM&` を返すための const 修正（DirDoc.cpp）、テストの `_T` 用に `<tchar.h>` を明示 include。`.po` 検査の過剰な assert も修正（`<<<<<<<` は既存の正規文言、複数行 msgstr の継続行を許容）。
+
+### 73.3 検証レポート（コーディネーター検証済み）
+- **PR #69**：head `7326c1e9`（マージコミット）、base master `1d83fc34`（F6 マージ＋NOTES §72）。30 コミット、変更ファイル 22 件（B10 PR1 の 22 ファイルのみ）。
+- F6 マージによるコンフリクト解消：PR 作成直後、作業中に F6（PR #67）が master（`1d83fc34`）へマージされ、PR は mergeable=false（dirty）で CI 未発火。競合した 7 ファイル（Merge.rc、resource.h、Merge.vcxproj／.filters、UnitTests.vcxproj／.filters、Japanese.po）を新 master 版に載せ直して 7 コミット。さらに resource.h の `_APS_NEXT_*` 3 行が隣接しているため 3-way マージが衝突と判定したので、Git Database API で master を取り込むマージコミット `7326c1e9` を作成（master 側のみ変更の 10 ファイル＝NOTES・FORM 比較／名称マスター関連を master 版で取り込み）。その後 mergeable=True／clean となり CI が発火。**教訓：`_APS_NEXT_*` の 3 行は隣接しているため、並行ブランチのマージで衝突しやすい。ID の台帳行と `_APS_NEXT_*` 行を同時に触るときは注意すること。**
+- **CI（ブランチ head）**：実行 46009557803、completed／success。全文ログ（3,610,582 バイト）を担当が取得・確認（`~/workspace/.coord/b10/ci-full-log.txt`）。コーディネーターも同ログの要所を確認：`Build succeeded`、`0 Error(s)`、GoogleTest `[ PASSED] 988 tests.`（978＋新規 10 件）、`[ FAILED]` 0 件。`.po` 番兵通過。成果物：`WinMerge-x64.zip` 26,744,878 バイト、`WinMerge-x64-Setup-x64.exe` 40,205,300 バイト、expire 2027-02-25。
+- **マージ**：マージコミット `25fbc2b2`。マージコミット CI：実行 46011203073、completed／success。全文ログ（3,612,502 バイト、ジョブ `build` 140546864238）をコーディネーターが取得・確認（`~/workspace/.coord/b10/b10_pr1_merge_log.txt`）。GoogleTest `[ PASSED ] 988 tests.`、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`、`Merge20 verify: 100 files x 500 lines, 108 ms total, 0 issues`。
+- **成果物（実行 46011203073）**：`WinMerge-x64.zip` 26,744,911 バイト、`WinMerge-x64-Setup-x64.exe` 40,190,897 バイト。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **受け入れ条件の照合（gap 分析 B10 のうち PR1 の範囲）**：
+- (a) 状態変更・出力切替・差分結論のそれぞれが Undo／Redo できること — 実装済み（単体テストはスタック側、操作は実機チェックリストで確認）。
+- (b) Undo しても学習データが変わらないこと — 構造上保証＋単体テスト `UndoDoesNotRecordLearning` 通過。
+- (c) Undo の上限を超えた古い操作は消えること（クラッシュしないこと） — `DepthCapDropsOldestEntries`／`CapKeepsNewestEntries` 通過、クラッシュなし。
+- (d) セッション保存・復元後も Undo 履歴が残っているか、残らない場合はその旨が明記されていること — **残らない**。復元時に消去し、マニュアル §17・PR 本文に明記。
+- (e) 分割・再結合の Undo が結果ペインとセッションの両方に反映されること — **PR1 対象外**。PR 本文に明記（分割・再結合後は結論 Undo が Stale になる場合あり）。
+- **未検証（実機でしか確認できないもの）**：Ctrl+Z 操作、メニュー表示・グレー表示、日本語表示、100 件超過時の挙動、セッション復元後の履歴消去、ファイル未オープン時の案内、一括チェックが Undo されないこと。PR 本文の実機チェックリスト 10 項目どおり。
+- **PR2 への引き継ぎ**：D5 分割・再結合の Undo、学習候補の受け入れ／却下の Undo、セッション保存・復元との相互作用の残り。既知の制限：結論を Undecided へ Undo しても、その結論で作られた学習候補は復活しない（再スキャン／オプション変更時に再計算）。
+
+### 73.4 次への移行
+- B10 PR2（D5 分割・再結合、学習候補の受け入れ／却下の Undo）を次に spawn する。
+- F7（CSV 出力＋受け入れテスト・文書化）は着手済み（ブランチ `merge20/form-f7`）。完了報告待ち。
+- ID 割り当て状況（2026-11-27 13:55 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、B10 PR1 が 38984–38985 を使用（38984 は F5 の予約を消費）。`_APS_NEXT_RESOURCE_VALUE` 308、`_APS_NEXT_COMMAND_VALUE` 38986、`_APS_NEXT_CONTROL_VALUE` 1910（B10 PR1 マージ時点）。

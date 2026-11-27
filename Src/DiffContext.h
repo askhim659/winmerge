@@ -18,6 +18,7 @@
 #include "SubstitutionList.h"
 #include "PropertySystem.h"
 #include "Merge20/Merge20FileStates.h"
+#include "Merge20/Merge20Undo.h"
 
 class PackingInfo;
 class PrediffingInfo;
@@ -189,14 +190,16 @@ public:
 	 */
 	bool GetMerge20IncludeInOutput(const DIFFITEM& di) const;
 	/** @brief Set the output checkbox flag of one file. */
-	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include);
+	void SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, bool bRecordUndo = true);
+	/** @brief Set the output checkbox flag of one file, by relative path (B10 undo application: no DIFFITEM needed, never recorded). */
+	void SetMerge20IncludeInOutput(const String& relPath, bool include);
 	/**
 	 * @brief Set the review state of one file and apply the output-flag
 	 * linkage (spec section 4(b), HTML setRev/cycRev): DONE turns the
 	 * output flag back ON except for NEW_ONLY files (2-way right-only),
 	 * HOLD and KEEP turn it OFF, TODO and SPECIAL leave it unchanged.
 	 */
-	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state);
+	void ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state, bool bRecordUndo = true);
 	/**
 	 * @brief Store the S4 classification of one file (action category,
 	 * risk, counts, summary, encodings) in the sidecar map, keeping
@@ -230,6 +233,22 @@ public:
 	Merge20FileStates& GetMerge20FileStates() { return m_merge20FileStates; }
 	/** @brief Direct access to the sidecar map (const version). */
 	const Merge20FileStates& GetMerge20FileStates() const { return m_merge20FileStates; }
+	/**
+	 * @brief Judgment undo / redo stack of this folder compare (B10).
+	 * One stack per folder compare: the folder list and every file
+	 * compare of this compare share it, so an operation done in one
+	 * place can be undone from the other. A standalone file compare
+	 * has no folder context, so its judgments are not recorded.
+	 * The stack stores values only (see Merge20Undo.h); applying an
+	 * entry is CDirDoc::Merge20Undo / Merge20Redo.
+	 */
+	Merge20UndoStack& GetMerge20UndoStack() { return m_merge20UndoStack; }
+	/** @brief Const view of the judgment undo / redo stack. */
+	const Merge20UndoStack& GetMerge20UndoStack() const { return m_merge20UndoStack; }
+	/** @brief Record one judgment operation for undo (no-op entries are ignored by the stack). */
+	void Merge20RecordUndo(const Merge20UndoEntry& entry) { m_merge20UndoStack.Push(entry); }
+	/** @brief Drop the undo / redo history (session restore: the restored states make every entry stale). */
+	void Merge20ClearUndoHistory() { m_merge20UndoStack.Clear(); }
 
 	/**
 	 * @brief Frame notification for per-file state changes (Panel P0,
@@ -340,6 +359,7 @@ public:
 	std::vector<std::map<std::vector<uint8_t>, DuplicateInfo>> m_duplicateValues; /**< Number of duplicate hash values */
 	std::vector<String> m_vCurrentlyHiddenItems; /**< The list of currently hidden items */
 	Merge20FileStates m_merge20FileStates; /**< Merge20 per-file work state (review state etc.), keyed by relative path; see GetMerge20ReviewState(). */
+	Merge20UndoStack m_merge20UndoStack; /**< Merge20 judgment undo / redo history (B10), one stack per folder compare. */
 	Merge20FileListNotifyCallback m_merge20FileListNotify; /**< Panel P0: frame refresh callback, empty when no panel is registered. */
 	// Merge20 (Panel P1): one callback per open file-compare frame,
 	// keyed by window handle (see AddMerge20FileListNotifyCallback).
