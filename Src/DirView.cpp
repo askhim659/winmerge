@@ -56,6 +56,7 @@
 #include "Merge20/Merge20Slim.h"
 #include "Merge20/Merge20Summary.h"
 #include "Merge20/Merge20SummaryDlg.h"
+#include "Merge20/Merge20Undo.h"
 #include "Merge20/Merge20VerifyGate.h"
 #include "Merge20/Merge20VerifyReportExport.h"
 #include "Merge20/Merge20HighRiskConfirmDlg.h"
@@ -182,6 +183,11 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_RESTORE, OnUpdateMerge20Session)
 	ON_COMMAND(ID_MERGE20_DIR_CHECK_ALL, OnMerge20DirCheckAll)
 	ON_COMMAND(ID_MERGE20_DIR_UNCHECK_ALL, OnMerge20DirUncheckAll)
+	// Merge20 (best-workflow B10): judgment undo / redo
+	ON_COMMAND(ID_MERGE20_UNDO_JUDGMENT, OnMerge20UndoJudgment)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_UNDO_JUDGMENT, OnUpdateMerge20UndoJudgment)
+	ON_COMMAND(ID_MERGE20_REDO_JUDGMENT, OnMerge20RedoJudgment)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_REDO_JUDGMENT, OnUpdateMerge20RedoJudgment)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_CHECK_ALL, OnUpdateMerge20DirCheck)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_UNCHECK_ALL, OnUpdateMerge20DirCheck)
 	ON_NOTIFY_REFLECT(LVN_COLUMNCLICK, OnColumnClick)
@@ -1013,6 +1019,18 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	pPopup->AppendMenu(MF_SEPARATOR);
 	String sMerge20BatchCheck = _("Batch check...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_BATCH_CHECK, sMerge20BatchCheck.c_str());
+	// Merge20 (best-workflow B10, gap analysis section 4.2 B10):
+	// judgment undo / redo, next to the batch check. The items
+	// are greyed out when there is nothing to undo / redo
+	// (OnUpdateMerge20*Judgment). This is judgment undo, not the
+	// text-edit undo: the shortcuts work in this list only
+	// (PreTranslateMessage), and the menu text says so.
+	String sMerge20UndoJudgment = _("Undo Judgment");
+	sMerge20UndoJudgment += _T("\tCtrl+Z");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_UNDO_JUDGMENT, sMerge20UndoJudgment.c_str());
+	String sMerge20RedoJudgment = _("Redo Judgment");
+	sMerge20RedoJudgment += _T("\tCtrl+Shift+Z");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_REDO_JUDGMENT, sMerge20RedoJudgment.c_str());
 	// Merge20 (S6, design section 3.5, spec section 4(f)): diff-list
 	// CSV export, next to the batch check. Always offered.
 	String sMerge20CsvExport = _("Export diff list as CSV...");
@@ -3283,6 +3301,35 @@ BOOL CDirView::PreTranslateMessage(MSG* pMsg)
 				AfxGetMainWnd()->PostMessage(WM_COMMAND, ID_MERGE_DELETE);
 				return FALSE;
 			}
+			// Merge20 (best-workflow B10): Ctrl+Z undoes the newest
+			// judgment (review state / output flag / diff conclusion)
+			// of this folder compare; Ctrl+Shift+Z or Ctrl+Y redoes
+			// it. This is judgment undo, not the text-edit undo: the
+			// folder list has no text editing (label editing is
+			// excluded above), so the keys are free here. In a file
+			// compare Ctrl+Z stays the text undo; judgment undo there
+			// is menu-only (result pane context menu).
+			if ((GetKeyState(VK_CONTROL) & 0x8000) != 0 &&
+				(GetKeyState(VK_MENU) & 0x8000) == 0)
+			{
+				if (pMsg->wParam == 'Z' && (GetKeyState(VK_SHIFT) & 0x8000) == 0)
+				{
+					if (GetDocument()->Merge20CanUndo())
+					{
+						OnMerge20UndoJudgment();
+						return TRUE;
+					}
+				}
+				else if ((pMsg->wParam == 'Z' && (GetKeyState(VK_SHIFT) & 0x8000) != 0) ||
+					pMsg->wParam == 'Y')
+				{
+					if (GetDocument()->Merge20CanRedo())
+					{
+						OnMerge20RedoJudgment();
+						return TRUE;
+					}
+				}
+			}
 			int sel = GetFocusedItem();
 			// Check if we got 'Backspace pressed' -message
 			if (pMsg->wParam == VK_BACK)
@@ -3897,7 +3944,7 @@ void CDirView::OnMerge20BatchCheck()
 			if (di.diffcode.isDirectory())
 				continue;
 			if (dlg.IsStateSelected(pDoc->GetMerge20ReviewState(di)))
-				pDoc->SetMerge20IncludeInOutput(di, true);
+				pDoc->SetMerge20IncludeInOutput(di, true, false);
 		}
 		break;
 	}
@@ -3911,7 +3958,7 @@ void CDirView::OnMerge20BatchCheck()
 				continue;
 			const DIFFITEM& di = GetDiffItem(i);
 			if (!di.diffcode.isDirectory())
-				pDoc->SetMerge20IncludeInOutput(di, true);
+				pDoc->SetMerge20IncludeInOutput(di, true, false);
 		}
 		break;
 	}
@@ -3942,7 +3989,7 @@ void CDirView::Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include)
 		if (pChild->diffcode.isDirectory())
 			Merge20SetOutputForDirectory(*pChild, include);
 		else
-			pDoc->SetMerge20IncludeInOutput(*pChild, include);
+			pDoc->SetMerge20IncludeInOutput(*pChild, include, false);
 	}
 }
 
@@ -3968,6 +4015,60 @@ void CDirView::OnMerge20DirUncheckAll()
 	}
 	m_pList->Invalidate();
 	UpdateMerge20StatusCount();
+}
+
+// Merge20 (best-workflow B10): failure message for a judgment undo /
+// redo step (same msgids as CMergeDoc, so the translation is shared).
+static String Merge20UndoFailureMessage(Merge20UndoApplyResult result, bool bUndo)
+{
+	switch (result)
+	{
+	case Merge20UndoApplyResult::NothingToUndo:
+		return _("There is no judgment to undo.");
+	case Merge20UndoApplyResult::NothingToRedo:
+		return _("There is no judgment to redo.");
+	case Merge20UndoApplyResult::Stale:
+		return bUndo ?
+			_("That judgment cannot be undone because its state has changed since then.") :
+			_("That judgment cannot be redone because its state has changed since then.");
+	case Merge20UndoApplyResult::TargetNotOpen:
+		return bUndo ?
+			_("That diff conclusion cannot be undone because its file comparison is not open. Open the file first, then try again.") :
+			_("That diff conclusion cannot be redone because its file comparison is not open. Open the file first, then try again.");
+	case Merge20UndoApplyResult::Applied:
+	default:
+		return String();
+	}
+}
+
+void CDirView::OnMerge20UndoJudgment()
+{
+	CDirDoc* pDoc = GetDocument();
+	const Merge20UndoApplyResult result = pDoc->Merge20Undo();
+	if (result == Merge20UndoApplyResult::Applied)
+		GetParentFrame()->SetStatus(_("Undid the last judgment.").c_str());
+	else
+		AfxMessageBox(Merge20UndoFailureMessage(result, true).c_str(), MB_OK | MB_ICONINFORMATION);
+}
+
+void CDirView::OnUpdateMerge20UndoJudgment(CCmdUI* pCmdUI)
+{
+	pCmdUI->Enable(GetDocument()->Merge20CanUndo());
+}
+
+void CDirView::OnMerge20RedoJudgment()
+{
+	CDirDoc* pDoc = GetDocument();
+	const Merge20UndoApplyResult result = pDoc->Merge20Redo();
+	if (result == Merge20UndoApplyResult::Applied)
+		GetParentFrame()->SetStatus(_("Redid the last judgment.").c_str());
+	else
+		AfxMessageBox(Merge20UndoFailureMessage(result, false).c_str(), MB_OK | MB_ICONINFORMATION);
+}
+
+void CDirView::OnUpdateMerge20RedoJudgment(CCmdUI* pCmdUI)
+{
+	pCmdUI->Enable(GetDocument()->Merge20CanRedo());
 }
 
 /**
@@ -5016,7 +5117,7 @@ void CDirView::Merge20SetOutputForAllFiles(bool include)
 	{
 		const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
 		if (!di.diffcode.isDirectory())
-			pDoc->SetMerge20IncludeInOutput(di, include);
+			pDoc->SetMerge20IncludeInOutput(di, include, false);
 	}
 }
 

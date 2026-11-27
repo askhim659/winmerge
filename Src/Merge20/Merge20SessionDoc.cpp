@@ -451,6 +451,13 @@ namespace
 	void ApplySessionStates(CDirDoc& doc, const Merge20Session& session, Merge20SessionRestoreResult& result)
 	{
 		CDiffContext& ctxt = doc.GetDiffContext();
+		// Merge20 (best-workflow B10): a restore rewrites the review
+		// states, output flags and diff judgments wholesale, so every
+		// undo entry predates the restored states. The history is
+		// cleared here (both the synchronous and the deferred paths
+		// run through ApplySessionStates); saving a session does not
+		// clear it. The manual states this (section 17).
+		ctxt.Merge20ClearUndoHistory();
 		// Index the current files by relative path.
 		std::map<String, const DIFFITEM*> byRelPath;
 	for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)

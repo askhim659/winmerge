@@ -12540,3 +12540,61 @@ msgstr "このフォルダ比較に属する、開いているファイル比較
 msgid "The verification report could not be saved, but the merge result was saved:\n%1"
 msgstr "検証レポートは保存できませんでしたが、マージ結果は保存されました：\n%1"
 
+#. Merge20 (best-workflow B10): judgment undo menu item (result pane context menu, Merge.rc; folder compare context menu, DirView.cpp)
+#: Src/Merge.rc
+#: Src/DirView.cpp
+msgid "Undo Judgment"
+msgstr "【Wiz】判断の取り消し（テキスト編集の取り消しとは別）"
+
+#. Merge20 (best-workflow B10): judgment redo menu item (result pane context menu, Merge.rc; folder compare context menu, DirView.cpp)
+#: Src/Merge.rc
+#: Src/DirView.cpp
+msgid "Redo Judgment"
+msgstr "【Wiz】判断のやり直し（テキスト編集の取り消しとは別）"
+
+#. Merge20 (best-workflow B10): judgment undo success (status bar, DirView.cpp)
+#: Src/DirView.cpp
+msgid "Undid the last judgment."
+msgstr "最後の判断を元に戻しました。"
+
+#. Merge20 (best-workflow B10): judgment redo success (status bar, DirView.cpp)
+#: Src/DirView.cpp
+msgid "Redid the last judgment."
+msgstr "最後の判断をやり直しました。"
+
+#. Merge20 (best-workflow B10): judgment undo failure: nothing to undo (DirView.cpp, MergeDocResultPane.cpp)
+#: Src/DirView.cpp
+#: Src/MergeDocResultPane.cpp
+msgid "There is no judgment to undo."
+msgstr "元に戻す判断がありません。"
+
+#. Merge20 (best-workflow B10): judgment redo failure: nothing to redo (DirView.cpp, MergeDocResultPane.cpp)
+#: Src/DirView.cpp
+#: Src/MergeDocResultPane.cpp
+msgid "There is no judgment to redo."
+msgstr "やり直す判断がありません。"
+
+#. Merge20 (best-workflow B10): judgment undo failure: state changed since then (DirView.cpp, MergeDocResultPane.cpp)
+#: Src/DirView.cpp
+#: Src/MergeDocResultPane.cpp
+msgid "That judgment cannot be undone because its state has changed since then."
+msgstr "その判断は、その後に状態が変わったため元に戻せませんでした。"
+
+#. Merge20 (best-workflow B10): judgment redo failure: state changed since then (DirView.cpp, MergeDocResultPane.cpp)
+#: Src/DirView.cpp
+#: Src/MergeDocResultPane.cpp
+msgid "That judgment cannot be redone because its state has changed since then."
+msgstr "その判断は、その後に状態が変わったためやり直せませんでした。"
+
+#. Merge20 (best-workflow B10): diff conclusion undo failure: file comparison not open (DirView.cpp, MergeDocResultPane.cpp)
+#: Src/DirView.cpp
+#: Src/MergeDocResultPane.cpp
+msgid "That diff conclusion cannot be undone because its file comparison is not open. Open the file first, then try again."
+msgstr "その差分の結論は、ファイル比較が開いていないため元に戻せませんでした。ファイルを開いてからもう一度お試しください。"
+
+#. Merge20 (best-workflow B10): diff conclusion redo failure: file comparison not open (DirView.cpp, MergeDocResultPane.cpp)
+#: Src/DirView.cpp
+#: Src/MergeDocResultPane.cpp
+msgid "That diff conclusion cannot be redone because its file comparison is not open. Open the file first, then try again."
+msgstr "その差分の結論は、ファイル比較が開いていないためやり直せませんでした。ファイルを開いてからもう一度お試しください。"
+

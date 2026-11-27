@@ -1464,7 +1464,7 @@ static void ApplyMerge20ConclusionLinkage(CMergeDoc& doc, Merge20DiffConclusion 
 	if (link.setReviewDone)
 		ctxt.SetMerge20ReviewState(*pItem, ReviewState::DONE);
 	if (link.setInclude)
-		ctxt.SetMerge20IncludeInOutput(*pItem, link.includeValue);
+		ctxt.SetMerge20IncludeInOutput(*pItem, link.includeValue, false);
 }
 
 Merge20DiffConclusion CMergeDoc::Merge20GetDiffConclusion(int nDiff) const
@@ -1622,11 +1622,56 @@ bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclu
 			Merge20LearnRefreshAllOpenDocs();
 		}
 	}
+	// Merge20 (best-workflow B10): snapshot the file state before
+	// the linkage below rewrites it, so the undo entry can rewind
+	// the conclusion and the file state together. Only a changed
+	// conclusion is recorded; learning acceptance and the session
+	// restore use Merge20SetDiffConclusionRestored instead and are
+	// never recorded (their undo is PR2).
+	CDirDoc* pUndoFolderDoc = nullptr;
+	DIFFITEM* pUndoFolderItem = nullptr;
+	ReviewState undoOldReview = ReviewState::TODO;
+	bool bUndoOldInclude = true;
+	if (bChanged)
+	{
+		pUndoFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+		if (pUndoFolderDoc != nullptr && pUndoFolderDoc->HasDiffs())
+		{
+			pUndoFolderItem = Merge20FindItemForMergeDoc(*pUndoFolderDoc, *this);
+			if (pUndoFolderItem != nullptr)
+			{
+				CDiffContext& ctxt = pUndoFolderDoc->GetDiffContext();
+				undoOldReview = ctxt.GetMerge20ReviewState(pUndoFolderItem->getItemRelativePath());
+				bUndoOldInclude = ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem);
+			}
+		}
+	}
 	// The one linkage rule (B1): a conclusion moves the file's
 	// review state and output checkbox. It runs even when the
 	// conclusion did not change the result (Keep) and even when the
 	// same conclusion is set twice (the rule is idempotent).
 	ApplyMerge20ConclusionLinkage(*this, conclusion);
+	if (bChanged && pUndoFolderItem != nullptr)
+	{
+		CDiffContext& ctxt = pUndoFolderDoc->GetDiffContext();
+		Merge20UndoEntry entry;
+		entry.kind = Merge20UndoKind::DiffConclusion;
+		entry.relPath = pUndoFolderItem->getItemRelativePath();
+		entry.diffIndex = nDiff;
+		entry.diffOp = static_cast<int>(pRange->op);
+		for (int i = 0; i < 3; ++i)
+		{
+			entry.diffBegin[i] = pRange->begin[i];
+			entry.diffEnd[i] = pRange->end[i];
+		}
+		entry.oldConclusion = prevConclusion;
+		entry.newConclusion = conclusion;
+		entry.oldReview = undoOldReview;
+		entry.newReview = ctxt.GetMerge20ReviewState(entry.relPath);
+		entry.oldInclude = bUndoOldInclude;
+		entry.newInclude = ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem);
+		ctxt.Merge20RecordUndo(entry);
+	}
 	// Refresh the focus dock (its header shows the conclusion and
 	// the judged/total progress) and, for Keep, the result view
 	// itself (no buffer change happened, so the 'K' margin marker
@@ -1706,6 +1751,119 @@ void CMergeDoc::OnUpdateMerge20SetConclusion(CCmdUI* pCmdUI)
 	{
 		pCmdUI->SetCheck(FALSE);
 	}
+}
+
+
+/////////////////////////////////////////////////////////////////////////////
+// Merge20 (best-workflow B10, gap analysis section 4.2 B10): apply one
+// conclusion undo / redo step, and the result-pane menu commands.
+//
+// Undo is not the text-edit undo (ID_EDIT_UNDO): it rewinds a
+// judgment -- the conclusion, the review state and the output
+// checkbox together. It never records learning: the result segment
+// is rewritten directly (ResultChooseSources records nothing) and
+// the conclusion is stored with Merge20SetDiffConclusionRestored,
+// so the learning store is untouched however often an entry is
+// undone and redone.
+
+Merge20UndoApplyResult CMergeDoc::Merge20ApplyConclusionUndo(const Merge20UndoEntry& entry, bool bUndo)
+{
+	if (!m_bResultBuilt || entry.diffIndex < 0 || entry.diffIndex >= m_diffList.GetSize() ||
+		!m_diffList.IsDiffSignificant(entry.diffIndex))
+		return Merge20UndoApplyResult::Stale;
+	const Merge20DiffConclusion expected = bUndo ? entry.newConclusion : entry.oldConclusion;
+	if (Merge20GetDiffConclusion(entry.diffIndex) != expected)
+		return Merge20UndoApplyResult::Stale;
+	const DIFFRANGE* pRange = m_diffList.DiffRangeAt(entry.diffIndex);
+	if (pRange == nullptr ||
+		!Merge20UndoEntryMatchesDiff(entry, static_cast<int>(pRange->op), pRange->begin, pRange->end))
+		return Merge20UndoApplyResult::Stale;
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	if (pFolderDoc == nullptr || !pFolderDoc->HasDiffs())
+		return Merge20UndoApplyResult::Stale;
+	DIFFITEM* pItem = Merge20FindItemForMergeDoc(*pFolderDoc, *this);
+	if (pItem == nullptr)
+		return Merge20UndoApplyResult::Stale;
+	CDiffContext& ctxt = pFolderDoc->GetDiffContext();
+	const ReviewState expectedReview = bUndo ? entry.newReview : entry.oldReview;
+	const bool bExpectedInclude = bUndo ? entry.newInclude : entry.oldInclude;
+	if (ctxt.GetMerge20ReviewState(entry.relPath) != expectedReview ||
+		ctxt.GetMerge20IncludeInOutput(*pItem) != bExpectedInclude)
+		return Merge20UndoApplyResult::Stale;
+	const Merge20DiffConclusion target = bUndo ? entry.oldConclusion : entry.newConclusion;
+	// Rewrite the result segment for the target conclusion (or leave
+	// it untouched for Keep); Undecided clears the selection, so the
+	// diff goes back to the unresolved display. No learning record:
+	// ResultChooseSources records nothing.
+	if (Merge20ConclusionChangesResult(target))
+		ResultChooseSources(entry.diffIndex,
+			Merge20ConclusionSrcPanes(target, m_nBuffers, static_cast<int>(pRange->op)));
+	Merge20SetDiffConclusionRestored(entry.diffIndex, target);
+	ctxt.SetMerge20ReviewState(entry.relPath, bUndo ? entry.oldReview : entry.newReview);
+	ctxt.SetMerge20IncludeInOutput(entry.relPath, bUndo ? entry.oldInclude : entry.newInclude);
+	pFolderDoc->Merge20UpdateDirViewItem(*pItem);
+	if (m_pMerge20FocusDock != nullptr)
+		m_pMerge20FocusDock->ShowDiff(GetCurrentDiff());
+	if (m_pMergeResultView != nullptr && m_pMergeResultView->GetSafeHwnd() != nullptr)
+		m_pMergeResultView->Invalidate();
+	return Merge20UndoApplyResult::Applied;
+}
+
+// Failure message for a judgment undo / redo step (same msgids as
+// CDirView, so the translation is shared). Applied has no message:
+// the caller reports success on the status bar, if it has one.
+static String Merge20UndoFailureMessage(Merge20UndoApplyResult result, bool bUndo)
+{
+	switch (result)
+	{
+	case Merge20UndoApplyResult::NothingToUndo:
+		return _("There is no judgment to undo.");
+	case Merge20UndoApplyResult::NothingToRedo:
+		return _("There is no judgment to redo.");
+	case Merge20UndoApplyResult::Stale:
+		return bUndo ?
+			_("That judgment cannot be undone because its state has changed since then.") :
+			_("That judgment cannot be redone because its state has changed since then.");
+	case Merge20UndoApplyResult::TargetNotOpen:
+		return bUndo ?
+			_("That diff conclusion cannot be undone because its file comparison is not open. Open the file first, then try again.") :
+			_("That diff conclusion cannot be redone because its file comparison is not open. Open the file first, then try again.");
+	case Merge20UndoApplyResult::Applied:
+	default:
+		return String();
+	}
+}
+
+void CMergeDoc::OnMerge20UndoJudgment()
+{
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	if (pFolderDoc == nullptr)
+		return;
+	const Merge20UndoApplyResult result = pFolderDoc->Merge20Undo();
+	if (result != Merge20UndoApplyResult::Applied)
+		ShowMessageBox(Merge20UndoFailureMessage(result, true), MB_OK | MB_ICONINFORMATION);
+}
+
+void CMergeDoc::OnUpdateMerge20UndoJudgment(CCmdUI* pCmdUI)
+{
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	pCmdUI->Enable(pFolderDoc != nullptr && pFolderDoc->Merge20CanUndo());
+}
+
+void CMergeDoc::OnMerge20RedoJudgment()
+{
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	if (pFolderDoc == nullptr)
+		return;
+	const Merge20UndoApplyResult result = pFolderDoc->Merge20Redo();
+	if (result != Merge20UndoApplyResult::Applied)
+		ShowMessageBox(Merge20UndoFailureMessage(result, false), MB_OK | MB_ICONINFORMATION);
+}
+
+void CMergeDoc::OnUpdateMerge20RedoJudgment(CCmdUI* pCmdUI)
+{
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	pCmdUI->Enable(pFolderDoc != nullptr && pFolderDoc->Merge20CanRedo());
 }
 
 /////////////////////////////////////////////////////////////////////////////
