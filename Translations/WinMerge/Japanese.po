@@ -12111,6 +12111,61 @@ msgstr "考えうる変更内容＆及ぼす影響分析"
 msgid "Minor differences ignored"
 msgstr "微小差を無視"
 
+#. Merge20 (Wave 5 F6): name-master dialog caption (design section 8.2)
+#: Src/Merge.rc
+msgid "Name Master"
+msgstr "【Wiz】名称マスター"
+
+#. Merge20 (Wave 5 F6): name-master edit button with the count badge (design sections 7.1 and 8.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Name master (%1 types)"
+msgstr "【Wiz】名称マスター（%1種）"
+
+#. Merge20 (Wave 5 F6): name-master dialog hint (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "One \"ID<TAB>form name\" line per form. Saving applies the names immediately to the FORM compare window."
+msgstr "1行に「帳票ID<TAB>帳票名」を1件ずつ書きます。保存すると FORM比較ウィンドウの帳票名にすぐ反映されます。"
+
+#. Merge20 (Wave 5 F6): name-master dialog count badge (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Registered: %1 kinds (%2 rows)"
+msgstr "登録：%1種（%2行）"
+
+#. Merge20 (Wave 5 F6): name-master dialog count badge, tab-less line (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Line %1 has no tab (ID and form name must be separated by a tab)."
+msgstr "行 %1 にタブがありません（帳票IDと帳票名はタブで区切ってください）。"
+
+#. Merge20 (Wave 5 F6): name-master save warning, tab-less line (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Line %1 has no tab (ID and form name must be separated by a tab). Saving was cancelled."
+msgstr "行 %1 にタブがありません（帳票IDと帳票名はタブで区切ってください）。保存を中止しました。"
+
+#. Merge20 (Wave 5 F6): name-master load failure (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Could not read the name master. Showing the default list."
+msgstr "名称マスターを読み込めませんでした。初期リストを表示します。"
+
+#. Merge20 (Wave 5 F6): name-master save failure (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Could not save the name master: %1"
+msgstr "名称マスターを保存できませんでした：%1"
+
+#. Merge20 (Wave 5 F6): name-master dialog reset button (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Restore default list"
+msgstr "初期リストに戻す"
+
+#. Merge20 (Wave 5 F6): name-master dialog save button (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Save and apply immediately"
+msgstr "保存して即時反映"
+
+#. Merge20 (Wave 5 F6): name-master reset confirmation (design section 8.2)
+#: Src/Merge20/Merge20FormMasterDlg.cpp
+msgid "Restore the name master to the default list (%1 kinds, %2 rows)? Your edits will be lost."
+msgstr "名称マスターを初期リスト（%1種、%2行）に戻しますか？編集中の内容は失われます。"
+
 #. Merge20 (UI U2): title-bar progress (CMainFrame::OnUpdateFrameTitle)
 #: Src/MainFrm.cpp
 msgid "WizMerge - %1 unreviewed - %2"
