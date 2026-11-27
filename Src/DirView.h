@@ -414,6 +414,8 @@ protected:
 	afx_msg void OnMerge20BatchCheck();
 	// Merge20 (S6): diff-list CSV export
 	afx_msg void OnMerge20CsvExport();
+	// Merge20 (B9): end-of-session summary dialog
+	afx_msg void OnMerge20Summary();
 	// Merge20 (Phase 3 L4): learning dialog
 	afx_msg void OnMerge20Learn();
 	// Merge20 (Phase 4 D7): Grep cross-file search dialog
