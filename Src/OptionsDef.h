@@ -397,6 +397,12 @@ inline const String OPT_MERGE20_DOCK_HIDDEN {_T("Merge20/DockHidden"s)};
 // width persists through the bar's own SaveState/LoadState, and
 // slim/search persistence is P4 (design section 12.7).
 inline const String OPT_MERGE20_FILELIST_VISIBLE {_T("Merge20/FileListVisible"s)};
+// Merge20 (UI U1, design section 4/U1): the WizMerge brand header
+// (app-internal header bar at the top of the main frame) toggle. A
+// dedicated key: the bar's visibility is NOT part of the dock state
+// (OPT_REBAR_STATE / "Settings-MainFrame"), so hiding it never leaks
+// into the saved layout of the other bars.
+inline const String OPT_MERGE20_BRAND_HEADER {_T("Merge20/BrandHeader"s)};
 // Merge20 (Panel P4, design section 12.7): the file-list panel
 // state saved and restored with the frame. Four dedicated keys:
 // the search string (P-R4, deferred from P2), the selected

@@ -11987,4 +11987,14 @@ msgstr "旧フォルダ（現地吸い上げ）を選択してください"
 #: Src/MainFrm.cpp
 msgid "Select the new folder (package)"
 msgstr "新フォルダ（パッケージ）を選択してください"
-||||||| base/Translations_WinMerge_Japanese.po
+
+#. Merge20 (UI U1): brand header menu item (Merge.rc) and bar caption (Merge20BrandBar.cpp)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20BrandBar.cpp
+msgid "Brand Header"
+msgstr "【Wiz】ブランドヘッダ"
+
+#. Merge20 (UI U1): file-compare state text on the brand header (Merge20BrandBar.cpp)
+#: Src/Merge20/Merge20BrandBar.cpp
+msgid "File Compare"
+msgstr "ファイル比較"
