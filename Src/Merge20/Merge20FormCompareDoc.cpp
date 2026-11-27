@@ -10,7 +10,7 @@
  * The folder walk is recursive (the HTML tool's webkitdirectory
  * reads subfolders too).
  */
-#include "StdAfx.h"
+#include "pch.h"
 #include "Merge20/Merge20FormCompareDoc.h"
 #include "Merge20/Merge20FormCompareView.h"
 #include "Merge.h"
