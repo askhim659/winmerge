@@ -32,6 +32,9 @@
 #include "Merge20/Merge20SessionDoc.h"
 #include "Merge20/Merge20LearnDoc.h"
 #include "Merge20/Merge20Split.h"
+#include "DiffContext.h"
+#include "DiffItem.h"
+#include "DirDoc.h"
 #include "resource.h"
 #include <algorithm>
 
@@ -774,6 +777,23 @@ tchar_t CMergeDoc::GetResultLineMarker(int nLine) const
 	if (pSegment == nullptr || pSegment->state == ResultSegmentState::Common)
 		return 0;
 
+	// Merge20 (best-workflow B1): an explicit Keep/Reject conclusion
+	// is shown in the margin even when the segment state cannot
+	// express it (Keep leaves the segment untouched; Reject on a
+	// changed block leaves the conflict display). 'K' and 'X' are
+	// unused by the other markers ('1'/'2'/'3', '?', 'm', 'L').
+	// Adopting conclusions need no marker: the chosen panes already
+	// show as '1'/'2'/'3'. A conclusion beats a learning candidate
+	// ('L'): the person's decision stands.
+	if (pSegment->diffIdx >= 0)
+	{
+		const Merge20DiffConclusion conclusion = Merge20GetDiffConclusion(pSegment->diffIdx);
+		if (conclusion == Merge20DiffConclusion::Keep)
+			return _T('K');
+		if (conclusion == Merge20DiffConclusion::Reject)
+			return _T('X');
+	}
+
 	// attribute the line to the source pane its block came from
 	auto srcPaneMarker = [&]() -> tchar_t
 	{
@@ -1357,24 +1377,202 @@ bool CMergeDoc::Merge20GetFocusResultText(int nDiff, String& sText, int& nState,
 	return true;
 }
 
-/**
- * @brief Merge20 (Phase 4 D4): apply a focus-dock judgement.
- * ResultChooseSources plus the Phase 3 L2 learning record, exactly
- * like a judgement made in the result pane (OnMergeChooseSource):
- * an explicit judgement is recorded for learning, while batch
- * approval, auto-merge and session restore go through
- * ResultChooseSources directly and stay unrecorded. The dock
- * refresh itself happens inside ResultChooseSources.
- */
-void CMergeDoc::Merge20FocusApplyJudgment(int nDiff, const std::vector<int>& srcPanes)
+/////////////////////////////////////////////////////////////////////////////
+// Merge20 (best-workflow B1, gap analysis section 4.2 B1): per-diff
+// explicit conclusion. Merge20SetDiffConclusion is the single entry
+// point for every conclusion (focus dock, result pane context menu,
+// and in B1b the learning acceptance): it rewrites the result
+// segment, stores the conclusion, records the judgment for learning
+// when the conclusion changed to a chosen strategy, and applies the
+// one linkage rule to the file's review state and output checkbox.
+// Batch approval (S5), auto-merge and session restore go through
+// ResultChooseSources directly and stay unrecorded and unlinked, as
+// before (L2 guarantee).
+
+// Rebuild a conclusion map after a split (rows inserted at nEdit) or
+// a regroup (rows removed at nEdit): entries before the edit stay,
+// entries inside the edited range are dropped, entries after it
+// shift by the row delta, and the carried conclusion is stored on
+// the new range (all rows for a split, the single regrouped diff
+// for a regroup).
+static std::map<int, Merge20DiffConclusion> ShiftMerge20Conclusions(
+	const std::map<int, Merge20DiffConclusion>& conclusions,
+	int nEdit, int nOldCount, int nNewCount, Merge20DiffConclusion carried)
 {
-	ResultChooseSources(nDiff, srcPanes);
-	if (Merge20LearnRecordDiffJudgment(*this, nDiff))
+	std::map<int, Merge20DiffConclusion> shifted;
+	const int nDelta = nNewCount - nOldCount;
+	for (const auto& [idx, conclusion] : conclusions)
+	{
+		if (idx < nEdit)
+			shifted[idx] = conclusion;
+		else if (idx >= nEdit + nOldCount)
+			shifted[idx + nDelta] = conclusion;
+	}
+	if (carried != Merge20DiffConclusion::Undecided)
+	{
+		for (int i = 0; i < nNewCount; ++i)
+			shifted[nEdit + i] = carried;
+	}
+	return shifted;
+}
+
+// The single conclusion -> file linkage point (B1): the one rule
+// from Merge20ConclusionLinkageFor, applied to this doc's folder
+// item. No-op for a standalone file compare (no folder doc) or
+// when the folder item cannot be found.
+static void ApplyMerge20ConclusionLinkage(CMergeDoc& doc, Merge20DiffConclusion conclusion)
+{
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(doc.GetDirDoc());
+	if (pFolderDoc == nullptr || !pFolderDoc->HasDiffs())
+		return;
+	DIFFITEM* pItem = Merge20FindItemForMergeDoc(*pFolderDoc, doc);
+	if (pItem == nullptr)
+		return;
+	CDiffContext& ctxt = pFolderDoc->GetDiffContext();
+	const bool bTodo = ctxt.GetMerge20ReviewState(pItem->getItemRelativePath()) == ReviewState::TODO;
+	const bool bNewOnly2Way = ctxt.GetCompareDirs() < 3 && pItem->diffcode.isSideSecondOnly();
+	const Merge20ConclusionLinkage link = Merge20ConclusionLinkageFor(conclusion, bTodo, bNewOnly2Way);
+	if (link.setReviewDone)
+		ctxt.SetMerge20ReviewState(*pItem, ReviewState::DONE);
+	if (link.setInclude)
+		ctxt.SetMerge20IncludeInOutput(*pItem, link.includeValue);
+}
+
+Merge20DiffConclusion CMergeDoc::Merge20GetDiffConclusion(int nDiff) const
+{
+	const auto it = m_merge20DiffConclusions.find(nDiff);
+	return it != m_merge20DiffConclusions.end() ? it->second : Merge20DiffConclusion::Undecided;
+}
+
+void CMergeDoc::Merge20GetConclusionProgress(int& nJudged, int& nTotal) const
+{
+	nJudged = 0;
+	nTotal = 0;
+	for (int i = 0; i < m_diffList.GetSize(); ++i)
+	{
+		if (!m_diffList.IsDiffSignificant(i))
+			continue;
+		++nTotal;
+		if (Merge20GetDiffConclusion(i) != Merge20DiffConclusion::Undecided)
+			++nJudged;
+	}
+}
+
+bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion, bool bSaveLearn /*= true*/)
+{
+	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize() ||
+		!m_diffList.IsDiffSignificant(nDiff))
+		return false;
+	const DIFFRANGE* pRange = m_diffList.DiffRangeAt(nDiff);
+	if (pRange == nullptr)
+		return false;
+	const Merge20DiffConclusion prevConclusion = Merge20GetDiffConclusion(nDiff);
+	const bool bChanged = prevConclusion != conclusion;
+	// Rewrite the result segment, except for Keep (the result is
+	// left untouched). Undecided and Reject on a changed block pass
+	// an empty selection, which restores the unresolved display.
+	if (Merge20ConclusionChangesResult(conclusion))
+		ResultChooseSources(nDiff, Merge20ConclusionSrcPanes(conclusion, m_nBuffers, static_cast<int>(pRange->op)));
+	// Store the conclusion (an Undecided diff has no entry).
+	if (conclusion == Merge20DiffConclusion::Undecided)
+		m_merge20DiffConclusions.erase(nDiff);
+	else
+		m_merge20DiffConclusions[nDiff] = conclusion;
+	// Record the explicit judgment for learning, like a judgement
+	// made in the result pane (OnMergeChooseSource): only when the
+	// conclusion actually changed to a chosen strategy. Keep records
+	// nothing (the segment is untouched, so re-recording its current
+	// panes would count the same judgment twice), and Undecided
+	// leaves the segment unresolved (Merge20LearnRecordDiffJudgment
+	// only records Chosen segments). Batch approval, auto-merge and
+	// session restore go through ResultChooseSources directly and
+	// stay unrecorded.
+	bool bLearnRecorded = false;
+	if (bChanged && conclusion != Merge20DiffConclusion::Undecided &&
+		conclusion != Merge20DiffConclusion::Keep &&
+		Merge20LearnRecordDiffJudgment(*this, nDiff))
+	{
+		bLearnRecorded = true;
+		if (bSaveLearn)
+		{
+			String errStr;
+			if (!Merge20LearnSaveStore(errStr))
+				ShowMessageBox(errStr, MB_OK | MB_ICONWARNING);
+			Merge20LearnRefreshAllOpenDocs();
+		}
+	}
+	// The one linkage rule (B1): a conclusion moves the file's
+	// review state and output checkbox. It runs even when the
+	// conclusion did not change the result (Keep) and even when the
+	// same conclusion is set twice (the rule is idempotent).
+	ApplyMerge20ConclusionLinkage(*this, conclusion);
+	// Refresh the focus dock (its header shows the conclusion and
+	// the judged/total progress) and, for Keep, the result view
+	// itself (no buffer change happened, so the 'K' margin marker
+	// would otherwise wait for the next repaint).
+	if (m_pMerge20FocusDock != nullptr)
+		m_pMerge20FocusDock->ShowDiff(GetCurrentDiff());
+	if (conclusion == Merge20DiffConclusion::Keep && m_pMergeResultView != nullptr &&
+		m_pMergeResultView->GetSafeHwnd() != nullptr)
+		m_pMergeResultView->Invalidate();
+	return bLearnRecorded;
+}
+
+void CMergeDoc::OnMerge20SetConclusion(UINT nID)
+{
+	const int nConclusion = static_cast<int>(nID) - ID_MERGE20_CONCLUSION_UNDECIDED;
+	if (nConclusion < 0 || nConclusion > static_cast<int>(Merge20DiffConclusion::Keep))
+		return;
+	int firstDiff = -1, lastDiff = -1;
+	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		return;
+	if (m_pMergeResultView != nullptr)
+		m_pMergeResultView->HideCursor();
+	// Each diff is its own undo group (unlike OnMergeChooseSource,
+	// which groups its range); the learning store is saved once
+	// after the loop, so a multi-diff selection does not rewrite
+	// the store per diff.
+	const Merge20DiffConclusion conclusion = static_cast<Merge20DiffConclusion>(nConclusion);
+	bool bLearnRecorded = false;
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		if (Merge20SetDiffConclusion(nDiff, conclusion, false))
+			bLearnRecorded = true;
+	}
+	if (m_pMergeResultView != nullptr)
+		m_pMergeResultView->ShowCursor();
+	if (bLearnRecorded)
 	{
 		String errStr;
 		if (!Merge20LearnSaveStore(errStr))
 			ShowMessageBox(errStr, MB_OK | MB_ICONWARNING);
 		Merge20LearnRefreshAllOpenDocs();
+	}
+}
+
+void CMergeDoc::OnUpdateMerge20SetConclusion(CCmdUI* pCmdUI)
+{
+	int firstDiff = -1, lastDiff = -1;
+	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+	{
+		pCmdUI->Enable(FALSE);
+		pCmdUI->SetCheck(FALSE);
+		return;
+	}
+	pCmdUI->Enable(TRUE);
+	// A check mark only for a single targeted diff: it shows that
+	// diff's conclusion. A range shows no check mark.
+	if (firstDiff == lastDiff)
+	{
+		const int nConclusion = static_cast<int>(pCmdUI->m_nID) - ID_MERGE20_CONCLUSION_UNDECIDED;
+		pCmdUI->SetCheck(Merge20GetDiffConclusion(firstDiff) ==
+			static_cast<Merge20DiffConclusion>(nConclusion));
+	}
+	else
+	{
+		pCmdUI->SetCheck(FALSE);
 	}
 }
 
@@ -1473,9 +1671,15 @@ bool CMergeDoc::Merge20SplitDiff(int nDiff)
 		pSegment->state : ResultSegmentState::Unresolved;
 	const std::vector<int> parentSrcPanes = pSegment != nullptr ?
 		pSegment->srcPanes : std::vector<int>{};
+	// Merge20 (best-workflow B1): the parent conclusion is carried
+	// to every row, and the conclusions of later diffs shift with
+	// their indices.
+	const Merge20DiffConclusion parentConclusion = Merge20GetDiffConclusion(nDiff);
 	const DIFFRANGE parentRange = *pParent;
 	m_merge20SplitGroups.push_back(Merge20SplitGroupFromRange(parentRange,
 		static_cast<int>(rows.size())));
+	m_merge20DiffConclusions = ShiftMerge20Conclusions(m_merge20DiffConclusions,
+		nDiff, 1, static_cast<int>(rows.size()), parentConclusion);
 	m_diffList.EraseDiffs(nDiff, 1);
 	for (size_t i = 0; i < rows.size(); ++i)
 		m_diffList.InsertDiff(nDiff + static_cast<int>(i), rows[i]);
@@ -1536,7 +1740,13 @@ bool CMergeDoc::Merge20RegroupDiff(int nDiff)
 		pFirstSegment->state : ResultSegmentState::Unresolved;
 	const std::vector<int> firstSrcPanes = pFirstSegment != nullptr ?
 		pFirstSegment->srcPanes : std::vector<int>{};
+	// Merge20 (best-workflow B1): the first row's conclusion is
+	// carried to the regrouped diff, and the conclusions of later
+	// diffs shift back with their indices.
+	const Merge20DiffConclusion firstConclusion = Merge20GetDiffConclusion(nFirst);
 	m_merge20SplitGroups.erase(m_merge20SplitGroups.begin() + nGroup);
+	m_merge20DiffConclusions = ShiftMerge20Conclusions(m_merge20DiffConclusions,
+		nFirst, group.rows, 1, firstConclusion);
 	m_diffList.EraseDiffs(nFirst, group.rows);
 	m_diffList.InsertDiff(nFirst, Merge20SplitGroupToRange(group));
 	m_diffList.ConstructSignificantChain();
