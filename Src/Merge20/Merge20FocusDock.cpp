@@ -10,9 +10,14 @@
  * code in OnCreate, laid out in OnSize, texts set in
  * UpdateResources with string literals so the .po extraction finds
  * them). It owns no state: ShowDiff is driven by the document.
+ *
+ * U5 (UI redesign, design sections 2.1 and 4/U5) adds a 2px accent
+ * underline at the bottom of the header strip (OnPaint,
+ * Merge20Theme::GetAccentColor). The dock behaviour is unchanged.
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FocusDock.h"
+#include "Merge20/Merge20Theme.h"
 #include "Merge20/Merge20FocusResultView.h"
 #include "MergeEditSplitterView.h"
 #include "MergeEditView.h"
@@ -85,6 +90,9 @@ BEGIN_MESSAGE_MAP(CMerge20FocusDock, CWnd)
 	//{{AFX_MSG_MAP(CMerge20FocusDock)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
+	ON_WM_PAINT()
+	ON_WM_SYSCOLORCHANGE()
+	ON_WM_SETTINGCHANGE()
 	ON_CONTROL_RANGE(BN_CLICKED, IDC_MERGE20_FOCUS_INSERT_OLD, IDC_MERGE20_FOCUS_REGROUP, OnButtonClicked)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
@@ -257,6 +265,48 @@ void CMerge20FocusDock::OnSize(UINT nType, int cx, int cy)
 	LayoutViews(cx, cy);
 }
 
+/**
+ * @brief Paint the 2px accent underline at the bottom of the
+ * header strip (U5). The header is Merge20FocusHeaderHeight px
+ * tall; its last 2px are free (the info label and the buttons
+ * end at ButtonTop + ButtonHeight = 26). The rest of the dock
+ * background is the window class brush, as before; the views
+ * below paint themselves.
+ */
+void CMerge20FocusDock::OnPaint()
+{
+	CPaintDC dc(this);
+	CRect rect;
+	GetClientRect(&rect);
+	if (rect.IsRectEmpty())
+		return;
+	CRect rcLine(rect.left, Merge20FocusHeaderHeight - 2,
+		rect.right, Merge20FocusHeaderHeight);
+	if (rcLine.top >= rect.top && rcLine.bottom <= rect.bottom)
+		dc.FillSolidRect(&rcLine,
+			Merge20Theme::GetAccentColor(Merge20Theme::IsDarkMode()));
+}
+
+/**
+ * @brief Repaint the header underline after a system colour
+ * change (U5).
+ */
+void CMerge20FocusDock::OnSysColorChange()
+{
+	CWnd::OnSysColorChange();
+	Invalidate(FALSE);
+}
+
+/**
+ * @brief Same repaint as OnSysColorChange, for theme changes
+ * announced through WM_SETTINGCHANGE (U5).
+ */
+void CMerge20FocusDock::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
+{
+	CWnd::OnSettingChange(uFlags, lpszSection);
+	Invalidate(FALSE);
+}
+
 void CMerge20FocusDock::OnButtonClicked(UINT nID)
 {
 	const size_t idx = static_cast<size_t>(nID) - IDC_MERGE20_FOCUS_INSERT_OLD;
@@ -329,6 +379,8 @@ void CMerge20FocusDock::UpdateResources()
 	sText = _("Regroup");
 	m_btnRegroup.SetWindowText(sText.c_str());
 	UpdateHeader();
+	// U5: repaint the header accent underline.
+	Invalidate(FALSE);
 }
 
 void CMerge20FocusDock::LayoutHeader()

@@ -26,6 +26,10 @@
  * resize and ShowControlBar display switch (design section 3.5,
  * T-4-7): the dock lays its two panes out proportionally, so a
  * dragged bar height still works.
+ *
+ * U5 (UI redesign, design sections 2.1 and 4/U5) adds a 2px accent
+ * underline at the bottom of the header strip (OnPaint). The dock
+ * behaviour is unchanged.
  */
 #pragma once
 
@@ -83,6 +87,9 @@ public:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnButtonClicked(UINT nID);
+	afx_msg void OnPaint();
+	afx_msg void OnSysColorChange();
+	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

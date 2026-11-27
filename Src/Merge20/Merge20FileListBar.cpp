@@ -26,10 +26,20 @@
  * follows file moves. Panel-initiated changes are also pushed to
  * the folder view (row repaint + status-bar count) through the
  * CDirDoc forwarders, closing the P2 known limitation.
+ *
+ * U5 (UI redesign, design sections 2.1 and 4/U5) adds the WizMerge
+ * accent: a 2px accent underline under the count, search and
+ * filter-tab rows (OnPaint, rows recorded by LayoutChildren; each
+ * child ends 2px above its row bottom so the line is never
+ * overpainted), and owner-drawn filter tabs (TCS_OWNERDRAWFIXED +
+ * DrawItem, HTML .pill.on: only the selected tab gets an accent
+ * border + opaque tinted fill). Columns, rows, buttons and their
+ * IDs are unchanged.
  */
 
 #include "StdAfx.h"
 #include "Merge20/Merge20FileListBar.h"
+#include "Merge20/Merge20Theme.h"
 #include "Merge20/Merge20BatchCheckDlg.h"
 #include "DiffContext.h"
 #include "DirDoc.h"
@@ -93,6 +103,10 @@ BEGIN_MESSAGE_MAP(CMerge20FileListBar, CSizingControlBarCF)
 	ON_WM_CREATE()
 	ON_WM_SIZE()
 	ON_WM_WINDOWPOSCHANGED()
+	ON_WM_DRAWITEM()
+	ON_WM_PAINT()
+	ON_WM_SYSCOLORCHANGE()
+	ON_WM_SETTINGCHANGE()
 	ON_EN_CHANGE(IDC_MERGE20_FILELIST_SEARCH, OnSearchChanged)
 	ON_NOTIFY(TCN_SELCHANGE, IDC_MERGE20_FILELIST_FILTER_TABS, OnFilterTabChanged)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_BATCH, OnMerge20BatchCheck)
@@ -165,8 +179,9 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_wndSearch.SetFont(pFont);
 	// Filter tabs (P2, P-R10): "all" plus the seven action
 	// categories. Single-line tabs show scroll arrows when they
-	// do not fit, so all eight tabs stay reachable.
-	if (!m_wndFilterTabs.Create(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+	// do not fit, so all eight tabs stay reachable. U5: owner-drawn
+	// (TCS_OWNERDRAWFIXED + DrawFilterTab, HTML .pill.on).
+	if (!m_wndFilterTabs.Create(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_OWNERDRAWFIXED,
 		rc, this, IDC_MERGE20_FILELIST_FILTER_TABS))
 	{
 		TRACE0("Failed to create Merge20FileListBar filter tabs\n");
@@ -302,6 +317,142 @@ void CMerge20FileListBar::OnWindowPosChanged(WINDOWPOS* lpwndpos)
 		if ((lpwndpos->flags & SWP_HIDEWINDOW) != 0)
 			::PostMessage(m_hwndFrame, MSG_STORE_PANESIZES, 0, 0);
 	}
+}
+
+/**
+ * @brief Paint the bar background and the U5 accent underlines.
+ * The base OnPaint paints nothing (see sizecbar.cpp), and the
+ * background comes from the class brush (COLOR_BTNFACE); this
+ * repaints it explicitly so the underline strips stay clean,
+ * then draws a 2px accent line at the bottom of the count,
+ * search and filter-tab rows recorded by LayoutChildren. Each
+ * child ends 2px above its row bottom, so the line is never
+ * overpainted by a child.
+ */
+void CMerge20FileListBar::OnPaint()
+{
+	CPaintDC dc(this);
+	CRect rect;
+	GetClientRect(&rect);
+	if (rect.IsRectEmpty())
+		return;
+	dc.FillSolidRect(&rect, ::GetSysColor(COLOR_BTNFACE));
+	const COLORREF crAccent = Merge20Theme::GetAccentColor(Merge20Theme::IsDarkMode());
+	const CRect* pRows[] = { &m_rcSearchRow, &m_rcTabsRow, &m_rcCountRow };
+	for (size_t i = 0; i < std::size(pRows); ++i)
+	{
+		if (pRows[i]->IsRectEmpty())
+			continue;
+		CRect rcLine = *pRows[i];
+		rcLine.top = rcLine.bottom - 2;
+		if (rcLine.top >= rect.top && rcLine.bottom <= rect.bottom)
+			dc.FillSolidRect(&rcLine, crAccent);
+	}
+}
+
+/**
+ * @brief Route owner-draw requests to DrawFilterTab (U5).
+ * Only the filter tabs are owner-drawn (TCS_OWNERDRAWFIXED).
+ */
+void CMerge20FileListBar::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+	if (nIDCtl == IDC_MERGE20_FILELIST_FILTER_TABS && lpDrawItemStruct != nullptr &&
+		lpDrawItemStruct->CtlType == ODT_TAB)
+		DrawFilterTab(lpDrawItemStruct);
+	else
+		CSizingControlBarCF::OnDrawItem(nIDCtl, lpDrawItemStruct);
+}
+
+/**
+ * @brief Owner-draw one filter tab (U5, HTML .pill.on).
+ *
+ * The selected tab gets an accent border + opaque tinted fill
+ * (light #DBEAFE, dark #1E3A5F) with theme text; unselected tabs
+ * get a muted outline and muted text on the bar background (the
+ * "semi-transparent" look). The whole item rect is painted
+ * first: the rounded pill leaves the corners unpainted, and a
+ * tab repaints alone when selected, so the corners must carry
+ * the bar background colour. The text comes from the tab item
+ * itself (see SetupFilterTabs), so no new strings are needed.
+ */
+void CMerge20FileListBar::DrawFilterTab(LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+	if (lpDrawItemStruct == nullptr)
+		return;
+	CDC* pDC = CDC::FromHandle(lpDrawItemStruct->hDC);
+	if (pDC == nullptr)
+		return;
+	const CRect rcItem(lpDrawItemStruct->rcItem);
+	if (rcItem.IsRectEmpty() || lpDrawItemStruct->itemID < 0)
+		return;
+	const bool bDark = Merge20Theme::IsDarkMode();
+	const bool bSelected = (lpDrawItemStruct->itemState & ODS_SELECTED) != 0;
+	const bool bFocused = (lpDrawItemStruct->itemState & ODS_FOCUS) != 0;
+
+	TCHAR szText[256] = { 0 };
+	TCITEM item = { 0 };
+	item.mask = TCIF_TEXT;
+	item.pszText = szText;
+	item.cchTextMax = 256;
+	m_wndFilterTabs.GetItem(static_cast<int>(lpDrawItemStruct->itemID), &item);
+
+	const COLORREF crBarBg = ::GetSysColor(COLOR_BTNFACE);
+	const COLORREF crAccent = Merge20Theme::GetAccentColor(bDark);
+	const COLORREF crText = bDark ? RGB(241, 245, 249) : RGB(15, 23, 42);
+	const COLORREF crMuted = bDark ? RGB(148, 163, 184) : RGB(100, 116, 139);
+	COLORREF crFill = crBarBg;
+	COLORREF crLine = crMuted;
+	COLORREF crTabText = crMuted;
+	if (bSelected)
+	{
+		// Opaque tinted fill (light #DBEAFE, dark #1E3A5F) +
+		// accent border + theme text.
+		crFill = bDark ? RGB(30, 58, 95) : RGB(219, 234, 254);
+		crLine = crAccent;
+		crTabText = crText;
+	}
+	pDC->FillSolidRect(&rcItem, crBarBg);
+	CRect rcDraw = rcItem;
+	rcDraw.DeflateRect(1, 1);
+	Merge20Theme::DrawRoundedRect(pDC, rcDraw, 5, crFill, crLine);
+
+	CFont* pFont = m_wndFilterTabs.GetFont();
+	if (pFont == nullptr)
+		pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
+	CFont* pOldFont = pDC->SelectObject(pFont);
+	pDC->SetBkMode(TRANSPARENT);
+	pDC->SetTextColor(crTabText);
+	CRect rcText = rcDraw;
+	pDC->DrawText(CString(szText), &rcText,
+		DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+	if (bFocused)
+	{
+		CRect rcFocus = rcDraw;
+		rcFocus.DeflateRect(2, 2);
+		pDC->DrawFocusRect(&rcFocus);
+	}
+	pDC->SelectObject(pOldFont);
+}
+
+/**
+ * @brief Repaint the bar, the underlines and the tabs after a
+ * system colour change (U5). The base handler updates the
+ * class background brush.
+ */
+void CMerge20FileListBar::OnSysColorChange()
+{
+	CSizingControlBarCF::OnSysColorChange();
+	RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+}
+
+/**
+ * @brief Same repaint as OnSysColorChange, for theme changes
+ * announced through WM_SETTINGCHANGE (U5).
+ */
+void CMerge20FileListBar::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
+{
+	CSizingControlBarCF::OnSettingChange(uFlags, lpszSection);
+	RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 /**
@@ -460,6 +611,12 @@ void CMerge20FileListBar::LayoutChildren()
 	const bool bHasDoc = m_pDirDoc != nullptr;
 	const bool bShowTopRows = bHasDoc && !m_bSlim;
 	int y = rcClient.top;
+	// U5: the accent underlines are drawn by OnPaint at the bottom
+	// 2px of these rows; cleared here and set where each row is
+	// laid out below.
+	m_rcSearchRow.SetRectEmpty();
+	m_rcTabsRow.SetRectEmpty();
+	m_rcCountRow.SetRectEmpty();
 	if (m_stSearchLabel.GetSafeHwnd() != nullptr)
 		m_stSearchLabel.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
 	if (m_wndSearch.GetSafeHwnd() != nullptr)
@@ -468,7 +625,10 @@ void CMerge20FileListBar::LayoutChildren()
 	{
 		CRect rcLabel = rcClient;
 		rcLabel.top = y;
-		rcLabel.bottom = y + Merge20FileListSearchHeight;
+		// U5: the label ends 2px above the row bottom, leaving
+		// the accent underline strip free (same for the tabs and
+		// count rows below).
+		rcLabel.bottom = y + Merge20FileListSearchHeight - 2;
 		rcLabel.right = rcLabel.left + Merge20FileListSearchLabelWidth;
 		m_stSearchLabel.MoveWindow(&rcLabel);
 		CRect rcSearch = rcClient;
@@ -476,6 +636,7 @@ void CMerge20FileListBar::LayoutChildren()
 		rcSearch.bottom = y + Merge20FileListSearchHeight - 3;
 		rcSearch.left += Merge20FileListSearchLabelWidth + Merge20FileListButtonGap;
 		m_wndSearch.MoveWindow(&rcSearch);
+		m_rcSearchRow.SetRect(rcClient.left, y, rcClient.right, y + Merge20FileListSearchHeight);
 		y += Merge20FileListSearchHeight;
 	}
 	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
@@ -484,8 +645,9 @@ void CMerge20FileListBar::LayoutChildren()
 	{
 		CRect rcTabs = rcClient;
 		rcTabs.top = y;
-		rcTabs.bottom = y + Merge20FileListTabsHeight;
+		rcTabs.bottom = y + Merge20FileListTabsHeight - 2; // U5: underline strip
 		m_wndFilterTabs.MoveWindow(&rcTabs);
+		m_rcTabsRow.SetRect(rcClient.left, y, rcClient.right, y + Merge20FileListTabsHeight);
 		y += Merge20FileListTabsHeight;
 	}
 	if (m_btnBatch.GetSafeHwnd() != nullptr)
@@ -557,9 +719,11 @@ void CMerge20FileListBar::LayoutChildren()
 	{
 		CRect rcCount = rcClient;
 		rcCount.top = y;
-		rcCount.bottom = y + Merge20FileListCountHeight;
+		rcCount.bottom = y + Merge20FileListCountHeight - 2; // U5: underline strip
 		m_stCount.MoveWindow(&rcCount);
 	}
+	if (bHasDoc)
+		m_rcCountRow.SetRect(rcClient.left, y, rcClient.right, y + Merge20FileListCountHeight);
 	y += Merge20FileListCountHeight;
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
@@ -635,6 +799,10 @@ void CMerge20FileListBar::UpdateResources()
 		if (m_pDirDoc != nullptr && m_stCount.GetSafeHwnd() != nullptr)
 			m_stCount.SetWindowText(m_wndList.GetCountText().c_str());
 	}
+	// U5: repaint the accent underlines and the owner-drawn tabs.
+	Invalidate(FALSE);
+	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
+		m_wndFilterTabs.Invalidate(FALSE);
 }
 
 /**

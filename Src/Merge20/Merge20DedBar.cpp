@@ -14,10 +14,22 @@
  * refreshes the button states through the setters. Toggle buttons are
  * BS_PUSHLIKE checkboxes whose check is set by the frame (not
  * auto-toggled), so the shown state is always the frame's state.
+ *
+ * U5 (UI redesign, design sections 2.1 and 4/U5) owner-draws the
+ * buttons (BS_OWNERDRAW + DrawItem) and the bar background
+ * (Merge20Theme::DrawBrandBar: HTML .ded-bar gradient + 2px accent
+ * underline). The five review buttons are coloured pills (HTML
+ * .ded-rev colours: checked = filled + white text, unchecked =
+ * outline + state-coloured text); the exit button is an accent
+ * fill; checked toggles (pin / unreviewed-only / sniper /
+ * diffs-only) are accent fills. Button order, fixed widths,
+ * height 32px, command forwarding and toggle behaviour are
+ * unchanged (D2).
  */
 
 #include "StdAfx.h"
 #include "Merge20/Merge20DedBar.h"
+#include "Merge20/Merge20Theme.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -98,6 +110,58 @@ namespace
 		ID_MERGE20_DED_SNIPER,
 		ID_MERGE20_DED_ZOOM_RESET,
 	};
+
+	/** @brief Text colour on the bar (U5, slate palette of design
+	 * section 2.1, same as the brand bar): light slate-900, dark
+	 * slate-100. */
+	constexpr COLORREF Merge20DedBarTextLight = RGB(15, 23, 42);
+	constexpr COLORREF Merge20DedBarTextDark = RGB(241, 245, 249);
+	/** @brief Muted text / flat-button outline (U5): light
+	 * slate-400, dark slate-500. */
+	constexpr COLORREF Merge20DedBarMutedLight = RGB(148, 163, 184);
+	constexpr COLORREF Merge20DedBarMutedDark = RGB(100, 116, 139);
+	/** @brief Dark text on a light accent fill (U5): the exit
+	 * button and checked toggles use the dark accent #38BDF8 in
+	 * dark mode, on which white text would be unreadable. */
+	constexpr COLORREF Merge20DedBarDarkOnAccent = RGB(9, 13, 22);
+
+	/** @brief Blend crFrom towards crTo by nPercentTo (0-100). */
+	COLORREF Merge20DedBarBlend(COLORREF crFrom, COLORREF crTo, int nPercentTo)
+	{
+		return RGB(
+			GetRValue(crFrom) + (GetRValue(crTo) - GetRValue(crFrom)) * nPercentTo / 100,
+			GetGValue(crFrom) + (GetGValue(crTo) - GetGValue(crFrom)) * nPercentTo / 100,
+			GetBValue(crFrom) + (GetBValue(crTo) - GetBValue(crFrom)) * nPercentTo / 100);
+	}
+
+	/** @brief Lighten a colour towards white (U5): unselected
+	 * review pills in dark mode use the lightened state colour
+	 * for outline and text, because the raw dark TODO grey
+	 * (#475569) is unreadable on the dark gradient. */
+	COLORREF Merge20DedBarLighten(COLORREF cr, int nPercent)
+	{
+		return Merge20DedBarBlend(cr, RGB(255, 255, 255), nPercent);
+	}
+
+	/**
+	 * @brief Bar background colour at one x position (U5).
+	 * The bar background is a horizontal gradient
+	 * (Merge20Theme::DrawBrandBar), so an unselected flat button
+	 * fills with the gradient colour at its own centre and blends
+	 * into the bar instead of showing a solid patch.
+	 */
+	COLORREF Merge20DedBarBackgroundAt(int x, int nWidth, bool bDark)
+	{
+		if (nWidth <= 1)
+			return Merge20Theme::GetBrandBarStartColor(bDark);
+		if (x < 0)
+			x = 0;
+		if (x > nWidth)
+			x = nWidth;
+		return Merge20DedBarBlend(
+			Merge20Theme::GetBrandBarStartColor(bDark),
+			Merge20Theme::GetBrandBarEndColor(bDark), x * 100 / nWidth);
+	}
 } // namespace
 
 //////////////////////////////////////////////////////////////////////
@@ -123,6 +187,11 @@ BEGIN_MESSAGE_MAP(CMerge20DedBar, CSizingControlBarCF)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_WINDOWPOSCHANGED()
 	ON_WM_SIZE()
+	ON_WM_DRAWITEM()
+	ON_WM_PAINT()
+	ON_WM_CTLCOLOR()
+	ON_WM_SYSCOLORCHANGE()
+	ON_WM_SETTINGCHANGE()
 	ON_CONTROL_RANGE(BN_CLICKED, IDC_MERGE20_DED_EXIT, IDC_MERGE20_DED_ZOOM, OnButtonClicked)
 	// Merge20 (Phase 4 D9): the diffs-only button (IDC 1805) is outside
 	// the contiguous 1745-1756 range above, so it gets its own range.
@@ -170,8 +239,15 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_szMinHorz = CSize(33, Merge20DedBarHeight);
 
 	CFont* pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
-	const DWORD dwPushStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON;
-	const DWORD dwToggleStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHLIKE | BS_CHECKBOX;
+	// U5: all buttons are owner-drawn (BS_OWNERDRAW + DrawItem).
+	// The check state is still held by the button itself
+	// (SetCheck/GetCheck, ODS_CHECKED in DrawItem), so the frame
+	// setters work unchanged; only the painting is custom. Push
+	// vs toggle is a drawing decision now (indexes 2-10 are the
+	// toggles: five review states, pin, unreviewed-only, sniper,
+	// diffs-only; Prev/Next, the zoom display and exit are plain
+	// push buttons).
+	const DWORD dwButtonStyle = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_OWNERDRAW;
 	CRect rc(0, 0, 0, 0);
 	// Merge20 (Phase 4 D3): the file-info label (current file name +
 	// (n/m) position), first in the bar. A label, not a button: it
@@ -193,11 +269,7 @@ int CMerge20DedBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	};
 	for (size_t i = 0; i < std::size(pButtons); ++i)
 	{
-		// Toggle buttons are the five review states, pin, unreviewed-only,
-		// sniper and diffs-only (indexes 2-10); Prev/Next, the zoom display
-		// and exit (indexes 0, 1, 11, 12) are plain push buttons.
-		const DWORD dwStyle = (i >= 2 && i <= 10) ? dwToggleStyle : dwPushStyle;
-		if (!pButtons[i]->Create(_T(""), dwStyle, rc, this, Merge20DedBarControlIDs[i]))
+		if (!pButtons[i]->Create(_T(""), dwButtonStyle, rc, this, Merge20DedBarControlIDs[i]))
 		{
 			TRACE0("Failed to create Merge20DedBar button\n");
 			return -1;
@@ -290,6 +362,201 @@ void CMerge20DedBar::OnSize(UINT nType, int cx, int cy)
 {
 	CSizingControlBarCF::OnSize(nType, cx, cy);
 	LayoutButtons();
+}
+
+/**
+ * @brief Paint the bar background (U5): the HTML .ded-bar
+ * gradient with a 2px accent underline (Merge20Theme::
+ * DrawBrandBar). The base OnPaint paints nothing (see
+ * sizecbar.cpp: CSizingControlBar::OnPaint is an empty CPaintDC),
+ * so this replaces nothing; the buttons paint themselves through
+ * DrawItem.
+ */
+void CMerge20DedBar::OnPaint()
+{
+	CPaintDC dc(this);
+	CRect rect;
+	GetClientRect(&rect);
+	if (rect.IsRectEmpty())
+		return;
+	Merge20Theme::DrawBrandBar(&dc, rect, Merge20Theme::IsDarkMode());
+}
+
+/**
+ * @brief Route owner-draw requests to DrawDedButton (U5).
+ * Only the buttons are owner-drawn; the file-info label is a
+ * static control and never sends WM_DRAWITEM.
+ */
+void CMerge20DedBar::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+	if (lpDrawItemStruct != nullptr && lpDrawItemStruct->CtlType == ODT_BUTTON)
+		DrawDedButton(lpDrawItemStruct);
+	else
+		CSizingControlBarCF::OnDrawItem(nIDCtl, lpDrawItemStruct);
+}
+
+/**
+ * @brief Owner-draw one bar button (U5).
+ *
+ * Roles (by control ID): the five review buttons are coloured
+ * pills in the HTML .ded-rev colours (checked = filled with the
+ * state colour + white text, unchecked = state-coloured outline
+ * and text on the bar gradient); the exit button is an accent
+ * fill; the four toggles (pin / unreviewed-only / sniper /
+ * diffs-only) are an accent fill while checked and flat while
+ * unchecked; Prev/Next and the zoom display are flat. A disabled
+ * button is muted grey. The pressed look is a slightly darkened
+ * fill, the focused look a focus rect. Text comes from the
+ * button's own window text (set by UpdateResources), so no new
+ * strings are needed.
+ */
+void CMerge20DedBar::DrawDedButton(LPDRAWITEMSTRUCT lpDrawItemStruct)
+{
+	if (lpDrawItemStruct == nullptr)
+		return;
+	CDC* pDC = CDC::FromHandle(lpDrawItemStruct->hDC);
+	if (pDC == nullptr)
+		return;
+	const CRect rcItem(lpDrawItemStruct->rcItem);
+	if (rcItem.IsRectEmpty())
+		return;
+	const UINT nID = lpDrawItemStruct->CtlID;
+	const bool bDark = Merge20Theme::IsDarkMode();
+	const bool bChecked = (lpDrawItemStruct->itemState & ODS_CHECKED) != 0;
+	const bool bPressed = (lpDrawItemStruct->itemState & ODS_SELECTED) != 0;
+	const bool bDisabled = (lpDrawItemStruct->itemState & ODS_DISABLED) != 0;
+	const bool bFocused = (lpDrawItemStruct->itemState & ODS_FOCUS) != 0;
+
+	// Role by control ID (resource.h: review 1748-1752 in
+	// ReviewState order, exit 1745, toggles 1753-1755 + 1805).
+	int nReview = -1;
+	if (nID >= IDC_MERGE20_DED_REVIEW_TODO && nID <= IDC_MERGE20_DED_REVIEW_KEEP)
+		nReview = static_cast<int>(nID) - IDC_MERGE20_DED_REVIEW_TODO;
+	const bool bExit = (nID == IDC_MERGE20_DED_EXIT);
+	const bool bToggle = (nID == IDC_MERGE20_DED_PIN ||
+		nID == IDC_MERGE20_DED_TODO_ONLY ||
+		nID == IDC_MERGE20_DED_SNIPER ||
+		nID == IDC_MERGE20_DED_DIFFS_ONLY);
+
+	CRect rcBar;
+	GetClientRect(&rcBar);
+	const COLORREF crBg = Merge20DedBarBackgroundAt(
+		rcItem.CenterPoint().x, rcBar.Width(), bDark);
+	const COLORREF crText = bDark ? Merge20DedBarTextDark : Merge20DedBarTextLight;
+	const COLORREF crMuted = bDark ? Merge20DedBarMutedDark : Merge20DedBarMutedLight;
+	COLORREF crFill = crBg;
+	COLORREF crLine = crMuted;
+	COLORREF crBtnText = crText;
+	if (bDisabled)
+	{
+		crBtnText = crMuted;
+		crLine = crMuted;
+	}
+	else if (nReview >= 0)
+	{
+		const COLORREF crState = Merge20Theme::GetReviewStateColor(
+			static_cast<ReviewState>(nReview), bDark);
+		if (bChecked)
+		{
+			// Selected pill: filled with the state colour, white
+			// text (white on every state colour meets the 3:1
+			// large-text contrast; see design section 2.1).
+			crFill = crState;
+			crLine = crState;
+			crBtnText = RGB(255, 255, 255);
+		}
+		else
+		{
+			// Unselected pill: outline + state-coloured text.
+			// In dark mode the state colour is lightened so the
+			// dark TODO grey stays readable on the gradient.
+			crLine = bDark ? Merge20DedBarLighten(crState, 45) : crState;
+			crBtnText = crLine;
+		}
+	}
+	else if (bExit || (bToggle && bChecked))
+	{
+		// Accent fill: the exit button, and a toggle while on.
+		// Dark mode uses the light cyan accent, so the text is
+		// dark there; light mode uses white text on the blue.
+		crFill = Merge20Theme::GetAccentColor(bDark);
+		crLine = crFill;
+		crBtnText = bDark ? Merge20DedBarDarkOnAccent : RGB(255, 255, 255);
+	}
+	if (bPressed && !bDisabled)
+		crFill = Merge20DedBarBlend(crFill, RGB(0, 0, 0), 12);
+
+	// Paint the whole item rect first (U5): the rounded pill
+	// leaves the corners unpainted, and the button repaints alone
+	// when its check changes, so the corners must carry the bar
+	// gradient colour or the previous button would show through.
+	pDC->FillSolidRect(&rcItem, crBg);
+	CRect rcDraw = rcItem;
+	rcDraw.DeflateRect(1, 1);
+	Merge20Theme::DrawRoundedRect(pDC, rcDraw, 6, crFill, crLine);
+
+	CString sText;
+	if (CWnd* pButton = CWnd::FromHandle(lpDrawItemStruct->hwndItem))
+		pButton->GetWindowText(sText);
+	CFont* pFont = nullptr;
+	if (CWnd* pButton = CWnd::FromHandle(lpDrawItemStruct->hwndItem))
+		pFont = pButton->GetFont();
+	if (pFont == nullptr)
+		pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
+	CFont* pOldFont = pDC->SelectObject(pFont);
+	pDC->SetBkMode(TRANSPARENT);
+	pDC->SetTextColor(crBtnText);
+	CRect rcText = rcDraw;
+	if (bPressed)
+		rcText.OffsetRect(1, 1);
+	pDC->DrawText(sText, &rcText,
+		DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+	if (bFocused)
+	{
+		CRect rcFocus = rcDraw;
+		rcFocus.DeflateRect(2, 2);
+		pDC->DrawFocusRect(&rcFocus);
+	}
+	pDC->SelectObject(pOldFont);
+}
+
+/**
+ * @brief Let the file-info label show the bar gradient (U5):
+ * transparent background + theme text colour. Other controls
+ * keep the default handling.
+ */
+HBRUSH CMerge20DedBar::OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor)
+{
+	if (nCtlColor == CTLCOLOR_STATIC && pWnd == &m_stFileInfo)
+	{
+		pDC->SetBkMode(TRANSPARENT);
+		pDC->SetTextColor(Merge20Theme::IsDarkMode() ?
+			Merge20DedBarTextDark : Merge20DedBarTextLight);
+		return static_cast<HBRUSH>(::GetStockObject(HOLLOW_BRUSH));
+	}
+	return CSizingControlBarCF::OnCtlColor(pDC, pWnd, nCtlColor);
+}
+
+/**
+ * @brief Repaint the bar and its buttons after a system colour
+ * change (U5): the gradient, the pill colours and the text
+ * colours all depend on the theme. The base handler updates
+ * the class background brush.
+ */
+void CMerge20DedBar::OnSysColorChange()
+{
+	CSizingControlBarCF::OnSysColorChange();
+	RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
+}
+
+/**
+ * @brief Same repaint as OnSysColorChange, for theme changes
+ * announced through WM_SETTINGCHANGE (U5).
+ */
+void CMerge20DedBar::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
+{
+	CSizingControlBarCF::OnSettingChange(uFlags, lpszSection);
+	RedrawWindow(nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
 /**
@@ -396,6 +663,9 @@ void CMerge20DedBar::UpdateResources()
 	sText = _("Back to Normal Mode");
 	m_btnExit.SetWindowText(sText.c_str());
 	SetZoomText(m_nZoom);
+	// U5: the new texts need owner-drawn repaints, and the bar
+	// background follows the theme.
+	Invalidate(FALSE);
 }
 
 void CMerge20DedBar::SetReviewState(ReviewState state)
@@ -477,4 +747,8 @@ void CMerge20DedBar::SetFileInfo(const String& sText)
 		return;
 	m_sFileInfo = sText;
 	m_stFileInfo.SetWindowText(sText.c_str());
+	// U5: the label is transparent over the bar gradient (see
+	// OnCtlColor), so the bar itself must repaint behind it or
+	// the previous text would show through.
+	Invalidate(FALSE);
 }
