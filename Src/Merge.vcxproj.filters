@@ -777,6 +777,9 @@
     <ClCompile Include="Merge20\Merge20Impact.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20ImpactView.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20CloseWarnDlg.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -805,6 +808,9 @@
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20ImpactSearch.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20ImpactList.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20BulkClassifyDlg.cpp">
@@ -1793,7 +1799,13 @@
     <ClInclude Include="Merge20\Merge20Impact.h">
       <Filter>Merge20</Filter>
     </ClInclude>
+    <ClInclude Include="Merge20\Merge20ImpactList.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
     <ClInclude Include="Merge20\Merge20ImpactSearch.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20ImpactView.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20CloseWarnDlg.h">
