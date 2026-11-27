@@ -808,7 +808,7 @@ void CMerge20FormCanvas::DrawSpotlight(CDC& dc)
 		const double newCx = (pNewShape->x + pNewShape->x2) / 2.0;
 		const double newCy = (pNewShape->y + pNewShape->y2) / 2.0;
 		const Merge20FormSpotlightArrowHead head =
-			Merge20FormSpotlightArrowHead(oldCx, oldCy, newCx, newCy);
+			Merge20FormSpotlightMakeArrowHead(oldCx, oldCy, newCx, newCy);
 		const CPoint ptFrom = XmlToScreen(oldCx, oldCy);
 		const CPoint ptTip = XmlToScreen(head.tipX, head.tipY);
 		const CPoint ptBase1 = XmlToScreen(head.base1X, head.base1Y);
