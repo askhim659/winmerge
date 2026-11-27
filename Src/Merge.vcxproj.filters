@@ -690,6 +690,12 @@
     <ClCompile Include="Merge20\Merge20FormCanvas.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20FormSpotlight.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FormSpotPreview.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20Split.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1638,6 +1644,12 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FormCanvas.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20FormSpotlight.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20FormSpotPreview.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Split.h">

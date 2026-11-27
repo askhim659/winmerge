@@ -14,7 +14,11 @@
  * It owns the zoom (100% / 25% / fit / slider 10-200%), the
  * scrollbars, the drag scroll (a drag over 4 px scrolls, a
  * plain click selects a shape) and the shape selection the F4
- * spotlight builds on.
+ * spotlight builds on. F4 adds the spotlight itself: focusing
+ * a diff record dims the surroundings, re-draws the old (red
+ * dashed) and new (green) shapes of the focused element with
+ * a move arrow and a callout box, and scrolls the shape into
+ * the centre of the viewport (design sections 2.7 and 10 F4).
  *
  * The geometry that needs no window (zoom scale, XML <-> screen
  * transform, hit test, truncation, pt -> px) lives in the pure
@@ -27,6 +31,7 @@
 
 #include <string>
 #include "Merge20/Merge20FormCanvasGeom.h"
+#include "Merge20/Merge20FormSpotlight.h"
 #include "Merge20/Merge20FormXml.h"
 
 /**
@@ -71,6 +76,33 @@ public:
 	const std::wstring& GetSelectedShapeKey() const { return m_selectedShapeKey; }
 	/** @brief Select a shape by key (F4 spotlight drives this). */
 	void SetSelectedShapeKey(const std::wstring& key);
+	/**
+	 * @brief Focus a diff record for the spotlight (F4): the
+	 * canvas dims the surroundings and emphasises the old/new
+	 * shapes of the record's element. The record is borrowed
+	 * from the document's result; nullptr clears the spotlight.
+	 * The record must belong to the current result (SetResult
+	 * clears the spotlight).
+	 */
+	void SetSpotlight(const Merge20FormDiffRecord* pRecord);
+	/** @brief Clear the spotlight (back to the whole view). */
+	void ClearSpotlight();
+	/** @brief True when a record is focused for the spotlight. */
+	bool HasSpotlight() const { return m_pSpotlightRecord != nullptr; }
+	/** @brief Key of the spotlighted shape, empty when none. */
+	const std::wstring& GetSpotlightShapeKey() const { return m_spotlightShapeKey; }
+	/**
+	 * @brief Scroll so the shape's centre is in the centre of
+	 * the viewport (HTML `scrollToShapeKey`). Does nothing when
+	 * the key has no shape in the current result.
+	 */
+	void ScrollToShapeKey(const std::wstring& key);
+	/**
+	 * @brief Scroll to the changed area (HTML
+	 * `scrollToChangedArea`): the spotlighted shape when there
+	 * is one, otherwise the first changed shape.
+	 */
+	void ScrollToChangedArea();
 	/** @brief True when any drawn text uses the fallback font (the note is shown). */
 	bool IsFontApproximate() const { return m_bFontApproximate; }
 
@@ -99,6 +131,12 @@ private:
 	/** @brief Create the font for one shape (shape fontName when installed, else default). */
 	bool CreateShapeFont(CDC& dc, const Merge20FormShape& shape, CFont& font, int pixelHeight);
 	void DrawSelectedOutline(CDC& dc);
+	/** @brief Spotlight pass (F4): dim veil, white window, re-drawn old/new shapes, move arrow, callout. */
+	void DrawSpotlight(CDC& dc);
+	/** @brief One focused shape in spotlight style (old = red dashed, new = green) with ruler guides and a badge. `badgeBelow` puts the new badge under the shape (HTML: when the old and new badges would overlap). */
+	void DrawSpotlightShape(CDC& dc, const Merge20FormShape& shape, bool isOld, bool badgeBelow);
+	/** @brief Callout box with the focused element's changes (F4). `rcWindow` is the spotlight window in screen pixels. */
+	void DrawSpotlightCallout(CDC& dc, const CRect& rcWindow);
 	/** @brief True when `key` is one of the result's changed shape keys. */
 	bool IsChangedKey(const std::wstring& key) const;
 
@@ -109,6 +147,8 @@ private:
 	int m_scrollX = 0; /**< Horizontal scroll offset (screen pixels). */
 	int m_scrollY = 0; /**< Vertical scroll offset (screen pixels). */
 	std::wstring m_selectedShapeKey; /**< Key of the clicked shape. */
+	const Merge20FormDiffRecord* m_pSpotlightRecord = nullptr; /**< Borrowed focused record (F4 spotlight). */
+	std::wstring m_spotlightShapeKey; /**< Key of the spotlighted shape (the record's element). */
 	bool m_bFontApproximate = false; /**< True when a drawn text used the fallback font. */
 	bool m_bDragging = false; /**< True between button down and up. */
 	bool m_bMoved = false; /**< True when the drag passed the 4 px threshold. */

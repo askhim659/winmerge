@@ -6235,3 +6235,133 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - B14（高リスク確認）は着手済み（ブランチ `merge20/wf-b14`）。完了報告待ち。
 - F4 マージ後に F5（構造化差分テーブル＋影響分析）を着手する（F3→F4→F5→F6→F7 の順序どおり）。
 - ID 割り当て状況（2026-11-27 09:45 JST 時点。B3 の完了報告で確定）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・使用中。コマンド ID は F4 では未使用）、B2 が 1882–1885、B4 が 1886、B3 が 1887–1889。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 が `ID_MERGE20_RISK_ORDER` 38982 を使用。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38983、`_APS_NEXT_CONTROL_VALUE` 1890（B3 マージ後の確定値。§64 の「1897」は B3 の実使用が 1887–1889 だったため訂正する）。
+## §66 最高峰ワークフロー B14 — 高リスク判断の確認 — マージ・CI 検証済み（2026-11-27）
+
+### 66.0 §65 の訂正 2 件
+- B3 マージ CI（実行 45974145511）の成果物サイズ：§65 では「WinMerge-x64.zip 26,606,805 バイト相当」と書いたが、正しくは **WinMerge-x64.zip 26,607,146 バイト、WinMerge-x64-Setup-x64.exe 40,063,506 バイト**（expire 2027-02-25）である。26,606,805 バイトはブランチ CI（実行 45972056871）の方のサイズだった。
+- B3 のコントロール ID：§65 では「B3 が 1887–1889」と書いたが、実際の define は **1887–1888 のみ**（`IDC_MERGE20_FILELIST_RISK_TABS` 1887、`IDC_MERGE20_DED_RISK_ORDER` 1888）で、1889 は未使用だった。B3 のコミット `451353b8` のメッセージ「controls 1887-1889」は確保範囲の記述で、実使用は 1887–1888 である。1889 は B14 が正しく取得した。
+
+### 66.1 内容（ギャップ分析書 §4.2 B14。柱 8「キーボード中心の速さと危険操作の慎重さ」の危険側）
+- リスク「高」の差分に対して、破壊的な方向の判断（旧採用で新側を捨てる／新採用で旧側を捨てる／不採用）をするときに確認ダイアログを挟む。
+- ダイアログ `Merge20HighRiskConfirmDlg`：件数行・明細行（読取専用マルチライン編集欄）・警告行・［実行する］／［キャンセル］。**［キャンセル］が既定ボタン**（Enter の誤押しでも判断が決まらない）。タイトル「【Wiz】高リスクの確認」。件数行「高リスクの差分：N 件」／「高リスクのファイル：<相対パス>」。明細行「差分 N：<S4 差分要約>」「学習候補：<方針>（<完全一致／特徴一致>・<n>件）」「次の状態：済」。警告行「キャンセルすると何も変わりません。」。
+- ダイアログの内容：リスク理由（S4 の要約文：欠落・変更・重要語・SQL 等＋影響関数。`Merge20ClassifyOneDiffSummary` を新設。B3 の差分リスク関数と範囲→行の構築を `BuildOneDiffRangeLines` として共有化）と、学習候補がある場合はその内容（L3 の候補文言）を併記する。
+- 確認は 1 回の判断につき 1 回だけ出す（同じ差分の連続操作では繰り返さない）。範囲操作は適用前に 1 つのダイアログにまとめ、キャンセル時は 1 件も変わらない。
+- 文言・操作感の原型：**S5 の件数確認ダイアログは未実装だった**（U-0-2 待ち、NOTES §51.3 残件）。調整役の指示の前提が誤っていた。B14 担当が正しく見抜き、同じ「件数＋対象＋キャンセルで無変更」の形を持つ **B9 の一覧ダイアログと B2 の終了時警告ダイアログ**を原型として統一した。
+- **Space 順送りの扱い（設計決定）：順送りを止めてその差分（ファイル）で確認を出す。スキップしない。** 対象は S2 Space の循環のうち高リスクファイルを「済」にする段（TODO→DONE。出力チェックも ON になる）のみで、他の段（DONE→HOLD 等）は無確認のまま。**スキップを選ばなかった理由**：高リスクファイルを無言で飛ばすと Space が「効かないキー」に見え、巡回フローからそのファイルが隠れてしまうため。止めて確認を出す方が、誤キーを防ぎつつ「ここに危険がある」ことを目に入らせる。キー 1〜5 はガードしない（'2' は DONE の明示選択で、次が何になるか分からないまま押す Space の循環とは誤キー性が違うため）。確認内容列のクリックによる循環も同様にガードしない（セルを狙った明示クリックのため）。この決定と理由は PR 説明文にも明記済み。
+- 確認ゲートの唯一の入口：`CMergeDoc::Merge20ConfirmHighRiskDiffs` を新設し、`OnMerge20SetConclusion`（範囲メニュー）と `OnMerge20LearnApply`（学習受け入れ）と D4 フォーカスドックの判定ボタンの 3 入口から呼ぶ。学習候補の受け入れでも、差分が高リスクなら確認が出る（候補があることを理由に確認を省かない。§3.1）。
+- Space が判断を決めるのはフォルダ一覧・パネルの確認内容循環のみで、ファイル比較エディタの Space は文字入力、スナイパーの Space はスクロールであることをコードで確認済み。
+- リソース割り当て：IDD_MERGE20_HIGHRISK_CONFIRM＝304、IDC_MERGE20_HIGHRISK_*＝1889–1892（1889 件数、1890 明細、1891 警告、1892 実行）。`_APS_NEXT_RESOURCE_VALUE` 305、`_APS_NEXT_CONTROL_VALUE` 1893。コマンド ID は不使用（B2 の警告と同じく判断操作から自動で呼ばれるため）。38980（F4 予約）・38981（B2 第2段階予約）は使っていない。`.po` 新規 9 件（msgid 2,246 → 2,255）。
+- B15（ショートカット一覧）について：B14 で新しいショートカットは追加していない（確認ダイアログは既存の判断操作から呼ばれるのみ）。アプリ内のショートカット一覧（B15）はまだ存在しないため（H-DOC のマニュアルのみ）、B15 の更新はない。
+
+### 66.2 変更一覧（ブランチ `merge20/wf-b14`、base master `26782ed3`→`ef524909`。19 コミット、19 ファイル）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20HighRiskConfirm.h` | `0aab80d2` | 純粋モジュール・ヘッダ |
+| 2 | `Src/Merge20/Merge20HighRiskConfirm.cpp` | `aafce4e7` | 純粋モジュール |
+| 3 | `Testing/GoogleTest/Merge20/Merge20HighRiskConfirm_test.cpp` | `c3624064` | 単体テスト 19 件 |
+| 4 | `Src/Merge20/Merge20HighRiskConfirmDlg.h` | `d3bf5c58` | ダイアログ・ヘッダ |
+| 5 | `Src/Merge20/Merge20HighRiskConfirmDlg.cpp` | `49a10bc5` | ダイアログ・実装（ファイル用ヘルパー `Merge20ConfirmHighRiskFileReview` を含む） |
+| 6 | `Src/resource.h` | `f489b5dc` | IDD 304、IDC 1889–1892 |
+| 7 | `Src/Merge.rc` | `0f2ecd89` | ダイアログテンプレート＋レイアウト／マージン登録 |
+| 8 | `Translations/WinMerge/Japanese.po` | `e976cb7b` | 新規 9 件 |
+| 9 | `Src/Merge.vcxproj` | `20a4e69b` | 登録 |
+| 10 | `Src/Merge.vcxproj.filters` | `068020be` | 登録 |
+| 11 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `a3d9ed1f` | 登録 |
+| 12 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `d1d54c15` | 登録 |
+| 13 | `Src/Merge20/Merge20ClassifyDoc.h` | `2a5a7715` | `Merge20ClassifyOneDiffSummary` の宣言 |
+| 14 | `Src/Merge20/Merge20ClassifyDoc.cpp` | `e7f120f1` | `Merge20ClassifyOneDiffSummary` の実装 |
+| 15 | `Src/MergeDoc.h` | `12c3f858` | 確認ゲートの宣言 |
+| 16 | `Src/MergeDocResultPane.cpp` | `2355b220` | `Merge20ConfirmHighRiskDiffs` の実装・配線 |
+| 17 | `Src/Merge20/Merge20FocusDock.cpp` | `0b6bc7db` | 判定ボタンに同じゲート |
+| 18 | `Src/DirView.cpp` | `b7d55290` | Space 循環ガード（フォルダ一覧） |
+| 19 | `Src/Merge20/Merge20FileListBar.cpp` | `9a273587` | Space 循環ガード（パネル。ブランチ head） |
+
+- 作業中に master が 1 コミット進んだが（`ef524909`、MERGE20_NOTES §65 のみ）、B14 の 19 ファイルと競合せず、PR の base は自動で現 master になった。
+- 純粋モジュール `Merge20HighRiskConfirm`：破壊的判定（旧採用／新採用／不採用のみ真）、確認要否（リスク高＋破壊的＋未決定）、範囲収集（確認要の差分を順に 1 回ずつ）、Space 循環の確認要否（高リスクかつ TODO→DONE のみ真）。単体テスト 19 件（破壊的判定 6 件、確認要否マトリクス、収集、Space 循環、受け入れシナリオ、学習候補が確認を抑制しないこと）。
+
+### 66.3 検証レポート（コーディネーター検証済み）
+- **PR #63**：open・mergeable=true・mergeable_state=clean、head `9a273587`、base master `ef524909`。19 コミット、変更ファイル 19 件（新規 5、変更 14。B14 の 19 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45977287468、completed／success。全文ログ（3,585,980 バイト、ジョブ `build` 140432091022、48,138 行）をコーディネーターが取得・確認（`~/workspace/.coord/b14/b14_final_log.txt`）。GoogleTest `[ PASSED ] 886 tests.`（867＋B14 の 19 件。B14 の 19 件すべて `[ OK ]`）、`[ FAILED ]` 0 件、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。警告は既存分のみ。B14 の新規ファイル由来の警告は 0 件（DirView.cpp の C4459 2 件は既存の他ハンドラのもので、今回触った箇所ではない）。`.po` 番兵も通過。
+- **成果物（実行 45977287468）**：`WinMerge-x64.zip` 26,616,134 バイト（ID 15187933029）、`WinMerge-x64-Setup-x64.exe` 40,067,824 バイト（ID 15188735062）。いずれも未失効（expire 2027-02-25）。
+- **マージ**：マージコミット `5700cb16`。マージコミット CI：実行 45978891064、completed／success（head_sha=5700cb16 と一致）。全文ログ（3,587,335 バイト、ジョブ `build` 140437466629、48,159 行）をコーディネーターが取得・確認（`~/workspace/.coord/b14_merge_final_log.txt`）。GoogleTest `[ PASSED ] 886 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,616,114 バイト、`WinMerge-x64-Setup-x64.exe` 40,079,808 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（ギャップ分析書 §4.2 B14）**：
+  - (a) 高リスク差分の破壊的な判断で確認が出ること — 3 入口すべてにゲート。ダイアログ表示そのものは**実機未検証**。
+  - (b) 確認ダイアログにリスク理由が表示されること — `Merge20ClassifyOneDiffSummary`（S4 差分要約＋影響関数）を明細行に表示。**実機未検証**。
+  - (c) キャンセルでは何も変わらないこと — ゲートが偽を返し、呼び出し元は適用前に return する（範囲操作も事前走査のため 1 件も変わらない）。**実機未検証**。
+  - (d) リスク高でない差分では確認が出ず、従来どおり速く進めること — 純粋モジュールの素通り（単体テスト済み）。回帰は CI 全合格で確認。
+  - (e) 学習候補の受け入れでも、差分が高リスクなら確認が出ること — `OnMerge20LearnApply` に同じゲート。候補は要否に影響しない（単体テスト済み）。**実機未検証**。
+  - (f) Space の順送りで高リスク差分を誤って決めてしまわないこと — TODO→DONE の段だけ確認を挟む（単体テスト済み）。**実機未検証**。
+  - (g) 回帰なし — B1 の結論付与・S2 のキー操作・学習候補の受け入れ・D3 巡回に触れていない（ゲートは確認要の場合にだけ割り込み、それ以外は既存経路をそのまま通る）。CI 全合格で確認。**実機での回帰確認は未実施**。
+- **未検証（実機でしか確認できないもの）**：確認ダイアログの表示そのもの（レイアウト・日本語表示・ボタン配置・既定ボタンがキャンセルであること）。実機での受け入れ手順 (1)〜(5)：リスク高の差分（削除・SQL・税・丸めを含むサンプル）で旧採用を選ぶと確認が出る、キャンセルすると状態が変わらない、リスクなしの差分では確認が出ない、学習候補のある高リスク差分を受け入れると確認が出る、Space の順送りで高リスク差分を誤って決められない（フォルダ一覧・パネルで TODO→DONE の段だけ確認が出る）。
+
+### 66.4 次への移行
+- F4（スポットライト）はマージ済み（マージコミット `bd15fa55`）。マージコミット CI は進行中。検証後に §67 として記録する。
+- B7（出力前最終検証ゲート・第1段階）は着手済み（ブランチ `merge20/wf-b7`。子が「B7 (1/2)」として PR を分ける方針で進行中）。完了報告待ち。
+- F5（構造化差分テーブル＋影響分析）を次に着手する（F3→F4→F5→F6→F7 の順序どおり）。
+- ID 割り当て状況（2026-11-27 10:40 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888（§65 の「1887–1889」は訂正。1889 は B14 が取得）、B14 が 1889–1892。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 が `ID_MERGE20_RISK_ORDER` 38982 を使用。`_APS_NEXT_RESOURCE_VALUE` 305、`_APS_NEXT_COMMAND_VALUE` 38983、`_APS_NEXT_CONTROL_VALUE` 1893。
+## §67 Wave 5 F4 — FORM スポットライト（前後横並び・インスペクタバナー・巡回・解除）— マージ・CI 検証済み（2026-11-27）
+
+### 67.1 内容（設計書 §10 F4）
+- スポットライトの選択状態（カードごとに保持。`m_spotlightByFile`）。キャンバスの強調描画：選択した差分箇所へ自動スクロールし、周囲を暗転（AlphaBlend 0.32 のヴェール＋窓）、旧（赤破線）→新（緑実線）の前後変化を矢印＋差分コールアウトで強調する。
+- インスペクタバナー（`LayoutSpotlightBanner`：旧／新ラベル＋150px 幅の横並びプレビュー `CMerge20FormSpotPreview`。旧の図形だけを描いた小キャンバスと、新の図形だけを描いた小キャンバスを横に並べる。スポットライト選択があるときだけ表示）。前／次での巡回ボタン、解除ボタン、「変更箇所へ移動」ボタン（スポットライト選択があればその図形へ、なければ最初の変更図形へスクロール）。
+- 関数：`focusDiffRecord`／`stepSpotlight`／`clearSpotlight`／`scrollToShapeKey`／`scrollToChangedArea`／`updateSpotlightBanner`（設計書 §2.7）。公開フック `CFormCompareView::FocusDiffRecord(int)` を用意し、構造化差分テーブル（F5）が後から呼ぶ形にした。
+- 純粋モジュール `Merge20FormSpotlight`（選択・巡回・窓・スクロール・矢印・コールアウト）＋単体テスト 19 件。
+- リソース割り当て：コントロール ID 1872–1881。コマンド ID は未使用。`.po` 新規 10 件。`BuildTranslations.cmd` に番兵チェック用の 8 msgid を追加（"Previous change" "Next change" "Clear spotlight" "Go to changed area" "Spotlight" "Changed attributes" "Change details" "No shape"）。"Old (before)"／"New (after)" が番兵に含まれていないのは意図的で、ファイル内のコメントに「括弧が FOR セットを壊すため載せない」と理由が書かれている（.po 側の 10 件には両方とも訳つきで存在）。
+
+### 67.2 変更一覧（ブランチ `merge20/form-f4`。28 コミット、16 ファイル）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20FormSpotlight.h` | `1f64037b` | 純粋モジュール（ヘッダ） |
+| 2 | `Src/Merge20/Merge20FormSpotlight.cpp` | `02bc5d3e` | 純粋モジュール（実装） |
+| 3 | `Testing/GoogleTest/Merge20/Merge20FormSpotlight_test.cpp` | `35003d5a` | 単体テスト 19 件 |
+| 4 | `Src/Merge20/Merge20FormSpotPreview.h` | `6ab3da66` | 横並びプレビュー（ヘッダ） |
+| 5 | `Src/Merge20/Merge20FormSpotPreview.cpp` | `35c2d58c` | 横並びプレビュー（実装） |
+| 6 | `Src/Merge20/Merge20FormCanvas.h` | `eec40882` | スポットライト API の宣言 |
+| 7 | `Src/Merge20/Merge20FormCanvas.cpp` | `4416818e` | キャンバスのスポットライト描画 |
+| 8 | `Src/Merge20/Merge20FormCompareView.h` | `3e6f69c9` | バナー・公開フックの宣言 |
+| 9 | `Src/Merge20/Merge20FormCompareView.cpp` | `6b7e3d3c` | バナーの実装 |
+| 10 | `Src/resource.h` | `c8ab72a7` | コントロール ID 1872–1881 |
+| 11 | `Translations/WinMerge/Japanese.po` | `ef04b9ad` | "Change details" の末尾スペース除去 |
+| 12 | `Translations/WinMerge/Japanese.po` | `743b3968` | "Changed attributes" の末尾スペース除去 |
+| 13 | `Translations/WinMerge/Japanese.po` | `d99301ae` | 新規 10 件 |
+| 14 | `BuildTranslations.cmd` | `de364f48` | 番兵チェックへの 8 msgid 追加 |
+| 15 | `Src/Merge.vcxproj` | `efe011a6` | 登録（`msimg32.lib` を含む） |
+| 16 | `Src/Merge.vcxproj.filters` | `a5d530d0` | 登録 |
+| 17 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `1fae926b` | 登録 |
+| 18 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `d445db8b` | 登録 |
+| 19 | `Src/Merge20/Merge20FormSpotlight.h` | `c3e07cb7` | 関数宣言の改名（C2373 修正） |
+| 20 | `Src/Merge20/Merge20FormSpotlight.cpp` | `bb47b9f5` | 関数定義の改名 |
+| 21 | `Src/Merge20/Merge20FormCanvas.cpp` | `47e9b344` | 呼び出し箇所の改名 |
+| 22 | テスト | `af194f5b` | 呼び出し箇所の改名＋cos/sin 30° のローカル変数化 |
+| 23 | （空コミット） | `d71c074f` | CI 再実行の発火試行（効果なし） |
+| 24 | （マージ） | `b6b322a9` | master `5d06070` のマージ（競合解消） |
+| 25 | `Src/Merge20/Merge20FormCanvas.cpp` | `d112ce75` | CRect LONG の int キャスト（C2672 修正） |
+| 26 | `Src/Merge20/Merge20FormCompareView.cpp` | `c04677f7` | ΔW/ΔH 行の先頭を `String(...)` に（C2110 修正） |
+| 27 | （マージ） | `49acb1e7` | master `ef524909` のマージ（B3 との競合解消） |
+| 28 | （マージ） | `282275df` | master `5700cb16` のマージ（B14 との競合解消。ブランチ head） |
+
+- CI 失敗と修正（実行 45955297401、63 Error(s)）：調整役の初報のヒント（2 引数 `EXPECT_NEAR` が原因）は**誤り**だった。前任者の `EXPECT_NEAR` はすべて 3 引数だった。真の根本原因は 2 つあった：
+  1. **同名衝突（C2373）**：構造体 `Merge20FormSpotlightArrowHead` と同名のファクトリ関数 `Merge20FormSpotlightArrowHead(...)` の衝突。`Merge20FormSpotlight.cpp(168,1): error C2373: 'Merge20FormSpotlightArrowHead': redefinition; different type modifiers` が決定的な証拠。関数名を `Merge20FormSpotlightMakeArrowHead` に改名して解消（`c3e07cb7`／`bb47b9f5`／`47e9b344`／`af194f5b`）。
+  2. **独立したエラー（当初は連鎖と誤認）**：C2672 が 24 行、Canvas 965／971／973 と CompareView 1081（C2110）が前回から存在する独立したエラーだった。マージ後 CI（実行 45971953400、failure）で 5 件として表面化し、修正した。C2672：`DrawSpotlightCallout` で `CRect` の LONG メンバ（`.right/.left/.top`、`.cx`）と `int` を `std::max/min` に渡し、型推論が曖昧になっていた → `static_cast<int>` で統一（`d112ce75`）。C2110：`coordLine += _T("  ΔW:") + (dw>=0 ? _T("+") : _T("")) + …` でポインタ同士の加算になっていた（`+=` の右辺がポインタから始まるため）→ 先頭を `String(...)` に（`c04677f7`）。
+  - **教訓（調整役の誤診の記録）**：CI 失敗の原因は、ログの全文を読んで特定すること。エラー件数の多さから「すべて 1 件の連鎖」と決めつけないこと。`EXPECT_NEAR` 2 引数説は F3 では正しかったが、F4 では誤りだった。同じエラーパターンでも原因が違うことがある。
+- 前任者の途中終了：前任者（子エージェント 3be9c080）は診断までで修正コミットを積めずに終了した（途中経過報告で完了）。後継（da96efc6）が改名・独立エラーの修正・master マージまで行い、フォローアップ（502278ed）が 2 回の master マージ（B3・B14 との競合解消）と CI 再実行を行った。3 人のリレーで完了した。
+- CI が発火しなかった出来事：修正 4 コミット後、約 30 分待っても CI が起動しなかった（空コミット・close／reopen でも不発）。原因は **PR #59 が master とコンフリクト（`mergeable: false`、`dirty`）しており、pull_request 用の merge ref が作れないため実行が作られない状態**だった。F3 と同じ方式で master をマージしたところ（`b6b322a9`）、直後に実行 45971953400 が起動した。**教訓：CI が起動しないときは PR の mergeable 状態を確認すること。コンフリクトしていると CI は作られない。**
+- マージ 1 回目（`49acb1e7`、master `ef524909` 取り込み）：重なったのは `resource.h` と `Japanese.po` の 2 ファイルのみ。`resource.h` は F4 の 1872–1881 を B2 アンカー（1882）の前に挿入し、B3 の 1887–1888・コマンド 38982 と `_APS_NEXT_*`（304／38983／1889）を維持。`.po` は F4 の 10 件を「File Compare」アンカー直後に挿入し、B3 の 3 件も残存。msgid 数 2243 → 2256。**指示書の訂正**：指示書は「B3 が 1887–1889 を使用、`_APS_NEXT_CONTROL_VALUE` は 1890」とあったが、実コードでは B3 は 1887–1888 のみで master の値は 1889 だった。1890 にすると「1889 は使用済み」という虚偽の申告になるため、master 値 1889 を採用した（§66 の訂正と一致）。
+- マージ 2 回目（`282275df`、master `5700cb16` 取り込み）：重なったのは 6 ファイル（`resource.h`、`Japanese.po`、`Src/Merge.vcxproj`／`.filters`、`UnitTests.vcxproj`／`.filters`）。B14 のダイアログ 304・コントロール 1889–1892 と F4 の 1872–1881 は重なりなし。`_APS_NEXT_*` は 305／38983／1893 に更新。UnitTests プロジェクトファイルは master の LF 改行のまま解消したため、PR 差分の改行 churn（従来 +1138/−1131）が消え、現在は +7/−0・+9/−0 のみ。PR 全体は +1798/−31（16 ファイルちょうど）。
+
+### 67.3 検証レポート（コーディネーター検証済み）
+- **PR #59**：open・mergeable=true・mergeable_state=clean、head `282275df`、base master `5700cb16`。28 コミット、変更ファイル 16 件（F4 の 16 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45980412083、completed／success。全文ログ（3,593,646 バイト、ジョブ `build` 140442575743、48,233 行）をコーディネーターが取得・確認（`~/workspace/.coord/f4_final2_log.txt`）。GoogleTest `[ PASSED ] 905 tests.`（886＋F4 の 19 件。Spotlight 19 件全 OK、B14 HighRiskConfirm 19 件も含まれて合格）、`[ FAILED ]` 0 件、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。`.po` 番兵も通過。
+- **成果物（実行 45980412083）**：`WinMerge-x64.zip` 26,637,168 バイト（ID 15188754047）、`WinMerge-x64-Setup-x64.exe` 40,096,153 バイト（ID 15188933852）。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **マージ**：マージコミット `bd15fa55`。マージコミット CI：実行 45983131061、completed／success（head_sha=bd15fa55 と一致）。全文ログ（3,593,040 バイト、ジョブ `build` 140451830140、48,223 行）をコーディネーターが取得・確認（`~/workspace/.coord/f4_merge_final_log.txt`）。GoogleTest `[ PASSED ] 905 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,637,687 バイト、`WinMerge-x64-Setup-x64.exe` 40,102,252 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（設計書 §10 F4）**：
+  - (a) 変更一覧の行またはキャンバス上の図形をクリックすると、キャンバスがその場所へ自動スクロールし、周囲が暗転して旧（赤）→新（緑）の前後変化が矢印＋差分コールアウトで強調されること — コードで確認。`OnLButtonUp` → `OnCanvasShapeClicked` → `FocusDiffRecord` → `SetSpotlight`／`ScrollToShapeKey`／`DrawSpotlight`（暗転 AlphaBlend 0.32、窓、旧／新再描画、矢印、コールアウト）。選択・窓・スクロール量・矢印・コールアウトの単体テスト 19 件が合格。**描画の目視とスクロールの中心合わせは実機未検証**。
+  - (b) インスペクタバナーに旧／新の横並びプレビューが表示されること（§6 (4) のテスト3） — コードで確認（`LayoutSpotlightBanner`：旧／新ラベル＋150px 幅プレビュー、`CMerge20FormSpotPreview`）。**目視は実機未検証**。
+  - (c) 前／次での巡回が `hasVisual` のあるレコードだけを対象に循環すること。解除で全体表示に戻ること — 純粋モジュール＋テスト（`StepForward/BackwardSkipsNonVisualAndWraps`、`ClearReturnsToWholeView` など）で合格。カードごとの選択状態保持（`m_spotlightByFile`）もコードで確認。**操作の実機確認は未検証**。
+  - (d) 回帰なし — 全 905 件合格。
+- **未検証（実機でしか確認できないもの）**：描画（暗転・矢印・コールアウト・バナー・旧／新プレビュー）の目視、スクロールの中心合わせ、前／次巡回と解除と「変更箇所へ移動」の操作、カード切替時の選択状態保持。
+
+### 67.4 次への移行
+- B7（出力前最終検証ゲート）は PR 1（エンジン）をマージ済み（マージコミット `d787cae7`）。PR 2（ダイアログ＋ゲート）のファイルは `~/workspace/.coord/b7/work/pr2/` に準備済みで、PR 1 のマージ後に同じブランチ `merge20/wf-b7` へ積む方針。PR 2 の担当を spawn する。
+- F5（構造化差分テーブル＋影響分析）は着手済み（ブランチ `merge20/form-f5`）。完了報告待ち。
+- ID 割り当て状況（2026-11-27 11:10 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 用に 305 を確保済み。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 用に 1893–1897 を確保済み、F5 用に 1903–1912 を確保済み（1898–1902 は予備）。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 が 38982 を使用、B7 用に 38983 を確保済み、F5 用に 38984 を確保済み。`_APS_NEXT_RESOURCE_VALUE` 305、`_APS_NEXT_COMMAND_VALUE` 38983、`_APS_NEXT_CONTROL_VALUE` 1893（F4 マージ時点）。
