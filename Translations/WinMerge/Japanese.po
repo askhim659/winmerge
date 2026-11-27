@@ -12628,3 +12628,119 @@ msgstr "CSVは2部構成（帳票サマリと変更箇所別の詳細）で、BO
 msgid "There are no comparison results to export. Run the analysis first."
 msgstr "出力する比較結果がありません。先に「解析実行」を行ってください。"
 
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "1 diff"
+msgstr "差分 1 件"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "%1 rows"
+msgstr "%1 行"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Batch check"
+msgstr "一括チェック"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Candidate: %1"
+msgstr "候補：%1"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Date/time"
+msgstr "日時"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Learning candidate accepted"
+msgstr "学習候補の受け入れ"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Learning candidate dismissed"
+msgstr "学習候補の却下"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "New value"
+msgstr "新値"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Old value"
+msgstr "旧値"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Operation"
+msgstr "操作"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Operator"
+msgstr "操作者"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Output toggle"
+msgstr "出力切替"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Output: %1 to %2"
+msgstr "出力：%1 → %2"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Regroup diff"
+msgstr "差分の再結合"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Remarks"
+msgstr "備考"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Reset to unreviewed (file changed)"
+msgstr "未確認に戻した（ファイル変更）"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Review state change"
+msgstr "確認内容の変更"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Review: %1 to %2"
+msgstr "確認内容：%1 → %2"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Split diff"
+msgstr "差分の分割"
+
+#: Src/Merge20/Merge20AuditDoc.cpp
+msgid "Error creating the report:\n%1"
+msgstr "監査ログの CSV 作成に失敗しました：\n%1"
+
+#: Src/DirView.cpp
+msgid "Audit log..."
+msgstr "監査ログ…"
+
+#: Src/DirView.cpp
+msgid "Export audit log as CSV..."
+msgstr "監査ログを CSV で出力…"
+
+#: Src/DirView.cpp
+msgid "There are no audit log entries yet. Make a judgment (review state, output check, diff conclusion) and it will be recorded here."
+msgstr "監査ログはまだありません。判断（確認内容・出力チェック・差分の結論）を行うと、ここに記録されます。"
+
+#: Src/DirView.cpp
+msgid "%1 entries exported to %2"
+msgstr "%1 件を %2 へ出力しました"
+
+#: Src/Merge20/Merge20AuditDlg.cpp
+msgid "%1 line(s) could not be read and were skipped."
+msgstr "%1 行が読み取れず、スキップしました。"
+
+#: Src/Merge20/Merge20AuditDlg.cpp
+msgid "Audit log entries: %1"
+msgstr "監査ログの件数：%1"
+
+#: Src/Merge20/Merge20AuditDlg.cpp
+msgid "This audit log records who changed what and when. It is separate from the learning data (learning stores patterns for suggestions, not this history)."
+msgstr "この監査ログは「いつ・誰が・何を変えたか」を記録します。学習データ（提案のための判断のパターン）とは別物です。"
+
+#: Src/Merge.rc
+msgid "Audit Log"
+msgstr "監査ログ"
+
+#: Src/Merge.rc
+msgid "Export as CSV..."
+msgstr "CSV で出力…"
+
