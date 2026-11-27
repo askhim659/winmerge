@@ -20,6 +20,7 @@
 #include "DiffWrapper.h"
 #include "FilterEngine/FilterExpression.h"
 #include "RenameMoveDetection.h"
+#include "Merge20/Merge20AuditDoc.h"
 #include "DebugNew.h"
 
 using Poco::FastMutex;
@@ -232,8 +233,8 @@ bool CDiffContext::GetMerge20IncludeInOutput(const DIFFITEM& di) const
  * @param [in] include New output flag.
  * @param [in] bRecordUndo False for bulk / linkage / restore callers
  *             (batch check, conclusion linkage): only a single user
- *             toggle is an undo step (B10). A toggle that changes
- *             nothing is never recorded.
+ *             toggle is an undo step (B10) and an audit entry (B11).
+ *             A toggle that changes nothing is never recorded.
  */
 void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, bool bRecordUndo /*= true*/)
 {
@@ -248,6 +249,13 @@ void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, b
 		entry.newInclude = include;
 		Merge20RecordUndo(entry);
 	}
+	// Merge20 (best-workflow B11): the same flag separates a user
+	// toggle from a bulk / linkage change (batch check logs its own
+	// BatchCheck entries, the conclusion linkage is covered by the
+	// conclusion entry, undo uses the raw setter and logs nothing).
+	if (bRecordUndo)
+		Merge20AuditLogIncludeChange(*this, di.getItemRelativePath(),
+			bOldInclude, include, Merge20AuditKind::IncludeInOutput);
 	NotifyMerge20FileListChanged();
 }
 
@@ -271,7 +279,8 @@ void CDiffContext::SetMerge20IncludeInOutput(const String& relPath, bool include
  *             every caller is a user operation -- folder-list keys,
  *             panel cycling -- so the default records). The entry
  *             holds the review state and the output flag before and
- *             after the linkage, so undo rewinds both at once (B10).
+ *             after the linkage, so undo rewinds both at once (B10);
+ *             the audit entry (B11) uses the same flag.
  */
 void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state, bool bRecordUndo /*= true*/)
 {
@@ -311,6 +320,14 @@ void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state
 		entry.newInclude = GetMerge20IncludeInOutput(di);
 		Merge20RecordUndo(entry);
 	}
+	// Merge20 (best-workflow B11): one audit entry per user review
+	// change (the S2 linkage may also have moved the output flag;
+	// that goes into the entry's note, not a second entry). The
+	// conclusion linkage does not come through here (it sets the
+	// review state directly), so it is never double-logged.
+	if (bRecordUndo)
+		Merge20AuditLogReviewChange(*this, relPath, oldReview, state,
+			bOldInclude, GetMerge20IncludeInOutput(di));
 }
 
 /**
