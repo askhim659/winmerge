@@ -12031,6 +12031,11 @@ msgstr "【Wiz】ブランドヘッダ"
 msgid "File Compare"
 msgstr "ファイル比較"
 
+#. Merge20 (UI U2): title-bar progress (CMainFrame::OnUpdateFrameTitle)
+#: Src/MainFrm.cpp
+msgid "WizMerge - %1 unreviewed - %2"
+msgstr "WizMerge - 未確認 %1件 - %2"
+
 #. Merge20 (B9): folder compare context menu (DirView.cpp)
 #: Src/DirView.cpp
 msgid "End-of-session review..."
