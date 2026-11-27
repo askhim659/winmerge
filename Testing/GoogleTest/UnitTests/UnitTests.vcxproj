@@ -463,6 +463,7 @@
     <ClCompile Include="..\..\..\Src\Merge20\Merge20FormMaster.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20FormCsv.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20CloseWarn.cpp" />
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20ResumeSummary.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Summary.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20HighRiskRemain.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20HighRiskConfirm.cpp" />
@@ -832,6 +833,11 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20ResumeSummary_test.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
     <ClCompile Include="..\Merge20\Merge20Summary_test.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -1101,6 +1107,7 @@
     <ClInclude Include="..\..\..\Src\Merge20\Merge20FormTable.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20FormCsv.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20CloseWarn.h" />
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20ResumeSummary.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Summary.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20HighRiskRemain.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20HighRiskConfirm.h" />
