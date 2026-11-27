@@ -165,7 +165,7 @@ std::pair<int, int> Merge20FormSpotlightScrollToCenter(double centreXmlX, double
 		(std::max)(0, static_cast<int>(std::lround(scrollY))));
 }
 
-Merge20FormSpotlightArrowHead Merge20FormSpotlightArrowHead(
+Merge20FormSpotlightArrowHead Merge20FormSpotlightMakeArrowHead(
 	double x1, double y1, double x2, double y2)
 {
 	Merge20FormSpotlightArrowHead head;
