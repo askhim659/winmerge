@@ -18,6 +18,7 @@
 #include "Merge20/Merge20FormCompareView.h"
 #include "Merge20/Merge20FormMasterDlg.h"
 #include "resource.h"
+#include "UnicodeString.h"
 #include <cmath>
 
 #ifdef _DEBUG
@@ -903,6 +904,8 @@ void CFormCompareView::OnMasterEdit()
 
 void CFormCompareView::RefreshMasterButton()
 {
+	if (m_btnMaster.GetSafeHwnd() == nullptr)
+		return;
 	// The count badge (HTML `masterCountBadge`): unique ids in
 	// the master file, or the default list when the file is
 	// missing or unparsable.
