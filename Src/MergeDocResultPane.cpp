@@ -31,6 +31,9 @@
 #include "OptionsDiffOptions.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "Merge20/Merge20LearnDoc.h"
+#include "Merge20/Merge20ClassifyDoc.h"
+#include "Merge20/Merge20HighRiskConfirm.h"
+#include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "Merge20/Merge20Split.h"
 #include "DiffContext.h"
 #include "DiffItem.h"
@@ -1475,6 +1478,76 @@ void CMergeDoc::Merge20SetDiffConclusionRestored(int nDiff, Merge20DiffConclusio
 		m_merge20DiffConclusions[nDiff] = conclusion;
 }
 
+/////////////////////////////////////////////////////////////////////////////
+// Merge20 (best-workflow B14, gap analysis section 4.2 B14): confirm
+// destructive judgments on high-risk diffs. The gate lives here, in
+// one place, and every conclusion entry point calls it first (the
+// result pane context menu, the focus dock, the learning
+// acceptance). Merge20SetDiffConclusion itself never prompts, so a
+// range caller shows one dialog for the whole range before the loop
+// and a cancel applies nothing.
+
+bool CMergeDoc::Merge20ConfirmHighRiskDiffs(const std::map<int, Merge20DiffConclusion>& conclusionsByDiff)
+{
+	const std::vector<String> riskKeywords = Merge20ParseRiskKeywords(
+		GetOptionsMgr()->GetString(OPT_MERGE20_RISK_KEYWORDS));
+	std::vector<Merge20HighRiskConfirmTarget> targets;
+	for (const auto& [nDiff, conclusion] : conclusionsByDiff)
+	{
+		if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize() ||
+			!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		Merge20HighRiskConfirmTarget target;
+		target.diffIndex = nDiff;
+		target.risk = Merge20ClassifyOneDiffRange(*this, nDiff, riskKeywords);
+		target.conclusion = conclusion;
+		target.alreadyDecided = Merge20GetDiffConclusion(nDiff) == conclusion;
+		targets.push_back(target);
+	}
+	const std::vector<int> needConfirm = Merge20HighRiskConfirmCollect(targets);
+	if (needConfirm.empty())
+		return true;
+	// One dialog for the whole judgment: the counts line, then one
+	// detail line per high-risk diff (at most five shown): its S4
+	// risk reason, and, when a learning candidate exists for it,
+	// the candidate text in the L3 wording. The candidate never
+	// suppresses the dialog (gap analysis section 3.1).
+	const String count = strutils::to_str(static_cast<int>(needConfirm.size()));
+	const String* countArgs[] = { &count };
+	const String countsText = strutils::format_strings(_("High-risk diffs: %1"), countArgs, 1);
+	std::vector<String> detailLines;
+	const size_t shown = (std::min)(needConfirm.size(), static_cast<size_t>(5));
+	for (size_t i = 0; i < shown; ++i)
+	{
+		const int nDiff = needConfirm[i];
+		const String reason = Merge20ClassifyOneDiffSummary(*this, nDiff, riskKeywords);
+		const String diffNo = strutils::to_str(nDiff + 1);
+		const String* diffArgs[] = { &diffNo, &reason };
+		String line = strutils::format_strings(_("Diff %1: %2"), diffArgs, 2);
+		const auto it = m_merge20LearnCandidates.find(nDiff);
+		if (it != m_merge20LearnCandidates.end())
+		{
+			const String strategy = Merge20LearnStrategyDisplayName(it->second.strategy);
+			const String via = Merge20LearnViaDisplayName(it->second.via);
+			const String n = strutils::to_str(it->second.n);
+			const String* candidateArgs[] = { &strategy, &via, &n };
+			line += _T(" ");
+			line += strutils::format_strings(_("Learning suggestion: %1 (%2, %3)"), candidateArgs, 3);
+		}
+		detailLines.push_back(line);
+	}
+	if (needConfirm.size() > shown)
+	{
+		const String rest = strutils::to_str(static_cast<int>(needConfirm.size() - shown));
+		const String* restArgs[] = { &rest };
+		detailLines.push_back(strutils::format_strings(_("And %1 more diff(s)"), restArgs, 1));
+	}
+	CWnd* pParent = m_pMergeResultView != nullptr ?
+		static_cast<CWnd*>(m_pMergeResultView->GetParentFrame()) : AfxGetMainWnd();
+	Merge20HighRiskConfirmDlg dlg(pParent, countsText, detailLines);
+	return dlg.DoModal() == IDOK && dlg.GetResult() == Merge20HighRiskConfirmDlg::Result::Execute;
+}
+
 bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion, bool bSaveLearn /*= true*/)
 {
 	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize() ||
@@ -1540,13 +1613,24 @@ void CMergeDoc::OnMerge20SetConclusion(UINT nID)
 	int firstDiff = -1, lastDiff = -1;
 	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
 		return;
-	if (m_pMergeResultView != nullptr)
-		m_pMergeResultView->HideCursor();
 	// Each diff is its own undo group (unlike OnMergeChooseSource,
 	// which groups its range); the learning store is saved once
 	// after the loop, so a multi-diff selection does not rewrite
 	// the store per diff.
 	const Merge20DiffConclusion conclusion = static_cast<Merge20DiffConclusion>(nConclusion);
+	// Merge20 (best-workflow B14): one dialog for the whole range,
+	// before anything changes; a cancel applies nothing.
+	std::map<int, Merge20DiffConclusion> conclusionsByDiff;
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		conclusionsByDiff[nDiff] = conclusion;
+	}
+	if (!Merge20ConfirmHighRiskDiffs(conclusionsByDiff))
+		return;
+	if (m_pMergeResultView != nullptr)
+		m_pMergeResultView->HideCursor();
 	bool bLearnRecorded = false;
 	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
 	{
@@ -2370,6 +2454,26 @@ void CMergeDoc::OnMerge20LearnApply()
 {
 	int firstDiff = -1, lastDiff = -1;
 	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
+		return;
+
+	// Merge20 (best-workflow B14): one dialog for the whole range,
+	// before anything changes; a cancel applies nothing. The
+	// candidate never suppresses the dialog (gap analysis section
+	// 3.1): its text is shown inside it.
+	std::map<int, Merge20DiffConclusion> conclusionsByDiff;
+	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
+	{
+		if (!m_diffList.IsDiffSignificant(nDiff))
+			continue;
+		const auto it = m_merge20LearnCandidates.find(nDiff);
+		if (it == m_merge20LearnCandidates.end())
+			continue;
+		const DIFFRANGE* pRange = m_diffList.DiffRangeAt(nDiff);
+		conclusionsByDiff[nDiff] = pRange != nullptr ?
+			Merge20ConclusionFromLearnStrategy(it->second.strategy, static_cast<int>(pRange->op)) :
+			Merge20DiffConclusion::Undecided;
+	}
+	if (!Merge20ConfirmHighRiskDiffs(conclusionsByDiff))
 		return;
 
 	// Apply each diff's own candidate strategy. ResultChooseSources
