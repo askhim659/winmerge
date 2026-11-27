@@ -396,8 +396,10 @@ public:
 	bool Merge20GetFocusResultText(int nDiff, String& sText, int& nState, int& nOp);
 	/** @brief Merge20 (best-workflow B1): the explicit conclusion of one diff (Undecided when the diff was never judged). The map is the source of truth for the "judged X of Y diffs" progress; it is keyed by diff index and shifted when a split/regroup moves indices, and cleared when the diff list is rebuilt (Rescan). */
 	Merge20DiffConclusion Merge20GetDiffConclusion(int nDiff) const;
-	/** @brief Merge20 (best-workflow B1): set the conclusion of one diff. This is the single entry point for every conclusion: it rewrites the result segment (except Keep, which leaves the result untouched, and Undecided, which clears the selection), records the judgment for learning when the conclusion changed to a chosen strategy, and applies the one linkage rule to the file's review state and output checkbox (gap analysis section 4.2 B1). No-op without a built merge session or for a non-significant diff. */
-	void Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion);
+	/** @brief Merge20 (best-workflow B1): set the conclusion of one diff. This is the single entry point for every conclusion: it rewrites the result segment (except Keep, which leaves the result untouched, and Undecided, which clears the selection), records the judgment for learning when the conclusion changed to a chosen strategy, and applies the one linkage rule to the file's review state and output checkbox (gap analysis section 4.2 B1). No-op without a built merge session or for a non-significant diff.
+	 * @param [in] bSaveLearn Save the learning store and recompute candidates after recording (single-diff callers). Range callers pass false and save once after the loop.
+	 * @return True when a learning judgment was recorded for this diff. */
+	bool Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion, bool bSaveLearn = true);
 	/** @brief Merge20 (best-workflow B1): judged/total significant diffs of this file ("judged X of Y diffs"). */
 	void Merge20GetConclusionProgress(int& nJudged, int& nTotal) const;
 	/** @brief Merge20 (best-workflow B1): set the conclusions of the targeted diffs (result pane context menu, Diff conclusion submenu). The target rule is the same as the learning commands: the current diff when nothing is selected, else the selected diffs. */
