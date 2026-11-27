@@ -151,6 +151,11 @@ public:
 	// compare first; this is the selection step, mirroring
 	// Merge20OpenFileAtLine (Grep jump).
 	void Merge20OpenFile(const DIFFITEM& di);
+	// Merge20 (best-workflow B12): same as Merge20OpenFile, but
+	// silent: false when the item is hidden by the current filter,
+	// with no message box. The session resume uses it so a target
+	// that cannot be opened falls back to the folder list alone.
+	bool Merge20OpenFileQuiet(const DIFFITEM& di);
 	// Merge20 (Phase 4 D7): Grep file list for the dialog, and the
 	// jump from a Grep hit to its file and diff.
 	std::vector<Merge20GrepFile> Merge20BuildGrepFiles();

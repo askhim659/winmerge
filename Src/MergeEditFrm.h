@@ -55,6 +55,12 @@ public:
 	void ShowMerge20Sniper(int nDiff);
 	void SetDedicatedMode(bool bEnable);
 	bool IsDedicatedMode() const { return m_bDedicatedMode; }
+	// Merge20 (best-workflow B12): true while any file-compare
+	// frame is in dedicated mode. The session restore uses it to
+	// skip writing back the ded pin while a dedicated bar is open
+	// (NOTES §53.4 hole): the frame's auto-hide timer reads the pin
+	// key every tick.
+	static bool HasOpenDedicatedModeFrame();
 	void FlashDedBar();
 
 // Attributes

@@ -40,6 +40,15 @@ struct Merge20SessionRestoreResult
 	int reset = 0;         /**< Files changed since save: reset to unreviewed */
 	int skipped = 0;       /**< Session entries with no matching current file */
 	int diffsRestored = 0; /**< Diff judgments stored into the sidecar for restore into merge docs */
+	/** @brief B12 resume target: relative path of the file compare
+	 * that was open at save time. Empty when none was open, or when
+	 * the saved target was changed since the save or no longer
+	 * exists (then only the folder list is restored). */
+	String resumeRelPath;
+	/** @brief B12: current diff index of the resume target at save time (-1: none). */
+	int resumeDiff = -1;
+	/** @brief B12: first visible (apparent) line of the resume target at save time. */
+	int resumeTopLine = 0;
 	/** @brief Saved compare options that differ from the current ones (display names, for the restore report). */
 	std::vector<String> optionsDiffer;
 	/** @brief Saved compare options that were applied by this restore
@@ -145,6 +154,18 @@ String Merge20SessionFormatDeferredMessage(const Merge20SessionRestoreResult& re
 void Merge20SessionOfferRestore(CDirDoc& doc);
 /** @brief Human-readable report of a restore result, for the message boxes (offer + manual restore). */
 String Merge20SessionFormatRestoreReport(const Merge20SessionRestoreResult& result, int skippedFiles);
+/**
+ * @brief Reopen the file compare that was open at save time, at its
+ * saved diff and scroll position (best-workflow B12). No-op when the
+ * restore result names no resume target. When the target is already
+ * open, its frame is activated instead of opening a duplicate. When
+ * it cannot be opened (hidden by the current filter, or the open
+ * itself failed), nothing is opened and no error is shown: the
+ * folder list alone is the restored state then. The diff index and
+ * the scroll position are clamped to the reopened compare, never
+ * forced.
+ */
+void Merge20SessionResumeLastFileCompare(CDirDoc& doc, const Merge20SessionRestoreResult& result);
 /**
  * @brief Find the folder compare item of a merge doc's files (same
  * lookup as CDirDoc::SetMerge20Classification, including the

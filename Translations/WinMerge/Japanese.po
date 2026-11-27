@@ -7646,6 +7646,11 @@ msgstr "%1に保存されたセッションがこのフォルダ組に見つか�
 "\n"
 "確認内容・出力チェック・メモ・差分判定を復元しますか？"
 
+#. Merge20 (best-workflow B12): restore offer, resume target line (Merge20SessionDoc)
+#: Src/Merge20/Merge20SessionDoc.cpp
+msgid "The file compare \"%1\" that was open last time will also be opened."
+msgstr "前回開いていたファイル比較「%1」も開きます。"
+
 #. Merge20 (S8): compare option name, recursive (Merge20SessionDoc)
 #: Src/Merge20/Merge20SessionDoc.cpp
 msgid "Recursive"

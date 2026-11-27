@@ -652,9 +652,9 @@ void CMerge20FileListBar::UpdateHighRiskRemain()
  * and on the delayed pane-size save after hiding a bar). The
  * display toggle and the width are NOT saved here: P0 already
  * persists them (OnBarCheck and the bar's SaveState). The search
- * string is saved here, not on every keystroke (OnSearchChanged
- * would write the registry on each typed character); the tab,
- * the folded set and the slim flag are saved at once when they
+ * string is saved here too, but since B12 also on every change
+ * (OnSearchChanged), so closing right after typing keeps it. The
+ * tab, the folded set and the slim flag are saved at once when they
  * change, and again here (the D11 dual-save precedent). Several
  * frames share these keys: the last frame to close wins, the
  * same rule as the bar width.
@@ -1076,9 +1076,12 @@ void CMerge20FileListBar::OnRiskTabChanged(NMHDR* /*pNMHDR*/, LRESULT* pResult)
  * @brief Search box changed (P2, P-R4): filter the panel on every
  * keystroke (a 1,000-row rebuild is cheap, so no debounce).
  *
- * P4: the string itself is saved by SavePanelState (frame
- * SavePosition), not here: saving on every keystroke would write
- * the registry on each typed character.
+ * Merge20 (best-workflow B12): the string is also saved at once,
+ * like the tab / folded set / slim flag (P4 saved it only at
+ * SavePosition, so typing a search and closing right away lost it).
+ * A registry write per keystroke is the accepted cost: the list is
+ * already rebuilt on every keystroke, and SavePanelState saves it
+ * again at SavePosition (the D11 dual-save precedent).
  */
 void CMerge20FileListBar::OnSearchChanged()
 {
@@ -1087,6 +1090,10 @@ void CMerge20FileListBar::OnSearchChanged()
 	CString text;
 	m_wndSearch.GetWindowText(text);
 	m_wndList.SetSearchText(static_cast<LPCTSTR>(text));
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions != nullptr)
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_SEARCH,
+			String(static_cast<LPCTSTR>(text)));
 }
 
 /**

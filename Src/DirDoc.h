@@ -130,6 +130,12 @@ public:
 	Merge20UndoApplyResult Merge20ApplyUndoEntry(const Merge20UndoEntry& entry, bool bUndo);
 	/** @brief Open merge doc showing this file, or nullptr when the file is not open. */
 	CMergeDoc* Merge20FindOpenMergeDoc(const String& relPath);
+	// Merge20 (best-workflow B12): the file compare open at save
+	// time, for the resume position. The active frame's merge doc
+	// when it belongs to this folder compare (the one the user was
+	// working in), else the most recently opened one (the tail of
+	// the list); nullptr when no file compare is open.
+	CMergeDoc* Merge20GetLastOpenMergeDoc();
 	// Merge20 (Phase 4 D2, IDirDoc): review state of the file a merge
 	// doc shows, found by the merge doc's paths (same lookup, incl. the
 	// swapped-paths fallback, as SetMerge20Classification). The

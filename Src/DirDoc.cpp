@@ -755,6 +755,41 @@ CMergeDoc* CDirDoc::Merge20FindOpenMergeDoc(const String& relPath)
 }
 
 /**
+ * @brief Merge20 (best-workflow B12): the file compare open at save
+ * time, for the resume position.
+ *
+ * The active frame's merge doc when it belongs to this folder
+ * compare is the one the user was working in (the usual case: the
+ * file compare was active when the session was saved, including
+ * the auto-save on close). When the folder view itself was active
+ * instead, the most recently opened file compare (the tail of the
+ * list) is the best available "last opened" choice. No activation
+ * is tracked anywhere else, so no extra state is kept for this.
+ */
+CMergeDoc* CDirDoc::Merge20GetLastOpenMergeDoc()
+{
+	if (CMainFrame* pMain = GetMainFrame())
+	{
+		if (CFrameWnd* pFrame = pMain->GetActiveFrame())
+		{
+			if (CMergeDoc* pDoc = dynamic_cast<CMergeDoc*>(pFrame->GetActiveDocument()))
+			{
+				// GetDirDoc returns the IDirDoc the merge doc was
+				// opened from; only this folder compare counts.
+				if (pDoc->GetDirDoc() == static_cast<IDirDoc*>(this))
+					return pDoc;
+			}
+		}
+	}
+	if (!m_MergeDocs.IsEmpty())
+	{
+		if (IMergeDoc* pLast = m_MergeDocs.GetTail())
+			return dynamic_cast<CMergeDoc*>(pLast);
+	}
+	return nullptr;
+}
+
+/**
  * @brief Merge20 (best-workflow B10): apply one undo / redo entry.
  * @param [in] entry Entry to apply.
  * @param [in] bUndo True to rewind (old values), false to re-apply (new values).

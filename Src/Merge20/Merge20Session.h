@@ -185,6 +185,17 @@ struct Merge20SessionDisplay
 	String focusedPath;
 	/** @brief First visible row index (best effort on restore). */
 	int topIndex = 0;
+	/** @brief Relative path of the file compare that was open at save
+	 * time (best-workflow B12). Empty when no file compare was open;
+	 * the folder list alone is then restored, as before. */
+	String resumeRelPath;
+	/** @brief Current diff index of that file compare at save time
+	 * (best-workflow B12). -1 when there was no current diff. */
+	int resumeDiff = -1;
+	/** @brief First visible (apparent) line of that file compare at
+	 * save time (best-workflow B12), from the active view's
+	 * GetTopLine. 0 when nothing was open. */
+	int resumeTopLine = 0;
 };
 
 /** @brief One file's saved work state. */
