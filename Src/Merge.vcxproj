@@ -1085,6 +1085,8 @@
     <ClInclude Include="Merge20\Merge20HighRiskConfirm.h" />
     <ClInclude Include="Merge20\Merge20HighRiskConfirmDlg.h" />
     <ClInclude Include="Merge20\Merge20Verify.h" />
+    <ClInclude Include="Merge20\Merge20VerifyDlg.h" />
+    <ClInclude Include="Merge20\Merge20VerifyGate.h" />
     <ClInclude Include="Merge20\Merge20Summary.h" />
     <ClInclude Include="Merge20\Merge20SummaryDlg.h" />
     <ClInclude Include="Merge20\Merge20FocusDock.h" />
@@ -1521,6 +1523,8 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20VerifyDlg.cpp" />
+    <ClCompile Include="Merge20\Merge20VerifyGate.cpp" />
     <ClCompile Include="Merge20\Merge20Summary.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>

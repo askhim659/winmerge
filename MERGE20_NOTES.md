@@ -6365,3 +6365,127 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - B7（出力前最終検証ゲート）は PR 1（エンジン）をマージ済み（マージコミット `d787cae7`）。PR 2（ダイアログ＋ゲート）のファイルは `~/workspace/.coord/b7/work/pr2/` に準備済みで、PR 1 のマージ後に同じブランチ `merge20/wf-b7` へ積む方針。PR 2 の担当を spawn する。
 - F5（構造化差分テーブル＋影響分析）は着手済み（ブランチ `merge20/form-f5`）。完了報告待ち。
 - ID 割り当て状況（2026-11-27 11:10 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 用に 305 を確保済み。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 用に 1893–1897 を確保済み、F5 用に 1903–1912 を確保済み（1898–1902 は予備）。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 が 38982 を使用、B7 用に 38983 を確保済み、F5 用に 38984 を確保済み。`_APS_NEXT_RESOURCE_VALUE` 305、`_APS_NEXT_COMMAND_VALUE` 38983、`_APS_NEXT_CONTROL_VALUE` 1893（F4 マージ時点）。
+
+## 68. B7 (1/2) — 出力時最終検証エンジン（PR #64）
+
+### 68.1 概要
+- B7（出力前の最終検証ゲート）の PR 1：検証エンジン `Merge20Verify`（純粋モジュール）＋単体テスト 33 件＋チェックごとのオプションキー。ダイアログ＋ゲート本体（`SaveMergeResult` フック）は PR 2（§70 で記録予定）。
+- 4 つのチェック：(i) 再差分（Hirschberg LCS、共有 intern map）、(ii) 行数／エンコーディング（厳密 UTF-8）、(iii) 構文健全性（括弧照合のみ）、(iv) 整合性（B1 の結論と出力の一致）。100 ファイル × 500 行 = 102 ms。
+- オプションキー `Merge20/VerifyRediff`、`VerifyLineCount`、`VerifySyntax`、`VerifyConsistency`（すべて既定 ON）。設定画面への追加は未実施。
+- stock の保存（`DoSave`）はゲート対象外（OLD／NEW ペインでありマージ出力ではない）。
+
+### 68.2 変更内容（PR #64、11 コミット、9 ファイル、+1884/−4）
+| ファイル | 内容 |
+|---|---|
+| `Src/Merge20/Merge20Verify.h` | エンジン宣言 |
+| `Src/Merge20/Merge20Verify.cpp` | エンジン実装（4 チェック） |
+| `Testing/GoogleTest/Merge20/Merge20Verify_test.cpp` | 単体テスト 33 件 |
+| `Src/OptionsDef.h` | オプションキー 4 件 |
+| `Src/OptionsInit.cpp` | オプション既定値（ON） |
+| `Src/Merge.vcxproj`／`.filters` | 登録 |
+| `Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | 登録 |
+
+### 68.3 検証レポート（コーディネーター検証済み）
+- **PR #64**：head `8a015289`（CI 失敗の修正後）、base master。ブランチ CI：実行 45985139460、completed／success。GoogleTest 938 件全合格（905＋33）。
+- CI 失敗と修正（実行 45982188009、GoogleTest 10 件失敗）：(1) intern map を新旧で別々に作っていたため再差分が不一致、(2) Conflict／Unresolved を must-equal から除外していなかった、(3) 大文字小文字のみのテストデータ "b" vs "B" が不正 — いずれも修正済み。
+- **マージ**：マージコミット `d787cae7`。マージコミット CI：実行 45987411912、completed／success。全文ログ（3,598,601 バイト、ジョブ `build` 140466464425）をコーディネーターが取得・確認（`~/workspace/.coord/b7/b7_pr1_merge_log.txt`）。GoogleTest `[ PASSED ] 938 tests.`、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`。
+- **成果物（実行 45987411912）**：`WinMerge-x64.zip` 26,638,306 バイト、`WinMerge-x64-Setup-x64.exe` 40,100,577 バイト。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **未検証（実機でしか確認できないもの）**：エンジンは純粋モジュールであり UI がないため、実機での動作確認は PR 2（ダイアログ＋ゲート）と合わせて行う。
+
+### 68.4 次への移行
+- B7 PR 2（ダイアログ＋ゲート、IDD 305、IDC 1893–1897、`.po` 27 件）は PR #66 として作成済み。ブランチ `merge20/wf-b7`、head `e9d116f9`、CI 実行 45988382245 が進行中。担当からの完了報告を待って検証・マージする。
+- F5（構造化差分テーブル＋影響分析）は PR #65 としてマージ済み（マージコミット `05052799`）。マージ CI 実行 45989040682 が進行中。検証後に §69 として記録する。
+- F6（名称マスター管理）を次に着手する。IDD 306 を使用すること（305 は B7 PR2 が予約済み）。コントロール ID は 1905 以降（F5 が 1903–1904 を使用。1893–1902 は B7 PR2 用に空けること）。コマンド ID が必要な場合は 38985 以降（38983 は B7、38984 は F5 が予約済み・未使用）。`_APS_NEXT_*` は master の現在値を読んで進めること。
+
+## 69. Wave 5 F5 — FORM 構造化差分テーブル＋影響分析（PR #65）
+
+### 69.1 概要
+- FORM 比較の差分テーブル（HTML 版と同じ 4 列：種別／対象要素／属性／旧値→新値／変更内容・影響分析）と影響分析（重なり・はみ出し・フォント波及・用紙外へのはみ出し）。グループ化された変更は 1 行に集約し、既定で折りたたみ。行クリックでスポットライト（F4 の `FocusDiffRecord` へ配線）。
+- **実装中に発見した F3/F4 の連携バグを F5 で修正**：設計書 §4.1 では形状キー（`Merge20FormShape::key`）は安定キーと定義されているが、F1 は F0 の HTML キー（`field[name='a']`）のままにしており、レコード・`changedShapeKeys`・キャンバス・スポットライトは安定キー（`/form/row[1]/field[1]|field|a`）で検索していた。そのため形状検索が常に miss し、キャンバスの変更強調・形状クリック・スポットライトのスクロールと旧／新プレビューが働かない状態だった。`Merge20FormDiff.cpp` に安定キーへの付け替え（旧／新を別マップで対応付け）を追加し、テストで固定した。F5 の受け入れ条件 (a)（行クリック→スポットライト）を成立させる前提の修正である。
+
+### 69.2 変更内容（PR #65、17 コミット、16 ファイル、+1901/−11）
+| ファイル | 内容 |
+|---|---|
+| `Src/Merge20/Merge20FormImpact.h/.cpp` | 影響分析（重なり・はみ出し・フォント波及・用紙外）。新側の図形集合に対する幾何判定。推定値の図形（`isEstimated`）は全チェック対象外 |
+| `Src/Merge20/Merge20FormTable.h/.cpp` | 差分テーブルの表示行を構築（グループ 1 行集約・既定折りたたみ、座標は小数第 1 位まで表示） |
+| `Src/Merge20/Merge20FormDiff.cpp` | 形状キーの安定キー化（上記の連携バグ修正） |
+| `Testing/GoogleTest/Merge20/Merge20FormImpact_test.cpp` | 単体テスト 13 件 |
+| `Testing/GoogleTest/Merge20/Merge20FormTable_test.cpp` | 単体テスト 9 件 |
+| `Src/Merge20/Merge20FormCompareDoc.cpp` | `RunAnalysis` から `Merge20ApplyFormImpact` を呼ぶ（`Merge20ApplyLargeChangeFlag` の後。上書き防止） |
+| `Src/Merge20/Merge20FormCompareView.h/.cpp` | プレビュー画面の下に差分テーブル（ラベル＋リスト、200px）を追加。行クリック→スポットライト、グループ行の展開／折りたたみ、スポットライトからの選択行の追従、ファイルごとの展開状態の保持 |
+| `Src/resource.h` | コントロール ID 1903–1904（`IDC_MERGE20_FORM_TABLE_LABEL`／`IDC_MERGE20_FORM_TABLE`）。`_APS_NEXT_CONTROL_VALUE` を 1905 へ |
+| `Translations/WinMerge/Japanese.po` | 新規 msgid 6 件（日本語訳付き。各 msgstr 直後に空行あり） |
+| `Src/Merge.vcxproj`／`.filters`、`Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | 登録 |
+
+- 影響分析の判定規則（設計書 §6 (5) に基づく。詳細はヘッダーに明記）：
+  - 重なり：旧側で重なっていなかった 2 図形が新側で重なった場合に警告。重なり面積／小さい方の図形の面積が 10% 以上で「重なり」（警告文に 2 項目名を含む）、10% 未満は「軽微な重なり」の注記。罫線（`isLine`）同士は対象外、罫線と項目の重なりは警告する。
+  - はみ出し：テキスト推定幅（半角 `point×0.6`、全角 `point×1.0`）が枠幅を超えた場合に警告。旧側でもはみ出していたものは警告しない。「〜可能性あり」「推定のため近似です」と明記。
+  - フォント波及：`point` が増えた要素についてテキスト幅の増加量を推定し、最も近い隣接図形までのすき間（矩形間距離）が増加量より小さい場合に警告（「可能性あり」「推定による近似判定です」）。
+  - 用紙外へのはみ出し：用紙サイズが判明している場合は用紙、なければキャンバス原寸を超えた場合に警告。**注意**：F1 の原寸は「最大座標＋160」のため、キャンバス基準では原理的に発火しない。用紙サイズは現状不明（T-F-4）のため、実働する経路は用紙サイズ判明時のみ。
+  - 深刻度：重なり／はみ出し／用紙外がある場合に `LayoutBreaking` へ引き上げる（フォント波及・軽微な重なりは引き上げない）。ファイル追加（旧側なし）の場合は比較対象がないため警告しない。
+
+### 69.3 検証レポート（コーディネーター検証済み）
+- **PR #65**：head `b625d59f`、base master `aeb12db5`（マージ時点で master は B7 PR1＋§67 まで進んでいたが、mergeable=clean のためそのままマージ）。CI：実行 45987159867、completed／success。全文ログ（48,251 行）を F5 担当が取得・確認（`~/workspace/.coord/f5/f5_run45987159867.log`）。GoogleTest 927 件中 927 件合格（ベースライン 905 件＋新規 22 件＝Impact 13 件＋Table 9 件）、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`（警告 429 件は既存のもので、F5 ファイルに起因する警告なし）。`.po` 番兵も通過。
+- **マージ**：マージコミット `05052799`。マージコミット CI：実行 45989040682、completed／success。全文ログ（3,604,200 バイト、ジョブ `build` 140471883924）をコーディネーターが取得・確認（`~/workspace/.coord/f5/f5_merge_log.txt`）。GoogleTest `[ PASSED ] 960 tests.`（938＋22）、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`。
+- **成果物（実行 45989040682）**：`WinMerge-x64.zip` 26,654,080 バイト、`WinMerge-x64-Setup-x64.exe` 40,127,355 バイト。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **受け入れ条件の照合（設計書 §10 F5）**：
+  - (a) 列が HTML 版と同じ・行クリックでスポットライト — 列構成は純粋モジュールのテストで固定。行クリック→`FocusDiffRecord` の配線はコードで実装済み。**実機でのクリック操作そのものは未検証**。形状キーの修正により、スポットライトのスクロール・旧／新プレビューが初めて機能するはず。
+  - (b) §6 (5) テスト 1〜4 合格 — GoogleTest で合格（`OverlapDetected`／`TextOverflowDetected`／`FontRippleDetected`／`NoFalsePositivesOnCleanChange`＋`LineLineOverlapIgnored`）。はみ出し・フォント波及の警告文は「可能性あり」表現で、近似である旨も文中に明記。
+  - (c) グループ化の 1 行表示＋展開（§5.3 テスト 1〜3） — GoogleTest で合格（`RowMoveGrouped`／`TwoRowsMoveSeparately`／`GroupSummaryText`）。微小グループの既定折りたたみと `+12.5単位` の小数表示もテスト済み。
+  - (d) 回帰なし — 938 件→960 件、全合格。既存テストの失敗なし。
+- **未検証（実機でしか確認できないもの）**：差分テーブルがプレビュー画面の下に 4 列で表示されること。グループ行のクリックで展開／折りたたみ、微小グループが既定で折りたたまれていること。レコード行のクリックでスポットライトが移動すること（キャンバスのスクロール、バナーの旧／新プレビュー）。FILE_ADD 行のクリックではスポットライトが動かないこと。重なり警告が第 4 列に出て 2 項目名を含むこと、深刻度がレイアウト破壊になること。ラベルの「微小差 N件を無視」表示。**重点：キャンバスで変更図形が緑／赤破線で強調されること（形状キー修正前は強調が働かなかったはずのため、目視での変化確認をお願いしたい）**。
+
+### 69.4 次への移行
+- F6（名称マスター管理）を着手済み（ブランチ `merge20/form-f6`）。IDD 306、コントロール 1905 以降、コマンドが必要なら 38985 以降。完了報告待ち。
+- B7 PR2（ダイアログ＋ゲート）は PR #66 として作成済みだが、CI 実行 45988382245 が failure（3 Error(s)）。`Merge20VerifyGate.cpp(151)` の C2440（`CMergeResultTextBuffer *` → `const CDiffTextBuffer *` への変換不可）と `Merge20VerifyDlg.cpp(107)` の C2653／C3861（`ucr::toTString` が存在しない）。担当に修正を指示済み。全文ログは `~/workspace/.coord/b7/b7_pr2_ci_fail_log.txt`。
+- ID 割り当て状況（2026-11-27 11:27 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 用に 305 を確保済み、F6 用に 306 を確保済み。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 用に 1893–1897 を確保済み、F5 が 1903–1904 を使用（1898–1902 は予備）、F6 用に 1905 以降を確保済み。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B7 用に 38983 を確保済み、F5 用に 38984 を確保済み（未使用）、F6 用に 38985 以降を確保済み。`_APS_NEXT_RESOURCE_VALUE` 306（F6 の予約分を含む見込み。次回 master 読取時に確認すること）、`_APS_NEXT_COMMAND_VALUE` 38983、`_APS_NEXT_CONTROL_VALUE` 1905（F5 マージ時点）。
+
+## 70. B7 (2/2) — 出力時最終検証ゲート＋問題一覧ダイアログ（PR #66）
+
+### 70.1 概要
+- B7（出力前の最終検証ゲート）の PR 2：ダイアログ＋ゲート本体。`SaveMergeResult` の冒頭にフックし、§68 の検証エンジンで問題があれば出力を停止して問題一覧ダイアログを表示する。問題がなければダイアログを出さずに素通りする。
+- ゲート API：`Merge20VerifyBeforeOutput(CMergeDoc& doc)` — 問題なし→`true`（ダイアログなし）、問題あり→問題一覧ダイアログ（Close→`false`、Output anyway→`true`、Jump→移動して `false`）。非対話実行ではダイアログを出さずログに記録して `false`。
+- S7 用の下位 API：`Merge20VerifyCheckMergeDocFile` → `Merge20VerifyCollectRows` → `Merge20VerifyShowIssuesAndDecide` → `Merge20VerifyJumpToIssue`。同じエンジン・同じダイアログを複数ファイルで使うためのもの（S7 自体は未着手のため呼び出し元なし）。
+- フック位置：`SaveMergeResult` 冒頭（結果バッファ初期化チェック直後、未解決プロンプトの前）。二重プロンプトにならない順序。
+- stock の保存（`DoSave`）にはゲートを付けない：`DoSave` は比較ペイン（OLD／NEW）の書き込みでマージ出力ではなく、ゲートすると正当な OLD／NEW 編集を阻み、stock の保存・終了経路（バックアップ・読み取り専用・`SaveModified`）に割り込むリスクがあるため。ゲート対象はマージ出力の漏斗 `SaveMergeResult` のみ。
+- 項目別 ON／OFF：オプションキー `Merge20/VerifyRediff`・`VerifyLineCount`・`VerifySyntax`・`VerifyConsistency`（すべて既定 ON）。設定画面への追加は未実施で、INI／レジストリで直接切り替える。
+
+### 70.2 変更内容（PR #66、15 コミット、11 ファイル、+1196/−4）
+| ファイル | 内容 |
+|---|---|
+| `Src/Merge20/Merge20VerifyDlg.h/.cpp` | 問題一覧ダイアログ（IDD 305、520×340） |
+| `Src/Merge20/Merge20VerifyGate.h/.cpp` | ゲート本体（`Merge20VerifyBeforeOutput`、Jump、S7 用下位 API） |
+| `Src/Merge.rc` | `IDD_MERGE20_VERIFY` 追加 |
+| `Src/resource.h` | ダイアログ 305・コントロール 1893–1897 割り当て。`_APS_NEXT_*` は 306／1898 へ（F5 マージ後の master 値 1905 を維持。台帳に B7・F5 両方の割り当てを併記） |
+| `Src/MergeDoc.h` | `Merge20GetNewPane()` 宣言 |
+| `Src/MergeDocResultPane.cpp` | `SaveMergeResult` へゲートをフック＋`Merge20GetNewPane()` 実装 |
+| `Translations/WinMerge/Japanese.po` | 新規 msgid 27 件（日本語訳付き。各 msgstr 直後に空行あり） |
+| `Src/Merge.vcxproj`／`.filters` | Dlg／Gate 登録（既定 PCH） |
+
+- **準備ファイルのリベース**：PR2 の準備ファイルは F4 スポットライト・マージ前の master を基に作られており、`Merge.vcxproj`（`msimg32.lib` 追加＋F4 ファイル 4 件）、`.filters`（F4 ファイル 4 件）、`Japanese.po`（F4 エントリ 10 件）が欠けていた。そのままコミットすると F4 を巻き戻すため、3 件だけ現 master（`4049229e`）へリベースした（`~/workspace/.coord/b7/rebase_pr2.py`）。リベース後の `.po` は 2292 msgid（2265＋27）で F4 の 10 件も含むことを確認済み。
+- **`LF_GHOST` スキップの修正あり**：`Merge20VerifyGate.cpp` の `appendBufferLines`（197 行目）と `CountRealLines`（75 行目）でゴースト行をスキップし、`BuildExpandedResultText`（保存内容）とのミラーが一致する。
+
+### 70.3 検証レポート（コーディネーター検証済み）
+- **PR #66**：head `1acab176`、base master `05052799`（F5 マージ済み）。15 コミット、変更ファイル 11 件（B7 の 11 ファイルのみ）。
+- CI 失敗と修正（実行 45988382245、3 Error(s)）：原因は 2 つとも準備ファイルの欠落した include だった。
+  1. `Merge20VerifyGate.cpp(151)` C2440：`CMergeResultTextBuffer` は `CDiffTextBuffer` の派生クラスだが（`MergeResultTextBuffer.h:22`）、`MergeDoc.h:37` は前方宣言のみで、Gate.cpp の翻訳単位では継承関係が見えていなかった → `#include "MergeResultTextBuffer.h"` を追加（コミット `fcf02fe0`）。
+  2. `Merge20VerifyDlg.cpp(107)` C2653／C3861：`ucr::toTString` 自体は正しい（`Src/Common/unicoder.h:107–108` で宣言され、`MergeDoc.cpp` でも使用）。誤りは include の欠落だけで、別名への置き換えは不要だった → `#include "unicoder.h"` を追加（コミット `71b74e57`）。
+  - **教訓**：調整役の初報は「`ucr::toTString` は存在しない」と断定したが誤りだった。コンパイルエラーの原因は「識別子が存在しない」ことと「include が欠けている」ことの両方があり得る。実コードを読んで確認すること。
+  - 警告 C4459（Gate.cpp の `files` がグローバル宣言を隠す）は警告のみで、ビルド失敗の原因ではないため触っていない。
+- F5 マージとの競合解消：修正後に master が進み PR #66 は mergeable=false になったため、3-way マージコミット `1acab176`（親：`fcf02fe0`＋`05052799`）を作成。重なった 4 ファイル（`Merge.vcxproj`、`.filters`、`resource.h`、`Japanese.po`）を base `4049229e`／master／branch の 3 者で `diff3 -m`。`resource.h` のみ台帳まわりで 3 箇所の競合があり、両方を残す形で解消（`_APS_NEXT_CONTROL_VALUE` は master 側の 1905（最大値）、台帳の割り当て行は B7・F5 両方の情報を併記、`_APS_NEXT_RESOURCE_VALUE` は 306 のまま）。マージ後の検証：vcxproj／.filters に B7 と F5 の両方の登録あり、`.po` は 2298 msgid（2265＋B7 27＋F5 6）、重複は stock 由来の既存分のみ、msgstr 直後の空行漏れ 0、diff3 マーカーなし。
+- **CI（ブランチ head）**：実行 45989997164、completed／success。全文ログ（3,605,853 バイト）を担当が取得・確認（`~/workspace/.coord/b7/pr2_build_success.log`）。コーディネーターも同ログの要所を確認：`Build succeeded`、`0 Error(s)`（警告 430 件は既存パターン）、GoogleTest `[ PASSED ] 960 tests.`、`[ FAILED ]` 0 件、`Merge20 verify: 100 files x 500 lines, 107 ms total, 0 issues`（第 1 段階の 102 ms と同オーダー）、`.po` 番兵通過。成果物：`WinMerge-x64.zip` 26,695,696 バイト、`WinMerge-x64-Setup-x64.exe` 40,147,826 バイト、expire 2027-02-25。
+- **マージ**：マージコミット `968b3b90`。マージコミット CI：実行 45992046764、completed／success。全文ログ（3,605,610 バイト、ジョブ `build` 140482031521）をコーディネーターが取得・確認（`~/workspace/.coord/b7/b7_pr2_merge_log.txt`）。GoogleTest `[ PASSED ] 960 tests.`、`[ FAILED ]` 0 件、`Build succeeded`、`0 Error(s)`、`Merge20 verify: 100 files x 500 lines, 95 ms total, 0 issues`。
+- **成果物（実行 45992046764）**：`WinMerge-x64.zip` 26,695,717 バイト、`WinMerge-x64-Setup-x64.exe` 40,150,348 バイト。いずれも未失効（expire 2027-02-25）。※成果物の SHA256 は API では取得できないため未確認。
+- **受け入れ条件の照合（B7 の (b)〜(f)）**：
+  - (b) 問題あり→出力停止＋一覧表示 — `SaveMergeResult` 冒頭の `Merge20VerifyBeforeOutput` が問題時に `false` を返し、問題一覧ダイアログを表示。**実機での停止動作は未検証**。
+  - (c) 一覧から該当ファイル・差分へ移動 — `Merge20VerifyJumpToIssue`（差分つきはその差分の結果セグメントへ、差分なしは結果行へ）。**実機未検証**。
+  - (d) 問題なしは素通り — 問題なしならダイアログを出さず `true` を返す。エンジン計測は CI ログで 107 ms（100 ファイル×500 行）を確認。
+  - (e) 項目別 ON／OFF — オプションキー 4 件（すべて既定 ON）。設定画面への追加は未実施で、INI／レジストリで直接切り替える。
+  - (f) 回帰なし — フックはゲート判定のみで通常の保存・マージ・B1 結論付与の経路を変更しない。GoogleTest 960 件全合格で確認。
+  - (a) 4 項目の検証は第 1 段階で実装済み。本段階ではゲート経由で呼ばれる（`Merge20VerifyBeforeOutput` → `Merge20VerifyRunFile`）。
+- **未検証（実機でしか確認できないもの）**：ダイアログの実機表示（レイアウト、列幅、日本語表示）。ゲートの実機動作：問題あり→出力停止・一覧表示・Jump・Output anyway、問題なし→素通りして保存されること。実ファイル（実マージ結果）での 4 項目の検出精度。S7 複数ファイル集約の下位 API（S7 未着手のため呼び出し元がなく、実機では未使用の経路）。
+
+### 70.4 次への移行
+- B7 はこれで完了（エンジン＋ゲート）。次は **B8**（検証レポートの保存。B7 に依存）に進む。B8 の担当を spawn する。
+- F6（名称マスター管理）は着手済み（ブランチ `merge20/form-f6`、PR の CI が進行中とみられる）。完了報告待ち。
+- ID 割り当て状況（2026-11-27 11:40 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 用に 306 を確保済み。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 用に 1905 以降を確保済み。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B7 用に 38983 を確保済み、F5 用に 38984 を確保済み（未使用）、F6 用に 38985 以降を確保済み。`_APS_NEXT_RESOURCE_VALUE` 306、`_APS_NEXT_COMMAND_VALUE` 38983、`_APS_NEXT_CONTROL_VALUE` 1905（B7 PR2 マージ時点）。

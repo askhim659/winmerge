@@ -124,6 +124,10 @@
 #define IDD_MERGE20_SUMMARY            301
 #define IDD_MERGE20_CLOSE_WARN         303
 #define IDD_MERGE20_HIGHRISK_CONFIRM  304
+// Merge20 (best-workflow B7): output-time final verification
+// problem-list dialog (summary line, syntax note, problem list,
+// jump and proceed buttons).
+#define IDD_MERGE20_VERIFY        305
 #define IDD_MERGE20_FORM_MASTER      306
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
@@ -943,7 +947,7 @@
 // 1893-1902 are reserved for B7 (see the allocation note below).
 // F5 consumes controls 1903-1904 (FORM compare diff table: label, list).
 // F6 consumes dialog 306 and controls 1905-1909 (FORM name master).
-// 305 is reserved for B7 (PR2).
+// B7 consumes dialog 305 (verification problem-list dialog).
 #define IDC_MERGE20_FORM_TABLE_LABEL        1903
 #define IDC_MERGE20_FORM_TABLE              1904
 // F6 consumes controls 1905-1909 (FORM name master: top-bar button, dialog text edit,
@@ -972,6 +976,11 @@
 #define IDC_MERGE20_HIGHRISK_DETAIL     1890
 #define IDC_MERGE20_HIGHRISK_WARNING    1891
 #define IDC_MERGE20_HIGHRISK_EXECUTE    1892
+#define IDC_MERGE20_VERIFY_SUMMARY    1893
+#define IDC_MERGE20_VERIFY_NOTE       1894
+#define IDC_MERGE20_VERIFY_LIST       1895
+#define IDC_MERGE20_VERIFY_JUMP       1896
+#define IDC_MERGE20_VERIFY_PROCEED    1897
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2746,20 +2755,26 @@
 // confirmation dialog: counts, detail, warning and execute
 // button). It uses no command ID: the dialog is invoked from
 // judgment operations, like the B2 warning.
+// B7 consumes dialog 305 and controls 1893-1897 (verification
+// problem-list dialog: summary, syntax note, list, jump and
+// proceed buttons). It uses no command ID: the dialog is shown
+// by the output gate, like the B2 warning.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
-// - dialogs (IDD_*): from 308 (_APS_NEXT_RESOURCE_VALUE). 305 is reserved
-//   for B7 (PR2), 306 is the F6 name-master dialog, 307 is IDR_LOGO. The numeric
+// - dialogs (IDD_*): from 308 (_APS_NEXT_RESOURCE_VALUE). 305 is the B7
+//   verification problem-list dialog, 306 is the F6 name-master dialog,
+//   307 is IDR_LOGO. The numeric
 //   space is shared with icons/bitmaps, so 301 is the B9 summary
 //   dialog, 302 (IDI_ROTATE2), 303 is the B2 close-warning dialog,
-//   304 is the B14 high-risk confirmation dialog,
+//   304 is the B14 high-risk confirmation dialog, 305 is the B7
+//   verification problem-list dialog,
 //   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
 // - controls (IDC_*): from 1910 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
 //   F4 takes 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1888,
-//   B14 takes 1889-1892, B7 reserves 1893-1902, F5 takes 1903-1904,
+//   B14 takes 1889-1892, B7 takes 1893-1897 (reserves 1893-1902), F5 takes 1903-1904,
 //   F6 takes 1905-1909.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
