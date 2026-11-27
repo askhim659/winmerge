@@ -5940,3 +5940,56 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 59.4 次への移行
 - U2（タイトルバーに WizMerge＋進捗を表示）は U0 依存で U1・U5 とは独立。U5 のマージを受けて着手する。
 - F3（PR #54）・B9（PR #55）は開いているが、子の最終報告待ちのためまだ扱わない。
+## §60 Wave 5 F3 — FORM ビジュアルプレビュー（キャンバス・ズーム・文字描画）— マージ・CI 検証済み（2026-11-27）
+
+### 60.1 内容（設計書 §10 F3）
+- `Merge20FormCanvasGeom`（純粋モジュール：座標変換・グリッド判定）＋単体テスト 20 件。TransformOneToOne（XML 100 → 画面 132、往復一致）を含む。
+- `Merge20FormCanvas`（`CWnd` 派生・GDI 描画）：原寸 1:1、方眼グリッド（100 単位ごと、500 単位ごとに太線・XML 座標基準に修正済み）、色規則（変更なし＝グレー実線、旧＝赤破線、新＝緑実線）、ズーム（100%／25%／フィット／スライダー 10〜200% クランプ）、ドラッグスクロール＋図形クリック、枠高さ切替（全開／640px 固定）、文字・値の描画（§6 (6)）。フォントが近似表示の場合は「フォントは近似表示です」の注記を出す。
+- `fontName` 追加（`Xml.h`／`Xml.cpp`、ShapeFontName テスト 1 件）。
+- `FormCompareView` にプレビューペインを配線（`Canvas.cpp` の `SetResult` が同一ポインタを無視しスクロール・選択を保持）。
+- リソース：コントロール ID 1858–1865、`_APS_NEXT_CONTROL_VALUE` 1866。コマンド ID 新規なし。`.po` 新規 6 件。
+
+### 60.2 変更一覧（ブランチ `merge20/form-f3`、base master `df925a7c`。24 コミット）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20FormCanvasGeom.h` | `a7c81b90` | 新規・純粋モジュール |
+| 2 | `Src/Merge20/Merge20FormCanvasGeom.cpp` | `3e2af0ae` | 新規 |
+| 3 | `Testing/GoogleTest/Merge20/Merge20FormCanvasGeom_test.cpp` | `6c053d63` | 新規・20 件 |
+| 4–6 | 同上 3 ファイル | `dcd43f0a`／`c79040d8`／`806b0ff8` | グリッド太線判定を XML 座標基準に修正 |
+| 7 | `Src/Merge20/Merge20FormCanvas.h` | `5df28a6a` | 新規 |
+| 8 | `Src/Merge20/Merge20FormCanvas.cpp` | `cb311b4d` | 新規・GDI 描画 |
+| 9–11 | `Src/Merge20/Merge20FormXml.h`／`.cpp`／Xml テスト | `32aebc1c`／`723c2ebf`／`41d9e40f` | `fontName` 追加 |
+| 12 | `Src/Merge20/Merge20FormCompareView.h` | `20fa1037` | キャンバス＋ズーム操作 |
+| 13 | `Src/Merge20/Merge20FormCanvas.cpp` | `2a9bf1cf` | `SetResult` が同一ポインタを無視しスクロール・選択を保持 |
+| 14 | `Src/Merge20/Merge20FormCompareView.cpp` | `0f8d98c3` | プレビューペイン配線 |
+| 15 | `Src/resource.h` | `0a763bd0` | コントロール ID 1858–1865、`_APS_NEXT_CONTROL_VALUE` 1866 |
+| 16–17 | `Src/Merge.vcxproj`／`.filters` | `0b519678`／`d3f5d708` | 登録 |
+| 18–19 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | `e282a9e0`／`a03286d7` | Geom 登録 |
+| 20 | `Translations/WinMerge/Japanese.po` | `47645948` | 新規 msgid 6 件 |
+| 21 | テスト | `cb6b9219` | CI 失敗修正：テスト 234 行目、`EXPECT_NEAR` 2 引数→`EXPECT_DOUBLE_EQ` |
+| 22 | `Src/Merge20/Merge20FormCanvas.cpp` | `11b61f62` | CI 失敗修正：`CDC::GetTextExtentPoint32` 不存在→`CDC::GetTextExtent` |
+| 23 | （マージ） | `a63d8102` | master マージ（`6d1767aa`、競合解消） |
+| 24 | `Translations/WinMerge/Japanese.po` | `8e6fe505` | .po 修正：エントリ区切りの空行挿入（3 か所。ブランチ head） |
+
+- CI 失敗と修正（実行 45947903570）：調整役の初報は「2 Error(s) のみ」と誤っていた。ログを自分で確認した結果、実際は **6 Error(s)** だった。テスト側 4 件（C2059／C2181／C2065／C2440、すべて `Merge20FormCanvasGeom_test.cpp:234` の 2 引数 `EXPECT_NEAR` が原因）に加え、`Merge20FormCanvas.cpp(548)` の `error C2039: 'GetTextExtentPoint32W': is not a member of 'CDC'` が 2 件。両方とも修正済み（`cb6b9219`、`11b61f62`）。**教訓：CI 失敗の件数はログの全文で数えること。調整役の初報の件数を鵜呑みにしないこと。** なお修正コミット `11b61f62` には CI 実行が一度も作成されなかった（理由不明）。その後のマージコミット `a63d8102` では実行 45949653613 が作成され success したが、.po 問題が見つかったためさらに修正して最終実行で再確認した。
+- master マージ（`a63d8102`）：master が 15 コミット進み、`Merge.vcxproj`／`.filters`／`resource.h`／`Japanese.po` が競合したため master（`6d1767aa`、U1 ブランドヘッダ等を含む）をマージ。F2 と同じ方式で Git Database API によるマージコミットを作成。競合解消：`_APS_NEXT_COMMAND_VALUE` 38979（U1 が 38978 を使用）、`_APS_NEXT_CONTROL_VALUE` 1866（F3 が 1858–1865 を使用）。F3・U1 両方の登録を保持。`diff3` で vcxproj／filters はクリーンマージ、resource.h／.po の競合箇所は手動で両方残す形に解決した。
+- **.po 空行欠陥の発見と修正（`8e6fe505`）**：検証ゲートの成果物チェックで判明。出荷 .po では `Font is shown approximately.` の訳文が空になっていた。原因はリポジトリ .po 内で `msgstr` の直後に空行なしで次エントリのコメントが続いていたためで、ビルド時の .po 処理がその訳文を落とす。子のマージ解決スクリプトの `.strip()` が F3 最終エントリと U1 エントリの間の空行を消したのが原因。**同じ欠陥が既存の 2 件（`%1 displayed, %2 checked, %3 unreviewed`、`(No lines)`、D4 由来）にもあった**ため、3 件まとめて空行を挿入した。修正後の成果物で 8 件すべて訳文ありを確認済み。**教訓（全スライス共通）：.po の各エントリ間には必ず空行を入れること。マージ解決スクリプトで `.strip()` を使うときはエントリ間の空行を消さないこと。マージ後は .po を末尾まで確認し、`diff3` マーカーがないことと、空行欠落がないことを確認すること。**
+
+### 60.3 検証レポート（コーディネーター検証済み）
+- **PR #54**：open・mergeable=true・mergeable_state=clean、head `8e6fe505`、base master。24 コミット、変更ファイル 16 件。PR 差分の 16 ファイルは F3 のものだけ（マージで取り込んだ master 側の変更は差分に含まれないことを確認済み）。
+- **CI（ブランチ head）**：実行 45951495877、completed／success。全文ログ（3,575,130 バイト、ジョブ `build` 140348155237、48,018 行）をコーディネーターが取得・確認（`~/workspace/.coord/f3_final_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`（814→835、新規 21 件＝Geom 20 件＋ShapeFontName 1 件を含む。`[ FAILED ]` なし）、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。ログ中の "error" 42 件はすべてビルドスクリプト内の `echo ERROR: Failed to download ...` という文字列そのもの（実際の失敗ではない）。`Checking bundled Japanese.po for Merge20 strings...` → `Merge20 strings present in the bundled Japanese.po.` を確認。
+- **成果物（実行 45951495877）**：`WinMerge-x64.zip` 26,580,310 バイト、`WinMerge-x64-Setup-x64.exe` 40,031,440 バイト。いずれも未失効。成果物の .po を直接ダウンロードして確認：出荷 `WizMerge/Languages/Japanese.po` 内で F3 の 6 件すべて日本語訳あり（`Visual preview`→ビジュアルプレビュー、`Select a form to preview it`→帳票を選択するとプレビューを表示します、`Fit`→フィット、`Expand to full height`→枠高さ：全開、`Fixed height (640px)`→枠高さ：640pxに固定、`Font is shown approximately.`→フォントは近似表示です）。既存 2 件の訳文の復旧も確認。
+- **マージ**：マージコミット `dee3974f`。マージコミット CI：実行 45953212902、completed／success（head_sha=dee3974f と一致）。全文ログ（3,571,925 バイト、ジョブ `build` 140353622266、47,967 行）をコーディネーターが取得・確認（`~/workspace/.coord/f3_merge_final_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,582,263 バイト、`WinMerge-x64-Setup-x64.exe` 40,038,275 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（設計書 §10 F3）**：
+  - (a) 原寸 1:1 — 単体テスト＋ローカルハーネスで検証済み（TransformOneToOne：XML 100 → 画面 132、往復一致）。描画の目視は**実機未検証**。
+  - (b) ズーム 4 種 — 単体テストで検証済み（Scale* 7 件：100%／25%／フィット／スライダー 10〜200% クランプ）。実機操作は未検証。
+  - (c) §6 (6) テスト 1〜3 — 切り詰めは単体テストで検証済み。フォント近似時の注記は実装済みで、出荷 .po での訳文ありを確認。文字描画・色分けの目視は**実機未検証**。
+  - (d) 回帰なし — 835 件全合格で回帰なし。キャンバスは FormCompareView 内の追加のみで、他ウィンドウへの影響なし。
+- **未検証（実機でしか確認できないもの）**：描画の目視（1:1 の位置、グリッド、色分け、文字表示）、ズーム操作（ボタン／スライダー／フィット）、ドラッグスクロール、図形クリック選択、枠高さ切替、実ファイルでの表示。
+
+### 60.4 次への移行
+- F4（スポットライト）は F3 マージを受けて着手済み（ブランチ `merge20/form-f4`、base `dee3974f`、ID 事前割り当て：コントロール 1872–1881、コマンド 38980）。ただし初回 CI（実行 45955297401、head `d445db8b`）が failure（`Merge20FormSpotlight_test.cpp` 262〜266 行目の 2 引数 `EXPECT_NEAR` と同じパターン、63 Error(s)）。F4 担当に診断ヒント（F3 と同一パターン、`EXPECT_DOUBLE_EQ` への修正）を送付済み。
+- B9（PR #57）は付け替え後の CI 成功（実行 45954401163、head `23be11da`）をコーディネーターが全文ログで検証済み（`Build succeeded`・`0 Error(s)`・GoogleTest `[ PASSED ] 839 tests.`（835＋B9 の 4 件）・`[ FAILED ]` なし・`.po` 番兵通過。全文ログは `~/workspace/.coord/b9_final_log.txt`）。ただし U2 マージ（`cfd4534c`）で再び競合（dirty）になったため、B9 担当に master `cfd4534c` の取り込みと CI 再実行を指示済み。B9 のコントロール ID は付け替え後 1866–1871、コマンド ID 38979。
+- U2（PR #58）はマージ済み（マージコミット `cfd4534c`）。マージコミット CI（実行 45956300465）は進行中。検証後に §61 として記録する。
+- ID 割り当て状況（2026-11-27 07:10 JST 時点）：コントロール ID は F3 が 1858–1865、B9 が 1866–1871（付け替え後）、F4 が 1872–1881（予約済み）。コマンド ID は B9 が 38979、F4 が 38980（予約済み）。master の `_APS_NEXT_COMMAND_VALUE` は 38979、`_APS_NEXT_CONTROL_VALUE` は 1866（F3 マージ時点。B9 マージ時にそれぞれ 38980／1872 へ進む）。
+- 運用の教訓：`/tmp` 配下の作業ファイルは VM により消去されることがある（U2 担当が未コミットの編集 1 件を失った。調整役の `/tmp/gh.py` も消去された）。作業用スクラッチと共用スクリプトは `~/workspace/.coord/` 配下に置くこと（`gh.py` は `~/workspace/.coord/gh.py` に再作成済み）。
