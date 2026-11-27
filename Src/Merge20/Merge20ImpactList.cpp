@@ -200,8 +200,11 @@ void CMerge20ImpactList::StartForDiff(CMergeDoc* pDoc, int nDiff)
 		UpdateStatus();
 		return;
 	}
-	const std::vector<Merge20GrepFile> files = m_pDirView->Merge20BuildGrepFiles();
-	m_search.Start(files, symbols, sRelPath,
+	// The name avoids C4459: a global named `files` exists, and
+	// the D7/D10 builders already trigger the same warning for
+	// their own local of that name.
+	const std::vector<Merge20GrepFile> grepFiles = m_pDirView->Merge20BuildGrepFiles();
+	m_search.Start(grepFiles, symbols, sRelPath,
 		GetOptionsMgr()->GetInt(OPT_CP_DETECT), this);
 	UpdateStatus();
 }
