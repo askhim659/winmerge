@@ -272,4 +272,68 @@ TEST(Merge20Split, GroupRoundTripAndFirstRowMatch)
 	EXPECT_TRUE(Merge20SplitGroupMatchesFirstRow(group, parent));
 }
 
+TEST(Merge20Split, GroupMatchesParentRange)
+{
+	// B10 PR2: the lookup an undo of a regroup (or a redo of a
+	// split) uses to find the parent again without an index.
+	const DIFFRANGE parent = TwoWayDiff3v5();
+	std::vector<DIFFRANGE> rows;
+	ASSERT_TRUE(Merge20SplitRange(parent, 2, rows));
+	const Merge20SplitGroup group = Merge20SplitGroupFromRange(parent,
+		static_cast<int>(rows.size()));
+	EXPECT_TRUE(Merge20SplitGroupMatchesParentRange(group, parent));
+	// A row is not the parent (its real ranges are a single line).
+	EXPECT_FALSE(Merge20SplitGroupMatchesParentRange(group, rows[0]));
+	// A shifted parent (rescan moved the diff) does not match.
+	DIFFRANGE shifted = parent;
+	shifted.begin[0] = 11;
+	EXPECT_FALSE(Merge20SplitGroupMatchesParentRange(group, shifted));
+	// A different op does not match.
+	DIFFRANGE otherOp = parent;
+	otherOp.op = OP_1STONLY;
+	EXPECT_FALSE(Merge20SplitGroupMatchesParentRange(group, otherOp));
+	// A different apparent range does not match.
+	DIFFRANGE otherApparent = parent;
+	otherApparent.dbegin = 31;
+	EXPECT_FALSE(Merge20SplitGroupMatchesParentRange(group, otherApparent));
+	// A group with fewer than two rows is not a split at all.
+	Merge20SplitGroup oneRow = group;
+	oneRow.rows = 1;
+	EXPECT_FALSE(Merge20SplitGroupMatchesParentRange(oneRow, parent));
+}
+
+TEST(Merge20Split, GroupEquals)
+{
+	// B10 PR2: the lookup an undo of a split (or a redo of a
+	// regroup) uses to find the stored group again without an
+	// index.
+	const DIFFRANGE parent = TwoWayDiff3v5();
+	std::vector<DIFFRANGE> rows;
+	ASSERT_TRUE(Merge20SplitRange(parent, 2, rows));
+	const Merge20SplitGroup group = Merge20SplitGroupFromRange(parent,
+		static_cast<int>(rows.size()));
+	const Merge20SplitGroup same = Merge20SplitGroupFromRange(parent,
+		static_cast<int>(rows.size()));
+	EXPECT_TRUE(Merge20SplitGroupEquals(group, same));
+	// Any field difference breaks equality.
+	Merge20SplitGroup otherRows = group;
+	otherRows.rows = 4;
+	EXPECT_FALSE(Merge20SplitGroupEquals(group, otherRows));
+	Merge20SplitGroup otherOp = group;
+	otherOp.op = static_cast<int>(OP_1STONLY);
+	EXPECT_FALSE(Merge20SplitGroupEquals(group, otherOp));
+	Merge20SplitGroup otherBegin = group;
+	otherBegin.begin[1] = 21;
+	EXPECT_FALSE(Merge20SplitGroupEquals(group, otherBegin));
+	Merge20SplitGroup otherEnd = group;
+	otherEnd.end[0] = 13;
+	EXPECT_FALSE(Merge20SplitGroupEquals(group, otherEnd));
+	Merge20SplitGroup otherBlank = group;
+	otherBlank.blank[0] = 30;
+	EXPECT_FALSE(Merge20SplitGroupEquals(group, otherBlank));
+	Merge20SplitGroup otherApparent = group;
+	otherApparent.dend = 35;
+	EXPECT_FALSE(Merge20SplitGroupEquals(group, otherApparent));
+}
+
 } // namespace
