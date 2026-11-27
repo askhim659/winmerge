@@ -1083,6 +1083,7 @@
     <ClInclude Include="Merge20\Merge20Session.h" />
     <ClInclude Include="Merge20\Merge20SessionDoc.h" />
     <ClInclude Include="Merge20\Merge20Types.h" />
+    <ClInclude Include="Merge20\Merge20Theme.h" />
     <ClInclude Include="MergeDiffNavigation.h" />
     <ClInclude Include="MergeConflictNavigation.h" />
     <ClInclude Include="MergeLogger.h" />
@@ -1484,6 +1485,7 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20SessionDoc.cpp" />
+    <ClCompile Include="Merge20\Merge20Theme.cpp" />
     <ClCompile Include="MergeDoc.cpp" />
     <ClCompile Include="MergeDocDiffSync.cpp" />
     <ClCompile Include="MergeDocEncoding.cpp" />

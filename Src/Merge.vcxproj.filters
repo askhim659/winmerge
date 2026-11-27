@@ -738,6 +738,9 @@
     <ClCompile Include="Merge20\Merge20SessionDoc.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Theme.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="MergeDoc.cpp">
       <Filter>MFCGui\MDIChild\TextTableCompare\Source Files</Filter>
     </ClCompile>
@@ -1638,6 +1641,9 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Types.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20Theme.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="MergeDoc.h">
