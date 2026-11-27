@@ -8,6 +8,8 @@
 #include "OptionsDef.h"
 #include "OptionsMgr.h"
 #include "MergeApp.h"
+#include "Merge20/Merge20Patrol.h"
+#include "Merge20/Merge20ClassifyDoc.h"
 
 class CCmdUI;
 
@@ -26,6 +28,108 @@ public:
 	{
 		return GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY) &&
 			!pView->GetDocument()->Merge20IsDiffUnresolved(nDiff);
+	}
+
+	/**
+	 * @brief Merge20 (best-workflow B3): whether risk-order patrol
+	 * is on (OPT_MERGE20_RISK_ORDER). The mode reorders the
+	 * patrol: file patrol in CDirView, diff patrol here.
+	 */
+	static bool IsRiskOrderPatrol()
+	{
+		return GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER);
+	}
+
+	/**
+	 * @brief Merge20 (best-workflow B3): patrol rank of one diff
+	 * (0 = High, 1 = Medium, 2 = None), from its per-diff S4 risk
+	 * (Merge20ClassifyOneDiffRange). 3-way docs rank as None: the
+	 * classification only runs for 2-way docs.
+	 */
+	template <typename View>
+	static int RiskRankOfDiff(View* pView, int nDiff)
+	{
+		const CMergeDoc* pd = pView->GetDocument();
+		if (pd == nullptr || pd->m_nBuffers != 2)
+			return static_cast<int>(Merge20RiskRank::NONE);
+		const std::vector<String> keywords = Merge20ParseRiskKeywords(
+			GetOptionsMgr()->GetString(OPT_MERGE20_RISK_KEYWORDS));
+		return static_cast<int>(Merge20RiskRankOfRisk(
+			Merge20ClassifyOneDiffRange(*pd, nDiff, keywords)));
+	}
+
+	/**
+	 * @brief Merge20 (best-workflow B3): the patrol candidates of
+	 * this file in risk order: the significant diffs that are not
+	 * filtered (and, with TODO-only on, not already resolved),
+	 * ordered High, Medium, None (stable, so equal risks keep
+	 * diff order). The same candidate set the diff-order patrol
+	 * visits; only the order changes, so the (f) regression
+	 * surface is the order alone.
+	 *
+	 * Classifying every candidate diff is the same work the S4
+	 * classification does once per rescan, so it runs only on an
+	 * actual Next/Prev/First/Last press, never from the idle-time
+	 * update handlers (those only ask whether any candidate
+	 * exists, which is order-independent).
+	 */
+	template <typename View>
+	static std::vector<int> RiskOrderDiffs(View* pView)
+	{
+		const CMergeDoc* pd = pView->GetDocument();
+		std::vector<int> diffs;
+		if (pd == nullptr || !pd->m_diffList.HasSignificantDiffs())
+			return diffs;
+		const int nDiffs = pd->m_diffList.GetSize();
+		std::vector<Merge20RiskRank> ranks(static_cast<size_t>(nDiffs), Merge20RiskRank::NONE);
+		std::vector<bool> isTarget(static_cast<size_t>(nDiffs), false);
+		const int firstDiff = pd->m_diffList.FirstSignificantDiff();
+		const int lastDiff = pd->m_diffList.LastSignificantDiff();
+		int nDiff = firstDiff;
+		while (nDiff >= 0 && nDiff <= lastDiff)
+		{
+			if (!pView->IsDiffFiltered(nDiff) && !IsDiffSkippedForTodoOnly(pView, nDiff))
+			{
+				isTarget[static_cast<size_t>(nDiff)] = true;
+				ranks[static_cast<size_t>(nDiff)] =
+					static_cast<Merge20RiskRank>(RiskRankOfDiff(pView, nDiff));
+			}
+			if (nDiff < nDiffs - 1)
+				nDiff = pd->m_diffList.NextSignificantDiff(nDiff);
+			else
+				break;
+		}
+		return Merge20BuildRiskOrder(ranks, isTarget);
+	}
+
+	/**
+	 * @brief Merge20 (best-workflow B3): next/previous diff in
+	 * risk order from the current diff (wrapping only when asked
+	 * for: the D3 wrap rule, see OnNextdiff). -1 when there is no
+	 * next diff in the order.
+	 */
+	template <typename View>
+	static int FindNextRiskOrderDiff(View* pView, int curDiff, int direction, bool wrap)
+	{
+		return Merge20FindNextInOrder(RiskOrderDiffs(pView), curDiff, direction, wrap);
+	}
+
+	/**
+	 * @brief Merge20 (best-workflow B3): first/last diff in risk
+	 * order (-1 when there is no candidate diff).
+	 */
+	template <typename View>
+	static int FindFirstRiskOrderDiff(View* pView)
+	{
+		const std::vector<int> diffs = RiskOrderDiffs(pView);
+		return diffs.empty() ? -1 : diffs.front();
+	}
+
+	template <typename View>
+	static int FindLastRiskOrderDiff(View* pView)
+	{
+		const std::vector<int> diffs = RiskOrderDiffs(pView);
+		return diffs.empty() ? -1 : diffs.back();
 	}
 
 	/**
@@ -261,7 +365,10 @@ public:
 		CMergeDoc* pd = pView->GetDocument();
 		if (pd->m_diffList.HasSignificantDiffs())
 		{
-			int nDiff = FindFirstNonFilteredDiff(pView);
+			// Merge20 (best-workflow B3): with risk-order patrol on,
+			// First goes to the highest-risk candidate diff.
+			int nDiff = IsRiskOrderPatrol() ? FindFirstRiskOrderDiff(pView)
+				: FindFirstNonFilteredDiff(pView);
 			if (nDiff >= 0)
 				pView->SelectDiff(nDiff, true, false);
 		}
@@ -286,7 +393,10 @@ public:
 		CMergeDoc *pd = pView->GetDocument();
 		if (pd->m_diffList.HasSignificantDiffs())
 		{
-			int nDiff = FindLastNonFilteredDiff(pView);
+			// Merge20 (best-workflow B3): with risk-order patrol on,
+			// Last goes to the lowest-risk candidate diff.
+			int nDiff = IsRiskOrderPatrol() ? FindLastRiskOrderDiff(pView)
+				: FindLastNonFilteredDiff(pView);
 			if (nDiff >= 0)
 				pView->SelectDiff(nDiff, true, false);
 		}
@@ -325,6 +435,30 @@ public:
 
 		// Returns -1 if no diff selected
 		int curDiff = pd->GetCurrentDiff();
+		// Merge20 (best-workflow B3): with risk-order patrol on,
+		// Next visits the candidate diffs in per-diff risk order
+		// instead of diff order. The wrap rule is the D3 one: with
+		// TODO-only on, wrap within the file; otherwise fall
+		// through to the next file when the risk order runs out
+		// (the plain patrol behaviour after its last diff).
+		if (IsRiskOrderPatrol())
+		{
+			const bool bTodoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
+			const int riskNextDiff = FindNextRiskOrderDiff(pView, curDiff, 1, bTodoOnly);
+			if (riskNextDiff >= 0)
+			{
+				pView->SelectDiff(riskNextDiff, true, false);
+				return;
+			}
+			if (bTodoOnly)
+				return; // No candidate diff at all: stay in this file.
+			if (IDirDoc *pDirDoc = pd->GetDirDoc())
+			{
+				if (pDirDoc->MoveableToNextDiff())
+					pDirDoc->MoveToNextDiff(pd);
+			}
+			return;
+		}
 		int nextDiff = FindNextNonFilteredDiff(pView, curDiff);
 
 		if (nextDiff >= 0)
@@ -395,6 +529,28 @@ public:
 
 		// GetCurrentDiff() returns -1 if no diff selected
 		int curDiff = pd->GetCurrentDiff();
+		// Merge20 (best-workflow B3): see OnNextdiff. Previous
+		// diff in risk order; with TODO-only on, wrap to the
+		// lowest-risk candidate instead of moving to the previous
+		// file.
+		if (IsRiskOrderPatrol())
+		{
+			const bool bTodoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
+			const int riskPrevDiff = FindNextRiskOrderDiff(pView, curDiff, -1, bTodoOnly);
+			if (riskPrevDiff >= 0)
+			{
+				pView->SelectDiff(riskPrevDiff, true, false);
+				return;
+			}
+			if (bTodoOnly)
+				return; // No candidate diff at all: stay in this file.
+			if (IDirDoc *pDirDoc = pd->GetDirDoc())
+			{
+				if (pDirDoc->MoveableToPrevDiff())
+					pDirDoc->MoveToPrevDiff(pd);
+			}
+			return;
+		}
 		int prevDiff = FindPrevNonFilteredDiff(pView, curDiff);
 
 		if (prevDiff >= 0)
