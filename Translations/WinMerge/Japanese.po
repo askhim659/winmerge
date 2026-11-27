@@ -12124,3 +12124,48 @@ msgstr "【Wiz】リスク順"
 msgid "All risks"
 msgstr "すべてのリスク"
 
+#. Merge20 (best-workflow B14): high-risk confirmation dialog title (Merge.rc)
+#: Src/Merge.rc
+msgid "High-Risk Confirmation"
+msgstr "【Wiz】高リスクの確認"
+
+#. Merge20 (best-workflow B14): high-risk confirmation counts line, diffs (MergeDocResultPane.cpp)
+#: Src/MergeDocResultPane.cpp
+msgid "High-risk diffs: %1"
+msgstr "高リスクの差分：%1 件"
+
+#. Merge20 (best-workflow B14): high-risk confirmation detail line, one diff (MergeDocResultPane.cpp)
+#: Src/MergeDocResultPane.cpp
+msgid "Diff %1: %2"
+msgstr "差分 %1：%2"
+
+#. Merge20 (best-workflow B14): learning candidate text inside the high-risk confirmation (MergeDocResultPane.cpp)
+#: Src/MergeDocResultPane.cpp
+msgid "Learning suggestion: %1 (%2, %3)"
+msgstr "学習候補：%1（%2・%3件）"
+
+#. Merge20 (best-workflow B14): overflow line when more than five high-risk diffs are listed (MergeDocResultPane.cpp)
+#: Src/MergeDocResultPane.cpp
+msgid "And %1 more diff(s)"
+msgstr "他 %1 件の差分"
+
+#. Merge20 (best-workflow B14): high-risk confirmation warning line (Merge20HighRiskConfirmDlg.cpp)
+#: Src/Merge20/Merge20HighRiskConfirmDlg.cpp
+msgid "Cancelling changes nothing."
+msgstr "キャンセルすると何も変わりません。"
+
+#. Merge20 (best-workflow B14): high-risk confirmation execute button (Merge.rc)
+#: Src/Merge.rc
+msgid "Execute"
+msgstr "実行する"
+
+#. Merge20 (best-workflow B14): high-risk confirmation counts line, file (Merge20HighRiskConfirmDlg.cpp)
+#: Src/Merge20/Merge20HighRiskConfirmDlg.cpp
+msgid "High-risk file: %1"
+msgstr "高リスクのファイル：%1"
+
+#. Merge20 (best-workflow B14): next review state line in the high-risk file confirmation (Merge20HighRiskConfirmDlg.cpp)
+#: Src/Merge20/Merge20HighRiskConfirmDlg.cpp
+msgid "Next state: %1"
+msgstr "次の状態：%1"
+
