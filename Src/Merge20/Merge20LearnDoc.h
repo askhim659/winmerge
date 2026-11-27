@@ -187,6 +187,23 @@ String Merge20LearnViaDisplayName(const String& via);
 bool Merge20LearnDismissCandidate(CMergeDoc& doc, int nDiff);
 
 /**
+ * @brief Merge20 (best-workflow B10 PR2): un-dismiss the candidate
+ * of one diff (the undo of a dismissal).
+ *
+ * Drops the diff identity from the doc's dismissed set, so the
+ * next recompute (Merge20LearnRefreshCandidates, called by the
+ * undo adapter) shows the candidate again when the diff is still
+ * waiting for a decision. Touches no learning data: a dismissal
+ * never recorded anything, so there is nothing to take back.
+ * The candidate itself is not restored here: the caller
+ * recomputes the candidates from the store, so the restored
+ * candidate always carries the store's current counts.
+ * @return True when the identity was in the dismissed set (false
+ *         when it was already gone: the dismissal is stale).
+ */
+bool Merge20LearnUndismissCandidate(CMergeDoc& doc, int nDiff);
+
+/**
  * @brief Merge20 (Phase 3 L2, design section 3.2): recompute the
  * learning candidates of one doc into its candidate map
  * (CMergeDoc::GetMerge20LearnCandidates()).
