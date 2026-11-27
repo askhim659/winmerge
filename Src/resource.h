@@ -1960,6 +1960,9 @@
 // patrol toggle (View menu + dedicated-bar button). 38980 is held
 // for F4, 38981 for the B2 stage 2 output gates (S7/S5).
 #define ID_MERGE20_RISK_ORDER           38982
+// Merge20 (best-workflow B8, gap analysis section 4.2 B8):
+// verification report export (folder compare context menu).
+#define ID_MERGE20_VERIFY_REPORT        38983
 #define IDS_SPLASH_GPLTEXT              38977
 #define ID_VIEW_MERGE20_BRAND_HEADER   38978
 #define IDS_MESSAGEBOX_OK               39001
@@ -2771,7 +2774,8 @@
 //   38970-38975 are the B1 conclusion commands; 38976 is the F2 FORM compare command;
 //   38978 is the U1 brand header toggle; 38979 is the B9 summary
 //   command; 38982 is the B3 risk-order patrol toggle command;
-//   _APS_NEXT_COMMAND_VALUE is now 38983), free from 38983
+//   38983 is the B8 verification report command;
+//   _APS_NEXT_COMMAND_VALUE is now 38984), free from 38984
 //   (38977 is IDS_SPLASH_GPLTEXT: not usable as a command ID).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2781,7 +2785,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        306
-#define _APS_NEXT_COMMAND_VALUE         38983
+#define _APS_NEXT_COMMAND_VALUE         38984
 #define _APS_NEXT_CONTROL_VALUE         1905
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
