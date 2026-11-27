@@ -35,6 +35,7 @@
 #include "Merge20/Merge20HighRiskConfirm.h"
 #include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "Merge20/Merge20Split.h"
+#include "Merge20/Merge20VerifyGate.h"
 #include "DiffContext.h"
 #include "DiffItem.h"
 #include "DirDoc.h"
@@ -1257,6 +1258,13 @@ bool CMergeDoc::SaveMergeResult(bool bSaveAs)
 	if (m_ptResultBuf == nullptr || !m_ptResultBuf->IsInitialized())
 		return false;
 
+	// Merge20 (B7): output-time final verification gate. Runs
+	// before the unresolved-diffs prompt, so a stopped output
+	// never double-prompts: problems show the problem-list dialog
+	// (Close/Jump stop the save, Output anyway proceeds).
+	if (!Merge20VerifyBeforeOutput(*this))
+		return false;
+
 	const int nUnresolved = GetResultUnresolvedCount();
 	// (an unattended run cannot be asked; its unresolved conflicts are
 	// written as conflict sections)
@@ -1445,6 +1453,14 @@ Merge20DiffConclusion CMergeDoc::Merge20GetDiffConclusion(int nDiff) const
 {
 	const auto it = m_merge20DiffConclusions.find(nDiff);
 	return it != m_merge20DiffConclusions.end() ? it->second : Merge20DiffConclusion::Undecided;
+}
+
+int CMergeDoc::Merge20GetNewPane() const
+{
+	// The NEW pane is the last compared pane (pane 1 in 2-way,
+	// Mine in 3-way -- the same pane Merge20ConclusionSrcPanes
+	// treats as NEW, so the gate and the conclusions agree).
+	return m_nBuffers - 1;
 }
 
 void CMergeDoc::Merge20GetConclusionProgress(int& nJudged, int& nTotal) const
