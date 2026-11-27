@@ -12440,3 +12440,103 @@ msgstr "問題があります"
 msgid "Merge20 verification found %1 problem(s); the merge result was not saved."
 msgstr "【Wiz】検証で %1 件の問題が見つかったため、マージ結果を保存しませんでした。"
 
+#. Merge20 (best-workflow B8): folder compare context menu (DirView.cpp)
+#: Src/DirView.cpp
+msgid "Export verification report..."
+msgstr "【Wiz】検証レポートを出力…"
+
+#. Merge20 (best-workflow B8): verification report title line (Merge20VerifyReportExport.cpp)
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Verification report"
+msgstr "【Wiz】検証レポート"
+
+#. Merge20 (best-workflow B8): verification report summary label
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Verification date/time"
+msgstr "検証日時"
+
+#. Merge20 (best-workflow B8): verification report summary label
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Files verified"
+msgstr "対象ファイル数"
+
+#. Merge20 (best-workflow B8): verification report summary label
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Files passed"
+msgstr "合格ファイル数"
+
+#. Merge20 (best-workflow B8): verification report summary label
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Files failed"
+msgstr "不合格ファイル数"
+
+#. Merge20 (best-workflow B8): verification report summary label
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Total issues"
+msgstr "問題総数"
+
+#. Merge20 (best-workflow B8): verification report section title
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Check results"
+msgstr "検査項目の結果"
+
+#. Merge20 (best-workflow B8): verification report section title
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Issue list"
+msgstr "問題の一覧"
+
+#. Merge20 (best-workflow B8): verification report check-table column header
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Result"
+msgstr "結果"
+
+#. Merge20 (best-workflow B8): verification report check-table column header
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Issues"
+msgstr "問題数"
+
+#. Merge20 (best-workflow B8): verification report check-table column header
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Elapsed (ms)"
+msgstr "所要時間 (ms)"
+
+#. Merge20 (best-workflow B8): verification report issue-table column header
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Diff no."
+msgstr "差分"
+
+#. Merge20 (best-workflow B8): verification report issue-table column header
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Result line"
+msgstr "結果行"
+
+#. Merge20 (best-workflow B8): verification report check result
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Passed"
+msgstr "合格"
+
+#. Merge20 (best-workflow B8): verification report check result
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Failed"
+msgstr "不合格"
+
+#. Merge20 (best-workflow B8): verification report check result (check switched off)
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Not run"
+msgstr "対象外"
+
+#. Merge20 (best-workflow B8): verification report unverified-file row
+#: Src/Merge20/Merge20VerifyReportExport.cpp
+msgid "Not verified (no merge result built)"
+msgstr "未検証（マージ結果が未構築）"
+
+#. Merge20 (best-workflow B8): verification report standalone export: no open file comparison
+#: Src/DirView.cpp
+msgid "There are no open file comparisons in this folder compare to verify. Open a file by double-clicking it first."
+msgstr "このフォルダ比較に属する、開いているファイル比較がありません。ファイルをダブルクリックで開いてから実行してください。"
+
+#. Merge20 (best-workflow B8): verification report save failure warning (merge result itself was saved)
+#: Src/MergeDocResultPane.cpp
+msgid "The verification report could not be saved, but the merge result was saved:\n%1"
+msgstr "検証レポートは保存できませんでしたが、マージ結果は保存されました：\n%1"
+

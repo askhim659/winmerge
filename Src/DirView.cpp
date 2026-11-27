@@ -56,6 +56,8 @@
 #include "Merge20/Merge20Slim.h"
 #include "Merge20/Merge20Summary.h"
 #include "Merge20/Merge20SummaryDlg.h"
+#include "Merge20/Merge20VerifyGate.h"
+#include "Merge20/Merge20VerifyReportExport.h"
 #include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
@@ -164,6 +166,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE, OnUpdateSave)
 	ON_COMMAND(ID_MERGE20_BATCH_CHECK, OnMerge20BatchCheck)
 	ON_COMMAND(ID_MERGE20_CSV_EXPORT, OnMerge20CsvExport)
+	ON_COMMAND(ID_MERGE20_VERIFY_REPORT, OnMerge20VerifyReport)
 	ON_COMMAND(ID_MERGE20_SUMMARY, OnMerge20Summary)
 	ON_COMMAND(ID_MERGE20_SESSION_SAVE, OnMerge20SessionSave)
 	ON_COMMAND(ID_MERGE20_SESSION_RESTORE, OnMerge20SessionRestore)
@@ -1014,6 +1017,10 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// CSV export, next to the batch check. Always offered.
 	String sMerge20CsvExport = _("Export diff list as CSV...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_CSV_EXPORT, sMerge20CsvExport.c_str());
+	// Merge20 (B8, gap analysis section 4.2 B8): verification
+	// report export (standalone), next to the CSV export. Always offered.
+	String sMerge20VerifyReport = _("Export verification report...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_VERIFY_REPORT, sMerge20VerifyReport.c_str());
 	// Merge20 (B9, gap analysis section 4.2 B9): end-of-session
 	// summary dialog, next to the CSV export. Always offered.
 	String sMerge20Summary = _("End-of-session review...");
@@ -4000,6 +4007,84 @@ void CDirView::OnMerge20CsvExport()
 		return;
 	}
 	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
+}
+
+// Case-insensitive "path is under root" test (B8): the root has no
+// trailing slash, so the character after the root must be a
+// separator -- C:\Foo2 is not under C:\Foo.
+static bool Merge20PathIsUnderRoot(const String& path, const String& root)
+{
+	String cleanRoot = root;
+	while (!cleanRoot.empty() && (cleanRoot.back() == _T('\\') || cleanRoot.back() == _T('/')))
+		cleanRoot.pop_back();
+	if (cleanRoot.empty() || path.length() <= cleanRoot.length())
+		return false;
+	if (strutils::compare_nocase(path.substr(0, cleanRoot.length()), cleanRoot) != 0)
+		return false;
+	const wchar_t next = path[cleanRoot.length()];
+	return next == _T('\\') || next == _T('/');
+}
+
+/**
+ * @brief Merge20 (B8, gap analysis section 4.2 B8): export the
+ * verification report on its own (without saving a merge result).
+ * Verifies the open file comparisons that belong to this folder
+ * compare (pane 0 under the left root, the NEW pane under the
+ * right root) and writes one combined report to a file the user
+ * picks (VerifyReport_YYYY-MM-DD.csv by default). Files that are
+ * not open are not verified: opening a merge document in the
+ * background just to verify it would need a headless compare,
+ * which does not exist yet, so the report lists the open files
+ * and says so (a file whose merge result was never built appears
+ * as "not verified"). The verification runs synchronously on the
+ * open documents only, so it stays fast.
+ */
+void CDirView::OnMerge20VerifyReport()
+{
+	CDiffContext& ctxt = GetDiffContext();
+	const String leftRoot = ctxt.GetLeftPath();
+	const String rightRoot = ctxt.GetRightPath();
+	CMainFrame* pMainFrame = dynamic_cast<CMainFrame*>(AfxGetMainWnd());
+	std::vector<Merge20VerifyFileResult> verifyFiles;
+	if (pMainFrame != nullptr)
+	{
+		int fileIndex = 0;
+		for (IMergeDoc* pDoc : pMainFrame->GetAllMergeDocuments())
+		{
+			CMergeDoc* pMergeDoc = dynamic_cast<CMergeDoc*>(pDoc);
+			if (pMergeDoc == nullptr || pMergeDoc->GetFileCount() < 2)
+				continue;
+			const int newPane = pMergeDoc->Merge20GetNewPane();
+			if (newPane < 0 || newPane >= pMergeDoc->GetFileCount())
+				continue;
+			if (!Merge20PathIsUnderRoot(pMergeDoc->GetPath(0), leftRoot))
+				continue;
+			if (!Merge20PathIsUnderRoot(pMergeDoc->GetPath(newPane), rightRoot))
+				continue;
+			verifyFiles.push_back(Merge20VerifyCheckMergeDocFile(*pMergeDoc, fileIndex++));
+		}
+	}
+	if (verifyFiles.empty())
+	{
+		AfxMessageBox(_("There are no open file comparisons in this folder compare to verify. Open a file by double-clicking it first.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	// Default file name, as in the S6 export (DiffList_YYYY-MM-DD.csv).
+	const String defaultName = Merge20VerifyReportDefaultFileName(CTime::GetCurrentTime());
+	String filePath;
+	if (!SelectFile(GetSafeHwnd(), filePath, false, defaultName.c_str(), _T(""),
+		_T("CSV Files (*.csv)|*.csv|All Files (*.*)|*.*||"), _T("csv")))
+		return;
+	const String verifiedAt =
+		String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S")).GetString());
+	const Merge20VerifyReport report = Merge20VerifyReportFromFileResults(verifyFiles, verifiedAt);
+	String errStr;
+	if (!Merge20VerifyReportWriteFile(report, Merge20VerifyReportMakeLabels(), filePath, errStr))
+	{
+		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+		return;
+	}
+	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(static_cast<int>(verifyFiles.size())), filePath).c_str(), MB_ICONINFORMATION);
 }
 
 /**

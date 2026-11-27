@@ -7,15 +7,18 @@
  * The list is filled in OnInitDialog from the rows the caller
  * built (same list-control pattern as the B9 summary dialog:
  * full-row select, grid lines, one row per problem). The check
- * names, locations and details are composed here from the
- * engine's structured issues with `_()` format strings, so the
- * Japanese translation stays in step with the dialog (see
- * Merge20VerifyDlg.h for the button contract).
+ * names, locations and details are composed by the shared gate
+ * helpers (Merge20VerifyCheckDisplayName /
+ * Merge20VerifyFormatIssueLocation / Merge20VerifyFormatIssueDetail)
+ * from the engine's structured issues with `_()` format strings,
+ * so the Japanese translation stays in step with the dialog (see
+ * Merge20VerifyDlg.h for the button contract) and the B8 report
+ * uses the same words.
  */
 #include "StdAfx.h"
 #include <set>
 #include "Merge20VerifyDlg.h"
-#include "unicoder.h"
+#include "Merge20VerifyGate.h"
 
 IMPLEMENT_DYNAMIC(Merge20VerifyDlg, CTrDialog)
 
@@ -40,74 +43,14 @@ END_MESSAGE_MAP()
 
 String Merge20VerifyDlg::FormatLocation(const Merge20VerifyIssue& issue) const
 {
-	if (issue.diffIndex >= 0)
-	{
-		if (issue.resultLine >= 1)
-		{
-			return strutils::format_string2(_("Diff %1, result line %2"),
-				strutils::to_str(issue.diffIndex + 1), strutils::to_str(issue.resultLine));
-		}
-		return strutils::format_string1(_("Diff %1"), strutils::to_str(issue.diffIndex + 1));
-	}
-	if (issue.resultLine >= 1)
-		return strutils::format_string1(_("Result line %1"), strutils::to_str(issue.resultLine));
-	return _("Whole file");
+	// B8: shared with the verification report (same words).
+	return Merge20VerifyFormatIssueLocation(issue);
 }
 
 String Merge20VerifyDlg::FormatDetail(const Merge20VerifyIssue& issue) const
 {
-	String detail;
-	switch (issue.kind)
-	{
-	case Merge20VerifyIssueKind::RediffUnexplained:
-		if (issue.newLine >= 1)
-		{
-			detail = strutils::format_string1(_("Unexplained difference from NEW (NEW line %1)"),
-				strutils::to_str(issue.newLine));
-		}
-		else
-		{
-			detail = _("Unexplained difference from NEW");
-		}
-		break;
-	case Merge20VerifyIssueKind::LineCountMismatch:
-		detail = strutils::format_string2(_("Expected %1 lines, got %2 lines"),
-			strutils::to_str(issue.expectedCount), strutils::to_str(issue.actualCount));
-		break;
-	case Merge20VerifyIssueKind::EncodingUnrepresentable:
-		detail = strutils::format_string1(_("Character U+%1 cannot be written in the output encoding"),
-			strutils::format(_T("%04X"), issue.codePoint));
-		break;
-	case Merge20VerifyIssueKind::EncodingInvalidUtf8:
-		detail = strutils::format_string1(_("Invalid byte at offset %1"),
-			strutils::to_str(issue.byteOffset));
-		break;
-	case Merge20VerifyIssueKind::SyntaxUnmatchedCloser:
-		detail = _("Unmatched closing bracket");
-		break;
-	case Merge20VerifyIssueKind::SyntaxUnclosedOpener:
-		detail = _("Opening bracket is never closed");
-		break;
-	case Merge20VerifyIssueKind::SyntaxMismatchedPair:
-		detail = _("Closing bracket does not match its opener");
-		break;
-	case Merge20VerifyIssueKind::ConsistencyMismatch:
-		detail = strutils::format_string2(_("The output does not match its judgment (expected %1 line(s), got %2)"),
-			strutils::to_str(issue.expectedCount), strutils::to_str(issue.actualCount));
-		break;
-	case Merge20VerifyIssueKind::ConsistencyUnresolved:
-		detail = _("Judged, but still unresolved");
-		break;
-	default:
-		detail = _("Problem found");
-		break;
-	}
-	// The offending line content (file content, shown verbatim).
-	if (!issue.text.empty())
-	{
-		detail += _T(" : ") + ucr::toTString(issue.text);
-	}
-	return detail;
+	// B8: shared with the verification report (same words).
+	return Merge20VerifyFormatIssueDetail(issue);
 }
 
 BOOL Merge20VerifyDlg::OnInitDialog()
@@ -157,25 +100,7 @@ BOOL Merge20VerifyDlg::OnInitDialog()
 	for (size_t i = 0; i < m_rows.size(); ++i)
 	{
 		const Merge20VerifyIssueRow& row = m_rows[i];
-		String checkName;
-		switch (row.issue.check)
-		{
-		case Merge20VerifyCheck::Rediff:
-			checkName = _("Re-diff");
-			break;
-		case Merge20VerifyCheck::LineCountEncoding:
-			checkName = _("Lines / encoding");
-			break;
-		case Merge20VerifyCheck::Syntax:
-			checkName = _("Syntax (simple check)");
-			break;
-		case Merge20VerifyCheck::Consistency:
-			checkName = _("Judgment consistency");
-			break;
-		default:
-			checkName = _("Check");
-			break;
-		}
+		const String checkName = Merge20VerifyCheckDisplayName(row.issue.check);
 		const int item = m_list.InsertItem(static_cast<int>(i), checkName.c_str());
 		m_list.SetItemText(item, 1, row.fileName.c_str());
 		m_list.SetItemText(item, 2, FormatLocation(row.issue).c_str());
