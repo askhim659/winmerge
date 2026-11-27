@@ -30,6 +30,7 @@
 #include "MergeDoc.h"
 #include "MergeResultPane.h"
 #include "MergeResultView.h"
+#include "MergeResultTextBuffer.h"
 #include "DiffTextBuffer.h"
 #include "Merge.h"
 #include "OptionsMgr.h"
