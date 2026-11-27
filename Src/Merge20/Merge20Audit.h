@@ -68,6 +68,7 @@
 #include <vector>
 #include "UnicodeString.h"
 #include "Merge20Types.h"
+#include "Merge20/Merge20Conclusion.h"
 
 /** @brief Kind of judgment operation one audit entry records. */
 enum class Merge20AuditKind
