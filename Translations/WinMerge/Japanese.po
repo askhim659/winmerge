@@ -12081,4 +12081,79 @@ msgstr "変更詳細"
 msgid "No shape"
 msgstr "図形なし"
 
+#. Merge20 (UI U2): title-bar progress (CMainFrame::OnUpdateFrameTitle)
+#: Src/MainFrm.cpp
+msgid "WizMerge - %1 unreviewed - %2"
+msgstr "WizMerge - 未確認 %1件 - %2"
+
+#. Merge20 (B9): folder compare context menu (DirView.cpp)
+#: Src/DirView.cpp
+msgid "End-of-session review..."
+msgstr "【Wiz】終わりの一覧確認…"
+
+#. Merge20 (B9): end-of-session summary dialog title (Merge.rc)
+#: Src/Merge.rc
+msgid "End-of-Session Review"
+msgstr "【Wiz】終わりの一覧確認"
+
+#. Merge20 (B9): end-of-session summary dialog buttons (Merge.rc)
+#: Src/Merge.rc
+msgid "Show unreviewed only"
+msgstr "未確認のみ表示"
+
+#. Merge20 (B9): end-of-session summary dialog buttons (Merge.rc)
+#: Src/Merge.rc
+msgid "Confirm and export"
+msgstr "確定して出力"
+
+#. Merge20 (B9): end-of-session summary dialog buttons (Merge.rc)
+#: Src/Merge.rc
+msgid "Back"
+msgstr "戻る"
+
+#. Merge20 (B9): end-of-session summary counts, first line (Merge20SummaryDlg.cpp)
+#: Src/Merge20/Merge20SummaryDlg.cpp
+msgid "Total: %1 | Diffs: %2 | Changed: %3 | Old only: %4 | New only: %5 | Identical: %6 | Needs manual work: %7"
+msgstr "総数：%1｜差分計：%2｜変更：%3｜旧のみ：%4｜新のみ：%5｜同一：%6｜個別対応要：%7"
+
+#. Merge20 (B9): end-of-session summary counts, second line (Merge20SummaryDlg.cpp)
+#: Src/Merge20/Merge20SummaryDlg.cpp
+msgid "Undecided: %1 | Output targets: %2"
+msgstr "未判断：%1｜出力対象：%2"
+
+#. Merge20 (B9): end-of-session summary warning (Merge20SummaryDlg.cpp)
+#: Src/Merge20/Merge20SummaryDlg.cpp
+msgid "Warning: %1 unreviewed file(s) remain. Review them before confirming."
+msgstr "警告：未判断のファイルが %1 件あります。確定する前に確認してください。"
+
+#. Merge20 (B9): folder compare with no files at all (DirView.cpp)
+#: Src/DirView.cpp
+msgid "There are no files to review."
+msgstr "確認するファイルがありません。"
+
+#. Merge20 (B2 stage 1): close-warning dialog title (Merge.rc)
+#: Src/Merge.rc
+msgid "Unreviewed Items Remain"
+msgstr "【Wiz】未判断の項目があります"
+
+#. Merge20 (B2 stage 1): close-warning dialog, proceed button (Merge.rc, DirDoc.cpp)
+#: Src/Merge.rc
+#: Src/DirDoc.cpp
+msgid "Close anyway"
+msgstr "それでも閉じる"
+
+#. Merge20 (B2 stage 1): close-warning counts line (Merge20CloseWarnDlg.cpp)
+#: Src/Merge20/Merge20CloseWarnDlg.cpp
+msgid "Unreviewed files: %1 | Undecided diffs: %2 | Of which high risk: %3"
+msgstr "未確認ファイル：%1 件｜未判断差分：%2 件｜うち高リスク：%3 件"
+
+#. Merge20 (B2 stage 1): close-warning line (Merge20CloseWarnDlg.cpp)
+#: Src/Merge20/Merge20CloseWarnDlg.cpp
+msgid "Warning: %1 unreviewed file(s) and %2 undecided diff(s) remain, of which %3 high risk. Review them before closing."
+msgstr "警告：未確認ファイル %1 件と未判断差分 %2 件（うち高リスク %3 件）が残っています。閉じる前に確認してください。"
+
+#. Merge20 (B4): high-risk remainder line in the file-list panel header (Merge20FileListBar.cpp)
+#: Src/Merge20/Merge20FileListBar.cpp
+msgid "Undecided high risk: %1"
+msgstr "【Wiz】未判断の高リスク：%1 件"
 

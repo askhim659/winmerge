@@ -38,6 +38,8 @@
 #include "FilterErrorMessages.h"
 #include "DirActions.h"
 #include "DirScan.h"
+#include "Merge20/Merge20CloseWarn.h"
+#include "Merge20/Merge20CloseWarnDlg.h"
 #include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "MessageBoxDialog.h"
@@ -1274,6 +1276,47 @@ void CDirDoc::UpdateHeaderPath(int nIndex)
 }
 
 /**
+ * @brief Merge20 (best-workflow B4, gap analysis section 4.2 B4):
+ * the B2 close-warning counts for this folder compare.
+ *
+ * The single gathering point for both uses: B2's close warning
+ * (SaveModified below) and B4's panel remainder display
+ * (CMerge20FileListBar::UpdateHighRiskRemain) call this, so the
+ * two can never disagree about the definition or the value. The
+ * walk is the one SaveModified had inline: every file (directory
+ * rows excluded), with its review state, its S4 risk and its
+ * recorded B1 diff conclusions (see Merge20CloseWarn.h for the
+ * counting rules). Still-open merge docs are refreshed into the
+ * sidecar first, exactly as SaveModified did, so a judgment made
+ * in the open compare counts at once. The refresh writes only
+ * the sidecar's judgment fields (SetMerge20DiffJudgments /
+ * SetMerge20SplitGroups post no file-list notification), so
+ * calling this from a panel refresh cannot re-trigger a refresh.
+ * All-zero counts when there is no folder context.
+ */
+Merge20CloseWarnCounts CDirDoc::GetMerge20CloseWarnCounts()
+{
+	if (m_pCtxt == nullptr)
+		return Merge20CloseWarnCounts();
+	Merge20SessionRefreshDiffJudgments(*this);
+	std::vector<Merge20CloseWarnFile> warnFiles;
+	for (DIFFITEM* pPos = m_pCtxt->GetFirstDiffPosition(); pPos != nullptr;)
+	{
+		const DIFFITEM& di = m_pCtxt->GetNextDiffPosition(pPos);
+		if (di.diffcode.isDirectory())
+			continue;
+		const Merge20FileState& state = m_pCtxt->GetMerge20FileStates().GetState(di.getItemRelativePath());
+		Merge20CloseWarnFile file;
+		file.review = state.review;
+		file.risk = state.risk;
+		for (const Merge20DiffJudgment& judgment : state.diffJudgments)
+			file.diffConclusions.push_back(judgment.conclusion);
+		warnFiles.push_back(std::move(file));
+	}
+	return Merge20CloseWarnComputeCounts(warnFiles);
+}
+
+/**
  * @brief virtual override called just before document is saved and closed
  */
 BOOL CDirDoc::SaveModified() 
@@ -1295,6 +1338,42 @@ BOOL CDirDoc::SaveModified()
 		int ans = I18n::MessageBox(IDS_CONFIRM_CLOSE_WINDOW_LONG_COMPARISON, MB_YESNO | MB_ICONWARNING | MB_DONT_ASK_AGAIN);
 		if (ans == IDNO)
 			return FALSE;
+	}
+
+	// Merge20 (B2 stage 1, gap analysis section 4.2 B2): warn when
+	// undecided items remain, before the session auto-save in
+	// OnCloseDocument (which runs only after this returns TRUE).
+	// The counts come from GetMerge20CloseWarnCounts above (the
+	// same gathering B4's panel display uses, so the warning and
+	// the remainder line can never disagree); still-open merge
+	// docs are refreshed into the sidecar first, so their
+	// judgments count too. [Show unreviewed only] enters the D3
+	// TODO-only patrol and opens the next unreviewed file (the B9
+	// pattern); [Close anyway] proceeds with the close; Cancel (or
+	// closing the dialog) aborts the close and changes nothing. No
+	// view means no patrol target, so the warning is skipped then.
+	if (m_pCtxt != nullptr && m_pDirView != nullptr)
+	{
+		const Merge20CloseWarnCounts counts = GetMerge20CloseWarnCounts();
+		if (Merge20CloseWarnHasUndecided(counts))
+		{
+			Merge20CloseWarnDlg dlg(m_pDirView, counts, _("Close anyway"));
+			if (dlg.DoModal() != IDOK)
+				return FALSE; // Cancel (or close): abort, change nothing.
+			switch (dlg.GetResult())
+			{
+			case Merge20CloseWarnDlg::Result::TodoOnly:
+				// Enter the D3 TODO-only patrol (the B9 pattern) and
+				// open the next unreviewed file; the close is aborted.
+				GetOptionsMgr()->Set(OPT_MERGE20_TODO_ONLY, true);
+				m_pDirView->OpenNextFile();
+				return FALSE;
+			case Merge20CloseWarnDlg::Result::Proceed:
+				break; // Close anyway: fall through to the base close.
+			case Merge20CloseWarnDlg::Result::Cancel:
+				return FALSE;
+			}
+		}
 	}
 
 	return CDocument::SaveModified();

@@ -5940,3 +5940,196 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 59.4 次への移行
 - U2（タイトルバーに WizMerge＋進捗を表示）は U0 依存で U1・U5 とは独立。U5 のマージを受けて着手する。
 - F3（PR #54）・B9（PR #55）は開いているが、子の最終報告待ちのためまだ扱わない。
+## §60 Wave 5 F3 — FORM ビジュアルプレビュー（キャンバス・ズーム・文字描画）— マージ・CI 検証済み（2026-11-27）
+
+### 60.1 内容（設計書 §10 F3）
+- `Merge20FormCanvasGeom`（純粋モジュール：座標変換・グリッド判定）＋単体テスト 20 件。TransformOneToOne（XML 100 → 画面 132、往復一致）を含む。
+- `Merge20FormCanvas`（`CWnd` 派生・GDI 描画）：原寸 1:1、方眼グリッド（100 単位ごと、500 単位ごとに太線・XML 座標基準に修正済み）、色規則（変更なし＝グレー実線、旧＝赤破線、新＝緑実線）、ズーム（100%／25%／フィット／スライダー 10〜200% クランプ）、ドラッグスクロール＋図形クリック、枠高さ切替（全開／640px 固定）、文字・値の描画（§6 (6)）。フォントが近似表示の場合は「フォントは近似表示です」の注記を出す。
+- `fontName` 追加（`Xml.h`／`Xml.cpp`、ShapeFontName テスト 1 件）。
+- `FormCompareView` にプレビューペインを配線（`Canvas.cpp` の `SetResult` が同一ポインタを無視しスクロール・選択を保持）。
+- リソース：コントロール ID 1858–1865、`_APS_NEXT_CONTROL_VALUE` 1866。コマンド ID 新規なし。`.po` 新規 6 件。
+
+### 60.2 変更一覧（ブランチ `merge20/form-f3`、base master `df925a7c`。24 コミット）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20FormCanvasGeom.h` | `a7c81b90` | 新規・純粋モジュール |
+| 2 | `Src/Merge20/Merge20FormCanvasGeom.cpp` | `3e2af0ae` | 新規 |
+| 3 | `Testing/GoogleTest/Merge20/Merge20FormCanvasGeom_test.cpp` | `6c053d63` | 新規・20 件 |
+| 4–6 | 同上 3 ファイル | `dcd43f0a`／`c79040d8`／`806b0ff8` | グリッド太線判定を XML 座標基準に修正 |
+| 7 | `Src/Merge20/Merge20FormCanvas.h` | `5df28a6a` | 新規 |
+| 8 | `Src/Merge20/Merge20FormCanvas.cpp` | `cb311b4d` | 新規・GDI 描画 |
+| 9–11 | `Src/Merge20/Merge20FormXml.h`／`.cpp`／Xml テスト | `32aebc1c`／`723c2ebf`／`41d9e40f` | `fontName` 追加 |
+| 12 | `Src/Merge20/Merge20FormCompareView.h` | `20fa1037` | キャンバス＋ズーム操作 |
+| 13 | `Src/Merge20/Merge20FormCanvas.cpp` | `2a9bf1cf` | `SetResult` が同一ポインタを無視しスクロール・選択を保持 |
+| 14 | `Src/Merge20/Merge20FormCompareView.cpp` | `0f8d98c3` | プレビューペイン配線 |
+| 15 | `Src/resource.h` | `0a763bd0` | コントロール ID 1858–1865、`_APS_NEXT_CONTROL_VALUE` 1866 |
+| 16–17 | `Src/Merge.vcxproj`／`.filters` | `0b519678`／`d3f5d708` | 登録 |
+| 18–19 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj`／`.filters` | `e282a9e0`／`a03286d7` | Geom 登録 |
+| 20 | `Translations/WinMerge/Japanese.po` | `47645948` | 新規 msgid 6 件 |
+| 21 | テスト | `cb6b9219` | CI 失敗修正：テスト 234 行目、`EXPECT_NEAR` 2 引数→`EXPECT_DOUBLE_EQ` |
+| 22 | `Src/Merge20/Merge20FormCanvas.cpp` | `11b61f62` | CI 失敗修正：`CDC::GetTextExtentPoint32` 不存在→`CDC::GetTextExtent` |
+| 23 | （マージ） | `a63d8102` | master マージ（`6d1767aa`、競合解消） |
+| 24 | `Translations/WinMerge/Japanese.po` | `8e6fe505` | .po 修正：エントリ区切りの空行挿入（3 か所。ブランチ head） |
+
+- CI 失敗と修正（実行 45947903570）：調整役の初報は「2 Error(s) のみ」と誤っていた。ログを自分で確認した結果、実際は **6 Error(s)** だった。テスト側 4 件（C2059／C2181／C2065／C2440、すべて `Merge20FormCanvasGeom_test.cpp:234` の 2 引数 `EXPECT_NEAR` が原因）に加え、`Merge20FormCanvas.cpp(548)` の `error C2039: 'GetTextExtentPoint32W': is not a member of 'CDC'` が 2 件。両方とも修正済み（`cb6b9219`、`11b61f62`）。**教訓：CI 失敗の件数はログの全文で数えること。調整役の初報の件数を鵜呑みにしないこと。** なお修正コミット `11b61f62` には CI 実行が一度も作成されなかった（理由不明）。その後のマージコミット `a63d8102` では実行 45949653613 が作成され success したが、.po 問題が見つかったためさらに修正して最終実行で再確認した。
+- master マージ（`a63d8102`）：master が 15 コミット進み、`Merge.vcxproj`／`.filters`／`resource.h`／`Japanese.po` が競合したため master（`6d1767aa`、U1 ブランドヘッダ等を含む）をマージ。F2 と同じ方式で Git Database API によるマージコミットを作成。競合解消：`_APS_NEXT_COMMAND_VALUE` 38979（U1 が 38978 を使用）、`_APS_NEXT_CONTROL_VALUE` 1866（F3 が 1858–1865 を使用）。F3・U1 両方の登録を保持。`diff3` で vcxproj／filters はクリーンマージ、resource.h／.po の競合箇所は手動で両方残す形に解決した。
+- **.po 空行欠陥の発見と修正（`8e6fe505`）**：検証ゲートの成果物チェックで判明。出荷 .po では `Font is shown approximately.` の訳文が空になっていた。原因はリポジトリ .po 内で `msgstr` の直後に空行なしで次エントリのコメントが続いていたためで、ビルド時の .po 処理がその訳文を落とす。子のマージ解決スクリプトの `.strip()` が F3 最終エントリと U1 エントリの間の空行を消したのが原因。**同じ欠陥が既存の 2 件（`%1 displayed, %2 checked, %3 unreviewed`、`(No lines)`、D4 由来）にもあった**ため、3 件まとめて空行を挿入した。修正後の成果物で 8 件すべて訳文ありを確認済み。**教訓（全スライス共通）：.po の各エントリ間には必ず空行を入れること。マージ解決スクリプトで `.strip()` を使うときはエントリ間の空行を消さないこと。マージ後は .po を末尾まで確認し、`diff3` マーカーがないことと、空行欠落がないことを確認すること。**
+
+### 60.3 検証レポート（コーディネーター検証済み）
+- **PR #54**：open・mergeable=true・mergeable_state=clean、head `8e6fe505`、base master。24 コミット、変更ファイル 16 件。PR 差分の 16 ファイルは F3 のものだけ（マージで取り込んだ master 側の変更は差分に含まれないことを確認済み）。
+- **CI（ブランチ head）**：実行 45951495877、completed／success。全文ログ（3,575,130 バイト、ジョブ `build` 140348155237、48,018 行）をコーディネーターが取得・確認（`~/workspace/.coord/f3_final_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`（814→835、新規 21 件＝Geom 20 件＋ShapeFontName 1 件を含む。`[ FAILED ]` なし）、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。ログ中の "error" 42 件はすべてビルドスクリプト内の `echo ERROR: Failed to download ...` という文字列そのもの（実際の失敗ではない）。`Checking bundled Japanese.po for Merge20 strings...` → `Merge20 strings present in the bundled Japanese.po.` を確認。
+- **成果物（実行 45951495877）**：`WinMerge-x64.zip` 26,580,310 バイト、`WinMerge-x64-Setup-x64.exe` 40,031,440 バイト。いずれも未失効。成果物の .po を直接ダウンロードして確認：出荷 `WizMerge/Languages/Japanese.po` 内で F3 の 6 件すべて日本語訳あり（`Visual preview`→ビジュアルプレビュー、`Select a form to preview it`→帳票を選択するとプレビューを表示します、`Fit`→フィット、`Expand to full height`→枠高さ：全開、`Fixed height (640px)`→枠高さ：640pxに固定、`Font is shown approximately.`→フォントは近似表示です）。既存 2 件の訳文の復旧も確認。
+- **マージ**：マージコミット `dee3974f`。マージコミット CI：実行 45953212902、completed／success（head_sha=dee3974f と一致）。全文ログ（3,571,925 バイト、ジョブ `build` 140353622266、47,967 行）をコーディネーターが取得・確認（`~/workspace/.coord/f3_merge_final_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,582,263 バイト、`WinMerge-x64-Setup-x64.exe` 40,038,275 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（設計書 §10 F3）**：
+  - (a) 原寸 1:1 — 単体テスト＋ローカルハーネスで検証済み（TransformOneToOne：XML 100 → 画面 132、往復一致）。描画の目視は**実機未検証**。
+  - (b) ズーム 4 種 — 単体テストで検証済み（Scale* 7 件：100%／25%／フィット／スライダー 10〜200% クランプ）。実機操作は未検証。
+  - (c) §6 (6) テスト 1〜3 — 切り詰めは単体テストで検証済み。フォント近似時の注記は実装済みで、出荷 .po での訳文ありを確認。文字描画・色分けの目視は**実機未検証**。
+  - (d) 回帰なし — 835 件全合格で回帰なし。キャンバスは FormCompareView 内の追加のみで、他ウィンドウへの影響なし。
+- **未検証（実機でしか確認できないもの）**：描画の目視（1:1 の位置、グリッド、色分け、文字表示）、ズーム操作（ボタン／スライダー／フィット）、ドラッグスクロール、図形クリック選択、枠高さ切替、実ファイルでの表示。
+
+### 60.4 次への移行
+- F4（スポットライト）は F3 マージを受けて着手済み（ブランチ `merge20/form-f4`、base `dee3974f`、ID 事前割り当て：コントロール 1872–1881、コマンド 38980）。ただし初回 CI（実行 45955297401、head `d445db8b`）が failure（`Merge20FormSpotlight_test.cpp` 262〜266 行目の 2 引数 `EXPECT_NEAR` と同じパターン、63 Error(s)）。F4 担当に診断ヒント（F3 と同一パターン、`EXPECT_DOUBLE_EQ` への修正）を送付済み。
+- B9（PR #57）は付け替え後の CI 成功（実行 45954401163、head `23be11da`）をコーディネーターが全文ログで検証済み（`Build succeeded`・`0 Error(s)`・GoogleTest `[ PASSED ] 839 tests.`（835＋B9 の 4 件）・`[ FAILED ]` なし・`.po` 番兵通過。全文ログは `~/workspace/.coord/b9_final_log.txt`）。ただし U2 マージ（`cfd4534c`）で再び競合（dirty）になったため、B9 担当に master `cfd4534c` の取り込みと CI 再実行を指示済み。B9 のコントロール ID は付け替え後 1866–1871、コマンド ID 38979。
+- U2（PR #58）はマージ済み（マージコミット `cfd4534c`）。マージコミット CI（実行 45956300465）は進行中。検証後に §61 として記録する。
+- ID 割り当て状況（2026-11-27 07:10 JST 時点）：コントロール ID は F3 が 1858–1865、B9 が 1866–1871（付け替え後）、F4 が 1872–1881（予約済み）。コマンド ID は B9 が 38979、F4 が 38980（予約済み）。master の `_APS_NEXT_COMMAND_VALUE` は 38979、`_APS_NEXT_CONTROL_VALUE` は 1866（F3 マージ時点。B9 マージ時にそれぞれ 38980／1872 へ進む）。
+- 運用の教訓：`/tmp` 配下の作業ファイルは VM により消去されることがある（U2 担当が未コミットの編集 1 件を失った。調整役の `/tmp/gh.py` も消去された）。作業用スクラッチと共用スクリプトは `~/workspace/.coord/` 配下に置くこと（`gh.py` は `~/workspace/.coord/gh.py` に再作成済み）。
+## §61 UI 見直し U2 — タイトルバーに WizMerge＋進捗を表示 — マージ・CI 検証済み（2026-11-27）
+
+### 61.1 内容（UI 見直し設計書 §4 U2）
+- 新規オプション `OPT_MERGE20_TITLE_PROGRESS`（`Merge20/TitleProgress`、既定 true）。OFF で従来のタイトル書式に戻る。オプション画面への項目追加は設計書どおり本スライスの範囲外のため、OFF の切り替えは設定ファイルで行う。
+- `CMainFrame::OnUpdateFrameTitle` を拡張。アクティブな `CDirDoc` がある場合のみタイトルを `"WizMerge - N unreviewed - <文書名>"` 形（日本語表示では `WizMerge - 未確認 N件 - <文書名>`）に書き換える。`bAddToTitle=FALSE` の場合（`OnTimer` のメニュー更新時）でも進捗表示が消えないよう、書き換えは `bAddToTitle` の値によらず行う。
+- **N の定義**：S3 と同じ（`GetMerge20StatusCountText()` と同じ定義）。表示中のファイル行のみで、ディレクトリ行と `..` 行は数えず、確認内容が TODO の件数。既存の `Merge20CountDisplayedByReviewState` を流用し、新しい数え方は作っていない。`DirView.h` で同関数を private→public へ移動（実装無変更。U1 が `GetMerge20StatusCountText` で行ったのと同じ前例）。
+- **更新の契機**：`CDirView::UpdateMerge20StatusCount()` の末尾からメインフレームの `OnUpdateFrameTitle(TRUE)` を呼ぶ。`UpdateMerge20StatusCount()` は確認内容変更の単一の funnel（Redisplay・キー 1〜5／Space・一括チェック・ディレクトリ単位操作・セッション復元・ファイル一覧パネル経由の `CDirDoc::Merge20UpdateDirViewStatus`）のため、S2 の連動と同じ経路でタイトルが追従する。フレーム側はアクティブな文書から件数を読み直すため、バックグラウンドのタブの更新がタイトルを壊すことはない。
+- タイトル書式は画面内部の語彙のため【Wiz】は付けていない（入口の文字列にだけ付ける約束どおり）。
+- 新規コマンド ID なし。`.po` 新規 1 件。
+
+### 61.2 変更一覧（ブランチ `merge20/ui-u2`、base master `93035933`。6 ファイル 6 コミット＋マージ 1 件）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/OptionsDef.h` | `7a99d4d6` | `OPT_MERGE20_TITLE_PROGRESS`（`Merge20/TitleProgress`）を追加 |
+| 2 | `Src/OptionsInit.cpp` | `6cf4f8ef` | 既定 true で初期化 |
+| 3 | `Src/DirView.h` | `36ec022a` | `Merge20CountDisplayedByReviewState` を private→public へ移動（実装無変更） |
+| 4 | `Src/MainFrm.cpp` | `54485e2d` | `CMainFrame::OnUpdateFrameTitle` を拡張 |
+| 5 | `Src/DirView.cpp` | `5cc6859e` | `UpdateMerge20StatusCount()` の末尾から `OnUpdateFrameTitle(TRUE)` を呼ぶ配線を追加 |
+| 6 | `Translations/WinMerge/Japanese.po` | `ccb7fb68` | 新規 1 件：msgid `WizMerge - %1 unreviewed - %2`／msgstr `WizMerge - 未確認 %1件 - %2`（msgid 2222→2223 件） |
+| — | （マージ） | `d63e2eb0` | master へのマージコミット（下記「競合の解消」を参照） |
+
+- 差分は +60/−2（マージコミットを除く）。`.github/workflows/*` と `MERGE20_NOTES.md` には触れていない。
+- 競合の解消：PR 作成直後、master に F3（PR #54）がマージされ、PR は `mergeable: false（dirty）` になり CI が起動しなかった。競合ファイルは `Translations/WinMerge/Japanese.po` のみ（F3 が 35 行追加、U2 が 5 行追加）。U1 の前例（§58.3）どおり、リベースや force-push はせず、**マージコミット `d63e2eb0`** で解消した（API による 3-way マージ）。`.po` は master 側の内容（2228 件）に U2 の 1 件を再追加したもの（計 2229 件）とし、F3 の 16 ファイルは master 側の blob をそのまま取り込んだ。マージ後、PR は mergeable: true になり CI が起動した。
+
+### 61.3 検証レポート（コーディネーター検証済み）
+- **PR #58**：open・mergeable=true・mergeable_state=clean、head `d63e2eb0`、base master `dee3974f`。7 コミット、変更ファイル 6 件（U2 の 6 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45953876566、completed／success。全文ログ（3,575,188 バイト、ジョブ `build` 140355740743、48,019 行）をコーディネーターが取得・確認（`~/workspace/.coord/u2/ci_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`（U1 時 814 件からの +21 件は F3 のテスト分。U2 は MFC 依存のため新規テストなし）、`[ FAILED ]` 行なし（ログ中の "FAILED" 4 件はすべて `IDS_FILESAVE_FAILED`／`IDS_MERGE_RESULT_SAVE_FAILED` の翻訳文字列 ID で、W2 §25.4 と同じ既知のもの）、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。`.pot` 抽出ステップで新規 msgid `WizMerge - %1 unreviewed - %2`（`MainFrm.cpp:3450`）が拾われていることもログで確認。`.po` 番兵も通過。
+- **成果物（実行 45953876566）**：`WinMerge-x64.zip` 26,582,648 バイト（ID 15178720721）、`WinMerge-x64-Setup-x64.exe` 40,044,890 バイト（ID 15178551405）。いずれも未失効。成果物内の `Build\Translations\WinMerge\Japanese.po` が同梱されていることもログで確認済み（コネクタでは成果物の中身をダウンロードできないため、`.po` 内の文字列の直接確認はログの番兵＋msgid 抽出による間接確認）。
+- **マージ**：マージコミット `cfd4534c`。マージコミット CI：実行 45956300465、completed／success（head_sha=cfd4534c と一致）。全文ログ（3,574,204 バイト、ジョブ `build` 140363439634、48,004 行）をコーディネーターが取得・確認（`~/workspace/.coord/u2_merge_final_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,582,607 バイト、`WinMerge-x64-Setup-x64.exe` 40,044,573 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（設計書 §4 U2）**：
+  - (a) フォルダ比較を開くとタイトルバーに「WizMerge - 未確認 N件 - …」と表示されること（タスクバーにも同じ表示が出ること） — コード上は満たす（アクティブな `CDirDoc` がある場合のみ書き換え。タスクバーはメインウィンドウのタイトルを表示するため同じ表示になる）。**実機未検証**。
+  - (b) 確認内容を「済」にするとタイトルの N が減ること — コード上は満たす（`UpdateMerge20StatusCount()` 経由で全ての確認内容変更からタイトルを更新）。**実機未検証**。
+  - (c) オプション OFF で従来のタイトルに戻ること — コード上は満たす（`OPT_MERGE20_TITLE_PROGRESS` false で早期 return し、基底のタイトルが残る）。**実機未検証**。
+  - (d) 単独ファイル比較・フォルダ比較なしの状態でタイトルが壊れないこと（`"WizMerge"` のみ） — コード上は満たす（`CDirDoc` でない／文書がない場合は基底の結果をそのまま残す）。**実機未検証**。
+- **未検証（実機でしか確認できないもの）**：(a)〜(d) はすべて実機未検証。実機チェックリストは PR #58 の説明文に記載済み（フォルダ比較でのタイトル表示と N の一致、キー 1〜5／専用バー／ファイル一覧パネルでの「済」による N の減少、`Merge20/TitleProgress=false` での従来タイトルへの復帰、単独ファイル比較・文書なし状態でのタイトル、MDI 子の最大化／通常表示の両方）。
+- 作業中の出来事：作業中に `/tmp` 配下の作業ファイルが VM により消去され、未コミットの MainFrm.cpp 編集 1 件を失った。プッシュ済みの 3 コミットは無事で、MainFrm.cpp を master から再取得して編集を再適用し直した（内容は同一）。以後、作業用スクラッチは `~/workspace/.coord/u2/` 配下に置いている（§60.4 の教訓も参照）。
+## §62 最高峰ワークフロー B9 — 終わりの一覧確認・セッション確定ダイアログ — マージ・CI 検証済み（2026-11-27）
+
+### 62.1 内容（ギャップ分析書 §4.2 B9。柱 5「終わりの一覧確認」）
+- 純粋モジュール `Src/Merge20/Merge20Summary.h/.cpp`：H-DASH 7 種（総数・差分計・変更・旧のみ・新のみ・同一・個別対応要）＋未判断件数・出力対象件数の集計。定義は S6 CSV と同一（変更＝`isResultDiff`、旧のみ＝`isSideFirstOnly`、新のみ＝`isSideSecondOnly` または 3-way の `isSideThirdOnly`、同一＝`!hasDiff`、個別対応要＝確認内容 SPECIAL、未判断＝TODO、出力対象＝出力チェック ON）。`modified + oldOnly + newOnly + identical == total` が常に成立する。
+- 単体テスト `Testing/GoogleTest/Merge20/Merge20Summary_test.cpp`：4 件（空入力、全同一・確認済み、混合 6 ファイルの 9 件数、未判断と警告の連動）。
+- ダイアログ `Src/Merge20/Merge20SummaryDlg.h/.cpp`（`CTrDialog`）：6 列リスト（ファイル名・確認内容・対応区分・リスク・出力・要約、値はフォルダ一覧・S6 CSV と同一の表示文字列）、上部 2 行の集計、未判断時の警告行、ボタン 3 つ。［未確認のみ表示］［確定して出力］は対象 0 件のとき無効化（S6 の範囲ダイアログと同じ作り）。［戻る］は IDCANCEL（早期 return で無変更）。
+- 呼び出し：フォルダ一覧の右クリックメニュー「【Wiz】終わりの一覧確認…」（msgid `End-of-session review...`）。ダイアログタイトルは「【Wiz】終わりの一覧確認」。
+- ボタンの動作（`CDirView::OnMerge20Summary`）：［未確認のみ表示］は `OPT_MERGE20_TODO_ONLY` を ON にして `OpenNextFile()` を呼ぶ（D3 の TODO-only 巡回へ）。［確定して出力］は S7 がない間の暫定として S6 の CSV（範囲は出力対象＝「選択分のみ」）を `Summary_YYYY-MM-DD.csv` に出力する。比較全体を走査するためフィルタで隠れたファイルや折りたたまれたフォルダ配下も含む。ファイル 0 件のときは情報メッセージを出して終了する。
+- リソース割り当て：IDD_MERGE20_SUMMARY＝301、IDC_MERGE20_SUMMARY_*＝1866–1871（付け替え後。下記「ID 衝突と付け替え」を参照）、ID_MERGE20_SUMMARY＝38979。`.po` 新規 9 件。列見出しは既存 msgid を流用。
+- `UnitTests.vcxproj.filters` の `Merge20Summary.cpp`／`.h` フィルタエントリの補完（ブランチに欠けていた分）も本 PR に含む。
+
+### 62.2 変更一覧（ブランチ `merge20/wf-b9`。16 コミット、14 ファイル）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20Summary.h` | `ca5c83f0` | 集計モジュール（ヘッダ） |
+| 2 | `Src/Merge20/Merge20Summary.cpp` | `7ab354ab` | 集計モジュール（実装） |
+| 3 | `Testing/GoogleTest/Merge20/Merge20Summary_test.cpp` | `9bdbfed0` | 単体テスト 4 件 |
+| 4 | `Src/Merge20/Merge20SummaryDlg.h` | `2e89d07b` | ダイアログ（ヘッダ） |
+| 5 | `Src/Merge20/Merge20SummaryDlg.cpp` | `ea24dda8` | ダイアログ（実装） |
+| 6 | `Src/resource.h` | `f4696ba1` | リソース ID 割り当て（メッセージは旧番号のまま。下記参照） |
+| 7 | `Src/Merge.rc` | `053fa384` | ダイアログテンプレート |
+| 8 | `Translations/WinMerge/Japanese.po` | `b9d839ae` | 新規 9 件 |
+| 9 | `Src/DirView.h` | `8eac5315` | `OnMerge20Summary` 宣言 |
+| 10 | `Src/DirView.cpp` | `b0a7c7d8` | フォルダ一覧への配線（`summaryFiles` への改名を含む） |
+| 11 | `Src/Merge.vcxproj` | `7059fd12` | 登録 |
+| 12 | `Src/Merge.vcxproj.filters` | `723274e3` | 登録 |
+| 13 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `2aa3b8e2` | 登録 |
+| 14 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `774df25f` | 登録 |
+| — | （マージ） | `23be11da` | master マージ（F3 取り込み・ID 付け替え。下記参照） |
+| — | （マージ） | `c9ac72d5` | master マージ（U2 取り込み・競合解消。下記参照。ブランチ head） |
+
+- PR #55 → #57 の置き換え：#55 は CI 成功済み（実行 45947979698：GoogleTest 818 件合格・`[ FAILED ]` 0 件・コンパイルエラー 0 件・`.po` 番兵通過・成果物 WinMerge-x64.zip 26,574,932 バイト／Setup exe 40,043,314 バイト）だったが、その後 master に U1（PR #56）がマージされ、U1 がコマンド 38978（`ID_VIEW_MERGE20_BRAND_HEADER`）を取得したため B9 のコマンドを 38978 → 38979 に変更し、master `6fab8e32` にリベースした。API 経由の force-reset 後に PR #55 の head が追従しなかった（#53 と同じ現象）ため、PR を作り直した。#55 は close した。変更内容は #55 と同一。差分はコマンド ID 38978→38979 のみで、さらに DirView.cpp のローカル変数 `files` を `summaryFiles` に改名した（C4459 警告の解消。CI ログで当該警告が出ていたため）。内容の同一性は各ファイルの差分点検で確認済み。
+- **ID 衝突と付け替え（F3 マージ時）**：B9 は当初 IDC_MERGE20_SUMMARY_* に 1858–1863 を使っていたが、F3 が master で同じ 1858–1865 を `IDC_MERGE20_FORM_*` に使ったため衝突した。マージコミット `23be11da`（master `dee3974f` 取り込み）で 1858–1863 → **1866–1871** に付け替え、`_APS_NEXT_CONTROL_VALUE` は 1872 とした。コマンド ID 38979 は衝突しなかった（F3 はコマンド ID を使っていない）。なおコミット `f4696ba1` のメッセージは旧番号（1858-1863）のままだが、内容は付け替え後の 1866–1871 である（メッセージと内容の不一致。無害だが記録しておく）。
+- **U2 との競合解消（マージコミット `c9ac72d5`、master `cfd4534c` 取り込み）**：重なった 3 ファイル（`Src/DirView.cpp`／`Src/DirView.h`／`Translations/WinMerge/Japanese.po`）で U2・B9 両方の変更を残存させた。`DirView.cpp` は master に対して純粋な追加のみ（削除 0 行）。`.po` は U2 の 1 件の後に B9 の 9 件を追加。Merge20 系エントリはすべて直前に空行あり（欠落 0 件）。F3 の 6 件・U2 の 1 件・B9 の 9 件すべて存在し、msgid＝msgstr＝2,238 件。`diff3` マーカー行なし。今回の U2 マージでは PR の head が正しく追従し（マージコミット方式）、CI も `synchronize` で即起動した。force-reset 時の head 停滞（#53・#55 の現象）は発生しなかった。
+
+### 62.3 検証レポート（コーディネーター検証済み）
+- **PR #57**：open・mergeable=true・mergeable_state=clean、head `c9ac72d5`、base master `cfd4534c`。16 コミット、変更ファイル 14 件（B9 の 14 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45956986344、completed／success。全文ログ（3,574,373 バイト、ジョブ `build` 140365643106、48,004 行）をコーディネーターが取得・確認（`~/workspace/.coord/b9_final2_log.txt`）。GoogleTest `[ PASSED ] 839 tests.`（835＋B9 の 4 件。B9 の単体テスト 4 件すべて `[ OK ]`）、`[ FAILED ]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。B9 ハンドラの C4459 警告なし（`summaryFiles` への改名が効いている。残る C4459 は F2 他の既存分）。`.po` 番兵も通過。
+- **成果物（実行 45956986344）**：`WinMerge-x64.zip` 26,594,226 バイト（ID 15179223918）、`WinMerge-x64-Setup-x64.exe` 40,059,499 バイト（ID 15179452594）。いずれも未失効（expire 2027-02-25）。
+- **マージ**：マージコミット `f9fc0f4a`。マージコミット CI：実行 45959073117、completed／success（head_sha=f9fc0f4a と一致）。全文ログ（3,575,768 バイト、ジョブ `build` 140372314878、48,026 行）をコーディネーターが取得・確認（`~/workspace/.coord/b9_merge_final_log.txt`）。GoogleTest `[ PASSED ] 839 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,594,320 バイト、`WinMerge-x64-Setup-x64.exe` 40,070,913 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（ギャップ分析書 §4.2 B9）**：
+  - (a) ファイルごとの判断が一文ずつ一覧で見られること — 実装済み（6 列リスト）。**実機未検証**。
+  - (b) 集計の 7 種の件数が正しいこと — 実装済み。単体テスト＋g++ ハーネスで検証済み。
+  - (c) 未判断があるときは警告が表示されること — 実装済み（警告行＋ボタン無効化）。**実機未検証**。
+  - (d) ［未確認のみ表示］で未確認ファイルへ移動できること — 実装済み（D3 巡回へ）。**実機未検証**。
+  - (e) ［確定して出力］で S7 の出力が始まること（S7 がない間は CSV 出力へ） — 実装済み（暫定：S6 CSV・出力対象のみ）。**実機未検証**。
+  - (f) ［戻る］では何も変わらないこと — 実装済み（IDCANCEL は早期 return）。**実機未検証**。
+- **未検証（実機でしか確認できないもの）**：実機での一覧ダイアログの表示（6 列・集計 2 行・警告行の見え方、日本語表示）。実機での［未確認のみ表示］→未確認ファイルのオープン、［確定して出力］→CSV の保存と内容、［戻る］→無変更。実機での 10 ファイル程度の受け入れテスト（ギャップ分析書 §4.2 B9 の検証方法）。
+
+### 62.4 次への移行
+- B2（未判断警告ゲート・第1段階）はマージ済み（マージコミット `60a5f113`）。マージコミット CI（実行 45962662832）は進行中。検証後に §63 として記録する。
+- F4（スポットライト）は CI 失敗の修正中（`Merge20FormSpotlight_test.cpp` の 2 引数 `EXPECT_NEAR`、63 Error(s)）。F4 担当に診断ヒントを送付済み。完了報告待ち。
+- B4（未判断の高リスク残量表示）を次に着手する（B2 の次。ギャップ分析書の推奨順序どおり）。
+- ID 割り当て状況（2026-11-27 08:05 JST 時点。master `resource.h` で確認済み）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2` のため使用不可）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・未使用）、B2 が 1882–1885。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み（`resource.h` のコメントに記録）。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38980、`_APS_NEXT_CONTROL_VALUE` 1886。
+## §63 最高峰ワークフロー B2 — 未判断警告ゲート・第1段階（終了時警告）— マージ・CI 検証済み（2026-11-27）
+
+### 63.1 内容（ギャップ分析書 §4.2 B2。柱 1「すべての差分に明示的な結論」の警告ゲート）
+- B2 は本来、出力時（S7 統一選択 ZIP、S5 一括承認）と終了時の 3 か所に警告を掛ける設計だが、**S7・S5 はユーザー作業 B0 の結論待ちで未着手のため、今回は (iii) フォルダ比較文書を閉じるときの警告だけを先行実装**した（ギャップ分析書 §5 の 2 段階化の選択肢どおり）。(i)(ii) の出力ゲートは第2段階とし、今回は実装していない。
+- フック位置は `CDirDoc::SaveModified()`（閉じる直前に呼ばれ、FALSE を返すと閉じる処理が中止される。セッション自動保存はその後の `OnCloseDocument` で走るため「自動保存の直前」になる）。既存の比較中・長時間比較の確認の後に追加。
+- 純粋モジュール `Src/Merge20/Merge20CloseWarn.h/.cpp`：件数集計（`Merge20CloseWarnComputeCounts`／`Merge20CloseWarnHasUndecided`）。集計直前に `Merge20SessionRefreshDiffJudgments` で開いているファイル比較の判定をサイドカーへ反映（セッション自動保存と同じ経路）。
+- ダイアログ `Src/Merge20/Merge20CloseWarnDlg.h/.cpp`：未判断の件数（ファイル X 件・差分 Y 件、うち高リスク Z 件）を表示し、ボタンは［未確認のみ表示］（D3 の TODO-only 巡回へ誘導）・［それでも閉じる］（警告を無視して閉じる処理を続行）・［キャンセル］（何も変えずに閉じる処理を中止する）。［進む］ボタンの文言はコンストラクタ引数のため、第2段階では「それでも出力する」等の文言を渡して同じダイアログを再利用できる。
+- 文言・操作感は B9 の一覧ダイアログと S5 の件数確認ダイアログと統一（同じ「件数＋対象＋キャンセルで無変更」の形）。
+- **件数の定義（二重計上なし）**：未確認ファイル X 件＝確認内容が TODO のファイル数（B9 の undecided と同一）。未判断差分 Y 件＝記録されている差分判定のうち、B1 の結論が「未判断」のものの総数。マージセッションで開いたファイルにだけ記録があるため、未開封ファイルの差分は Y に含めない（そのファイルは X に含まれる）。1 つの差分は最大 1 回だけ数え、ファイルは差分として数えない。うち高リスク Z 件＝上記の未判断のうち、ファイルのリスクが S4 の「高」のもの（TODO かつリスク高のファイル数＋リスク高ファイルに属する未判断差分）。常に Z ≦ X + Y。
+- リソース割り当て：IDD_MERGE20_CLOSE_WARN＝303（302 は `IDI_ROTATE2` のため使用不可）、IDC_MERGE20_CLOSE_WARN_*＝1882–1885（1882 件数行、1883 警告行、1884 未確認のみ表示、1885 進むボタン）。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_CONTROL_VALUE` 1886。**コマンド ID は使っていない**（警告は閉じる操作に自動で掛かるためメニュー項目不要）。38981 は第2段階の出力ゲート用に予約として `resource.h` のコメントに記録した。`.po` 新規 4 件。
+- 第2段階へのフック：件数集計は純粋モジュール `Merge20CloseWarn` に切り出してあるため、S7・S5 の呼び出し側は同じ関数を呼ぶだけでよい。ダイアログの［進む］ボタンの文言はコンストラクタ引数で差し替え可能。件数・警告・残り 2 ボタンは共通。
+
+### 63.2 変更一覧（ブランチ `merge20/wf-b2`、base master `451691d0`。13 コミット、13 ファイル）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20CloseWarn.h` | `957fd015` | 純粋モジュール・ヘッダ |
+| 2 | `Src/Merge20/Merge20CloseWarn.cpp` | `41893e49` | 純粋モジュール |
+| 3 | `Src/Merge20/Merge20CloseWarnDlg.h` | `e19fd63b` | 警告ダイアログ・ヘッダ |
+| 4 | `Src/Merge20/Merge20CloseWarnDlg.cpp` | `bd7b6d48` | 警告ダイアログ |
+| 5 | `Testing/GoogleTest/Merge20/Merge20CloseWarn_test.cpp` | `a6efb5f8` | 単体テスト 7 件 |
+| 6 | `Src/resource.h` | `784e819b` | IDD 303、IDC 1882–1885 |
+| 7 | `Src/Merge.rc` | `ccde5fab` | ダイアログテンプレート＋レイアウト |
+| 8 | `Src/Merge.vcxproj` | `b102ab80` | 登録 |
+| 9 | `Src/Merge.vcxproj.filters` | `386e8cd8` | 登録 |
+| 10 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `d81a3737` | 登録 |
+| 11 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `fd48472a` | 登録 |
+| 12 | `Src/DirDoc.cpp` | `872a7626` | `SaveModified` に警告ゲート |
+| 13 | `Translations/WinMerge/Japanese.po` | `8b87cdc3` | 訳文 4 件追加（ブランチ head） |
+
+- `.po` の確認：追加した 4 エントリはすべて `msgstr` の直後に空行を入れ、ファイル末尾も空行で終えている。`<<<<<<<` の 2 ヒットは、コンフリクト表示の説明文の中の既存の stock WinMerge 翻訳文字列であることをコーディネーターが直接確認済み（`>>>>>>>`／`|||||||` は 0 件）。`diff3` マーカーの残存なし。
+
+### 63.3 検証レポート（コーディネーター検証済み）
+- **PR #60**：open・mergeable=true・mergeable_state=clean、head `8b87cdc3`、base master `451691d0`。13 コミット、変更ファイル 13 件（B2 の 13 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45960856740、completed／success。全文ログ（3,578,941 バイト、ジョブ `build` 140378059474、48,069 行）をコーディネーターが取得・確認（`~/workspace/.coord/b2_final_log.txt`）。GoogleTest `[ PASSED ] 846 tests.`（839＋B2 の 7 件。`EmptyInput`／`AllDecided`／`AcceptanceScenario`／`FilesOnlyUndecided`／`DiffsOnlyUndecided`／`DecidingClearsWarning`／`HighRiskNeverExceedsUndecided` すべて `[ OK ]`）、`[ FAILED ]` 0 件、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。429 warnings は gtest ヘッダ等の既存分。B2 の新規ファイルからの警告は 0 件。`.po` 番兵も通過。
+- **成果物（実行 45960856740）**：`WinMerge-x64.zip` 26,598,578 バイト（ID 15181755124）、`WinMerge-x64-Setup-x64.exe` 40,057,186 バイト（ID 15180753952）。いずれも未失効（expire 2027-02-25）。
+- **マージ**：マージコミット `60a5f113`。マージコミット CI：実行 45962662832、completed／success（head_sha=60a5f113 と一致）。全文ログ（3,578,870 バイト、ジョブ `build` 140383900949、48,067 行）をコーディネーターが取得・確認（`~/workspace/.coord/b2_merge_final_log.txt`）。GoogleTest `[ PASSED ] 846 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,598,021 バイト、`WinMerge-x64-Setup-x64.exe` 40,052,792 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（B2 第1段階）**：
+  - (a) 未判断 0 で警告なし — `Merge20CloseWarnHasUndecided` が偽ならダイアログを出さない。単体テスト `AllDecided`／`DecidingClearsWarning` で検証。コード上は満たす。
+  - (b) 未判断ありで件数付き警告 — 受け入れシナリオ（未確認ファイル 2 件・未判断差分 3 件・うち高リスク 3 件）を単体テスト `AcceptanceScenario` で検証。コード上は満たす。
+  - (c) ［未確認のみ表示］で未確認ファイルへ移動 — `OPT_MERGE20_TODO_ONLY` を ON にして `CDirView::OpenNextFile()` を呼ぶ B9 と同一経路。コード上は満たす。**実機での移動は未検証**。
+  - (d) ［それでも閉じる］の場合に限り続行 — Proceed のときだけ `SaveModified` が TRUE を返す。コード上は満たす。
+  - (e) キャンセルで無変更 — Cancel／ダイアログを閉じた場合は FALSE を返し、判断状態も変えない。コード上は満たす。
+  - (f) 回帰なし — 警告は `SaveModified` の末尾（既存の確認の後）に追加したのみで、通常の閉じる操作・セッション保存・復元・B9・D3 巡回には触れていない。CI 全テスト合格で裏付け。**実機での回帰確認は未実施**。
+- **未検証（実機でしか確認できないもの）**：ダイアログの表示そのもの（レイアウト・日本語表示・ボタン配置）。実機での受け入れ手順 (1)〜(5)：未確認ファイル 2 件・未判断差分 3 件を残した状態で (1) 閉じようとすると警告が出る、(2) ［未確認のみ表示］で未確認ファイルに移動する、(3) ［それでも閉じる］で閉じられる、(4) 全件 DONE にしてから閉じると警告が出ない、(5) キャンセルで閉じられない。ダイアログ表示中にフォルダ比較ウィンドウを閉じる等の実機フロー。
+
+### 63.4 次への移行
+- B4（未判断の高リスク残量表示）はマージ済み（マージコミット `4c359a70`）。マージコミット CI（実行 45967396948）は進行中。検証後に §64 として記録する。
+- F4（スポットライト）は CI 失敗の修正中（`Merge20FormSpotlight_test.cpp` の 2 引数 `EXPECT_NEAR`、63 Error(s)）。F4 担当に診断ヒントを送付済み。完了報告待ち。
+- B3（リスク順巡回）を次に着手する（B4 の次。ギャップ分析書の推奨順序どおり）。
+- ID 割り当て状況（2026-11-27 08:45 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・未使用）、B2 が 1882–1885、B4 が 1886。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 用に 38982 を確保予定。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38980、`_APS_NEXT_CONTROL_VALUE` 1887。

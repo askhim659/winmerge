@@ -121,6 +121,8 @@
 #define IDD_MERGE20_GREP                298
 #define IDD_MERGE20_MASTER              299
 #define IDD_MERGE20_BULK_CLASSIFY      300
+#define IDD_MERGE20_SUMMARY            301
+#define IDD_MERGE20_CLOSE_WARN         303
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -920,6 +922,12 @@
 #define IDC_MERGE20_FORM_ZOOM_SLIDER        1863
 #define IDC_MERGE20_FORM_ZOOM_LABEL         1864
 #define IDC_MERGE20_FORM_VIEWPORT_TOGGLE    1865
+#define IDC_MERGE20_SUMMARY_COUNTS          1866
+#define IDC_MERGE20_SUMMARY_SUBCOUNTS       1867
+#define IDC_MERGE20_SUMMARY_WARNING         1868
+#define IDC_MERGE20_SUMMARY_LIST            1869
+#define IDC_MERGE20_SUMMARY_TODO_ONLY       1870
+#define IDC_MERGE20_SUMMARY_CONFIRM         1871
 #define IDC_MERGE20_FORM_SPOT_PANEL         1872
 #define IDC_MERGE20_FORM_SPOT_OLD_LABEL     1873
 #define IDC_MERGE20_FORM_SPOT_OLD           1874
@@ -930,6 +938,12 @@
 #define IDC_MERGE20_FORM_SPOT_NEXT          1879
 #define IDC_MERGE20_FORM_SPOT_CLEAR         1880
 #define IDC_MERGE20_FORM_SPOT_GOTO          1881
+#define IDC_MERGE20_CLOSE_WARN_COUNTS       1882
+#define IDC_MERGE20_CLOSE_WARN_WARNING      1883
+#define IDC_MERGE20_CLOSE_WARN_TODO_ONLY    1884
+#define IDC_MERGE20_CLOSE_WARN_PROCEED      1885
+// Merge20 (B4): high-risk remainder line in the file-list panel header.
+#define IDC_MERGE20_FILELIST_HIGHRISK     1886
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1914,6 +1928,7 @@
 #define ID_MERGE20_CONCLUSION_REJECT    38974
 #define ID_MERGE20_CONCLUSION_KEEP      38975
 #define ID_MERGE20_FORM_COMPARE         38976
+#define ID_MERGE20_SUMMARY              38979
 #define IDS_SPLASH_GPLTEXT              38977
 #define ID_VIEW_MERGE20_BRAND_HEADER   38978
 #define IDS_MESSAGEBOX_OK               39001
@@ -2680,25 +2695,34 @@
 // F2 consumes command 38976 (FORM compare launch) and controls 1837-1857 (FORM compare view).
 // F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
 // zoom slider, zoom label, viewport height toggle).
-// B9 reserves controls 1866-1871.
+// B9 consumes dialog 301, controls 1866-1871 and command 38979 (end-of-session summary dialog).
 // F4 consumes controls 1872-1881 (FORM compare spotlight: banner panel, old/new preview
 // labels + previews, banner text, previous / next / clear / go-to-changed-area buttons).
+// B2 stage 1 consumes dialog 303 and controls 1882-1885 (close-warning dialog: counts, warning,
+// show-unreviewed-only and proceed buttons). It uses no command ID: the warning is automatic on
+// close. Command 38981 is held for the B2 stage 2 output gates (S7/S5); F4 consumes
+// controls 1872-1881 (see above).
+// B4 consumes control 1886 (file-list panel high-risk remainder line). It uses no command ID:
+// the remainder is a display, not a menu item.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
-// - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
-//   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
-//   (IDR_LOGO), 310 (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already
-//   taken; dialog IDs must skip those values.
-// - controls (IDC_*): from 1810 (_APS_NEXT_CONTROL_VALUE), free
-//   contiguously up to 8602 (the next IDC_* is 8603).
+// - dialogs (IDD_*): from 304 (_APS_NEXT_RESOURCE_VALUE). The numeric
+//   space is shared with icons/bitmaps, so 301 is the B9 summary
+//   dialog, 302 (IDI_ROTATE2), 303 is the B2 close-warning dialog,
+//   307 (IDR_LOGO), 310
+//   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
+//   IDs must skip those values.
+// - controls (IDC_*): from 1887 (_APS_NEXT_CONTROL_VALUE), free
+//   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
+//   F4 takes 1872-1881, B2 takes 1882-1885, B4 takes 1886.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
 //   diffs-only and slim commands; 38968 is the H-FILTER deck toggle;
 //   38969 is the H-DOC user manual command;
 //   38970-38975 are the B1 conclusion commands; 38976 is the F2 FORM compare command;
-//   38978 is the U1 brand header toggle;
-//   _APS_NEXT_COMMAND_VALUE is now 38979), free from 38979
+//   38978 is the U1 brand header toggle; 38979 is the B9 summary
+//   command; _APS_NEXT_COMMAND_VALUE is now 38980), free from 38980
 //   (38977 is IDS_SPLASH_GPLTEXT: not usable as a command ID).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2707,9 +2731,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        301
-#define _APS_NEXT_COMMAND_VALUE         38979
-#define _APS_NEXT_CONTROL_VALUE         1882
+#define _APS_NEXT_RESOURCE_VALUE        304
+#define _APS_NEXT_COMMAND_VALUE         38980
+#define _APS_NEXT_CONTROL_VALUE         1887
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif

@@ -216,6 +216,11 @@ public:
 	// header shows the same count on its right end.
 	void UpdateMerge20StatusCount();
 	String GetMerge20StatusCountText();
+	// Merge20 (UI U2): the per-state count itself, so the main frame
+	// can show the same unreviewed (TODO) count in the title bar.
+	// Public like GetMerge20StatusCountText above (U1 did the same
+	// for the text); the implementation is unchanged.
+	void Merge20CountDisplayedByReviewState(int counts[5]);
 private:
 	void InitiateSort();
 	void NameColumn(const DirColInfo *col, int subitem);
@@ -409,6 +414,8 @@ protected:
 	afx_msg void OnMerge20BatchCheck();
 	// Merge20 (S6): diff-list CSV export
 	afx_msg void OnMerge20CsvExport();
+	// Merge20 (B9): end-of-session summary dialog
+	afx_msg void OnMerge20Summary();
 	// Merge20 (Phase 3 L4): learning dialog
 	afx_msg void OnMerge20Learn();
 	// Merge20 (Phase 4 D7): Grep cross-file search dialog
@@ -536,7 +543,6 @@ private:
 	void HeaderContextMenu(CPoint point, int i);
 	void ListContextMenu(CPoint point, int i);
 	// Merge20 (S3): batch check, per-directory check/uncheck, status count
-	void Merge20CountDisplayedByReviewState(int counts[5]);
 	// Merge20 (Phase 4 D3): patrol targets over the displayed rows
 	// (true = file in the patrol set), and the Up/Down-key patrol move.
 	std::vector<bool> Merge20BuildPatrolTargets(bool bTodoOnly) const;

@@ -54,6 +54,8 @@
 #include "Merge20/Merge20SessionDoc.h"
 #include "Merge20/Merge20FilterDeckBar.h"
 #include "Merge20/Merge20Slim.h"
+#include "Merge20/Merge20Summary.h"
+#include "Merge20/Merge20SummaryDlg.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
@@ -161,6 +163,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE, OnUpdateSave)
 	ON_COMMAND(ID_MERGE20_BATCH_CHECK, OnMerge20BatchCheck)
 	ON_COMMAND(ID_MERGE20_CSV_EXPORT, OnMerge20CsvExport)
+	ON_COMMAND(ID_MERGE20_SUMMARY, OnMerge20Summary)
 	ON_COMMAND(ID_MERGE20_SESSION_SAVE, OnMerge20SessionSave)
 	ON_COMMAND(ID_MERGE20_SESSION_RESTORE, OnMerge20SessionRestore)
 	ON_COMMAND(ID_MERGE20_MEMO_EDIT, OnMerge20MemoEdit)
@@ -1010,6 +1013,10 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// CSV export, next to the batch check. Always offered.
 	String sMerge20CsvExport = _("Export diff list as CSV...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_CSV_EXPORT, sMerge20CsvExport.c_str());
+	// Merge20 (B9, gap analysis section 4.2 B9): end-of-session
+	// summary dialog, next to the CSV export. Always offered.
+	String sMerge20Summary = _("End-of-session review...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_SUMMARY, sMerge20Summary.c_str());
 	// Merge20 (Phase 4 D7, design section 5.2/D7, spec section 3 (4/4)):
 	// Grep cross-file search. Always offered.
 	String sMerge20Grep = _("Cross-File Search...");
@@ -3708,10 +3715,20 @@ String CDirView::GetMerge20StatusCountText()
  * Called from Redisplay() (the displayed set changed) and from every
  * place that changes an output flag, so the count always follows
  * filters and check operations (T-2-2).
+ * UI U2: the main-frame title shows the same unreviewed count, so
+ * refresh it here too. This is the single funnel for review-state
+ * changes (keys 1-5/Space, batch check, per-directory operations,
+ * session restore, and the file-list panel via
+ * CDirDoc::Merge20UpdateDirViewStatus), so the title follows every
+ * confirmation change. The frame reads the active document, so a
+ * background tab's refresh can only rewrite the title from the
+ * active document, never from this view.
  */
 void CDirView::UpdateMerge20StatusCount()
 {
 	GetParentFrame()->SetStatus(GetMerge20StatusCountText().c_str());
+	if (CMainFrame* pMainFrame = GetMainFrame())
+		pMainFrame->OnUpdateFrameTitle(TRUE);
 }
 
 /**
@@ -3879,6 +3896,93 @@ void CDirView::OnMerge20CsvExport()
 		return;
 	}
 	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
+}
+
+/**
+ * @brief Merge20 (B9, gap analysis section 4.2 B9): end-of-session
+ * summary dialog. One line per file (file name, review state,
+ * action category, risk, output on/off, one-line summary) under
+ * the H-DASH counts, with a warning while unreviewed files
+ * remain. [Show unreviewed only] enters the D3 TODO-only patrol
+ * and opens the next unreviewed file; [Confirm and export]
+ * exports the output targets with the S6 CSV (S7 does not exist
+ * yet); [Back] changes nothing. Cancel in the save dialog
+ * exports nothing.
+ */
+void CDirView::OnMerge20Summary()
+{
+	CDiffContext& ctxt = GetDiffContext();
+	// The whole comparison is walked (as in the S6 export), so files
+	// hidden by the current filter or inside a collapsed folder are
+	// included too; directories are not rows.
+	std::vector<Merge20SummaryFile> summaryFiles;
+	std::vector<Merge20SummaryRow> rows;
+	for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)
+	{
+		const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
+		if (di.diffcode.isDirectory())
+			continue;
+		const Merge20FileState& state = ctxt.GetMerge20FileStates().GetState(di.getItemRelativePath());
+		Merge20SummaryFile file;
+		file.hasDiff = Merge20CsvHasDiff(di);
+		file.isModified = di.diffcode.isResultDiff();
+		file.isOldOnly = di.diffcode.isSideFirstOnly();
+		file.isNewOnly = di.diffcode.isSideSecondOnly() || di.diffcode.isSideThirdOnly();
+		file.review = state.review;
+		file.includeInOutput = ctxt.GetMerge20IncludeInOutput(di);
+		summaryFiles.push_back(file);
+		Merge20SummaryRow row;
+		row.fileName = Merge20CsvGetFileNameText(&ctxt, di);
+		row.review = Merge20CsvGetReviewText(&ctxt, di);
+		row.action = Merge20CsvGetActionText(&ctxt, di);
+		row.risk = Merge20CsvGetRiskText(&ctxt, di);
+		row.output = Merge20CsvGetOutputText(&ctxt, di);
+		row.summary = Merge20CsvGetSummaryText(&ctxt, di);
+		rows.push_back(row);
+	}
+	const Merge20SummaryCounts counts = Merge20SummaryComputeCounts(summaryFiles);
+	if (counts.total == 0)
+	{
+		AfxMessageBox(_("There are no files to review.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	Merge20SummaryDlg dlg(this, rows, counts);
+	if (dlg.DoModal() != IDOK)
+		return; // Back (or close): change nothing.
+	switch (dlg.GetResult())
+	{
+	case Merge20SummaryDlg::Result::TodoOnly:
+		// Enter the D3 TODO-only patrol (the dedicated bar toggle
+		// reads the same option) and open the next unreviewed
+		// file. OpenNextFile reports "No unreviewed files" itself
+		// when there is none, and stays when the current file is
+		// the only unreviewed one.
+		GetOptionsMgr()->Set(OPT_MERGE20_TODO_ONLY, true);
+		OpenNextFile();
+		break;
+	case Merge20SummaryDlg::Result::Confirm:
+	{
+		// S7 does not exist yet: the output is the S6 CSV of the
+		// output targets (the "selected only" range), so the
+		// exported rows are exactly the dialog's output targets.
+		const String defaultName = _T("Summary_") + String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d")).GetString()) + _T(".csv");
+		String filePath;
+		if (!SelectFile(GetSafeHwnd(), filePath, false, defaultName.c_str(), _T(""),
+			_T("CSV Files (*.csv)|*.csv|All Files (*.*)|*.*||"), _T("csv")))
+			return;
+		String errStr;
+		int exported = 0;
+		if (!Merge20CsvExportToFile(ctxt, Merge20CsvExportRange::SelectedOnly, filePath, errStr, exported))
+		{
+			AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+			return;
+		}
+		AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
+		break;
+	}
+	case Merge20SummaryDlg::Result::Back:
+		break;
+	}
 }
 
 /**

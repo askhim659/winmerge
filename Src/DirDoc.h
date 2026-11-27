@@ -19,6 +19,7 @@
 #include "IMDITab.h"
 #include "IDirDoc.h"
 #include "Merge20/Merge20Types.h"
+#include "Merge20/Merge20CloseWarn.h"
 #include "Merge20/Merge20Session.h"
 
 class CDirView;
@@ -149,6 +150,14 @@ public:
 	// Merge20 (S8): refresh the diff judgments of all still-open merge
 	// docs into the sidecar map (called before a session save).
 	void RefreshMerge20DiffJudgments();
+	// Merge20 (best-workflow B4, gap analysis section 4.2 B4): the
+	// B2 close-warning counts for this folder compare (see
+	// Merge20CloseWarn.h for the counting rules). The single
+	// gathering point for both uses: B2's close warning
+	// (SaveModified) and B4's panel remainder display
+	// (CMerge20FileListBar) call this, so the two can never
+	// disagree about the definition or the value.
+	Merge20CloseWarnCounts GetMerge20CloseWarnCounts();
 	// Merge20 (S8): true once the session-restore offer was shown for
 	// this document (the offer is made once, after the first compare).
 	bool Merge20SessionAsked() const { return m_bMerge20SessionAsked; }
