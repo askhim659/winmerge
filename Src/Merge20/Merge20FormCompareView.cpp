@@ -7,7 +7,7 @@
  * (DEFAULT_GUI_FONT, dummy rect at creation, layout in OnSize,
  * literal _() calls for the .pot generator).
  */
-#include "pch.h"
+#include "StdAfx.h"
 #include "Merge20/Merge20FormCompareView.h"
 #include "resource.h"
 #include <cmath>
