@@ -42,6 +42,8 @@
 #include "LoadSaveCodepageDlg.h"
 #include "ConfirmFolderCopyDlg.h"
 #include "DirColsDlg.h"
+#include "Merge20/Merge20AuditDlg.h"
+#include "Merge20/Merge20AuditDoc.h"
 #include "Merge20/Merge20BatchCheckDlg.h"
 #include "Merge20/Merge20CsvExport.h"
 #include "Merge20/Merge20CsvExportDlg.h"
@@ -188,6 +190,10 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_UNDO_JUDGMENT, OnUpdateMerge20UndoJudgment)
 	ON_COMMAND(ID_MERGE20_REDO_JUDGMENT, OnMerge20RedoJudgment)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_REDO_JUDGMENT, OnUpdateMerge20RedoJudgment)
+	ON_COMMAND(ID_MERGE20_AUDIT_VIEW, OnMerge20AuditView)
+	ON_COMMAND(ID_MERGE20_AUDIT_CSV, OnMerge20AuditCsv)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_AUDIT_VIEW, OnUpdateMerge20Audit)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_AUDIT_CSV, OnUpdateMerge20Audit)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_CHECK_ALL, OnUpdateMerge20DirCheck)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_DIR_UNCHECK_ALL, OnUpdateMerge20DirCheck)
 	ON_NOTIFY_REFLECT(LVN_COLUMNCLICK, OnColumnClick)
@@ -1043,6 +1049,13 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// summary dialog, next to the CSV export. Always offered.
 	String sMerge20Summary = _("End-of-session review...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_SUMMARY, sMerge20Summary.c_str());
+	// Merge20 (B11, gap analysis section 4.2 B11): audit-log viewer
+	// and CSV export, next to the diff-list CSV export and the
+	// end-of-session summary. Always offered.
+	String sMerge20AuditView = _("Audit log...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_AUDIT_VIEW, sMerge20AuditView.c_str());
+	String sMerge20AuditCsv = _("Export audit log as CSV...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_AUDIT_CSV, sMerge20AuditCsv.c_str());
 	// Merge20 (Phase 4 D7, design section 5.2/D7, spec section 3 (4/4)):
 	// Grep cross-file search. Always offered.
 	String sMerge20Grep = _("Cross-File Search...");
@@ -3944,7 +3957,17 @@ void CDirView::OnMerge20BatchCheck()
 			if (di.diffcode.isDirectory())
 				continue;
 			if (dlg.IsStateSelected(pDoc->GetMerge20ReviewState(di)))
+			{
+				// Merge20 (best-workflow B11): one audit entry per
+				// file whose output flag actually changed (the batch
+				// is one operation, but the log is per file, so each
+				// file's old -> new stays traceable). The undo stack
+				// deliberately records nothing for a batch (B10).
+				const bool bOldInclude = pDoc->GetMerge20IncludeInOutput(di);
 				pDoc->SetMerge20IncludeInOutput(di, true, false);
+				Merge20AuditLogIncludeChange(pDoc->GetDiffContext(),
+					di.getItemRelativePath(), bOldInclude, true, Merge20AuditKind::BatchCheck);
+			}
 		}
 		break;
 	}
@@ -3958,7 +3981,14 @@ void CDirView::OnMerge20BatchCheck()
 				continue;
 			const DIFFITEM& di = GetDiffItem(i);
 			if (!di.diffcode.isDirectory())
+			{
+				// Merge20 (best-workflow B11): see the Selected case
+				// above (one BatchCheck entry per changed file).
+				const bool bOldInclude = pDoc->GetMerge20IncludeInOutput(di);
 				pDoc->SetMerge20IncludeInOutput(di, true, false);
+				Merge20AuditLogIncludeChange(pDoc->GetDiffContext(),
+					di.getItemRelativePath(), bOldInclude, true, Merge20AuditKind::BatchCheck);
+			}
 		}
 		break;
 	}
@@ -3989,7 +4019,14 @@ void CDirView::Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include)
 		if (pChild->diffcode.isDirectory())
 			Merge20SetOutputForDirectory(*pChild, include);
 		else
+		{
+			// Merge20 (best-workflow B11): one BatchCheck entry per
+			// changed file (as in the batch-check dialog).
+			const bool bOldInclude = pDoc->GetMerge20IncludeInOutput(*pChild);
 			pDoc->SetMerge20IncludeInOutput(*pChild, include, false);
+			Merge20AuditLogIncludeChange(pDoc->GetDiffContext(),
+				pChild->getItemRelativePath(), bOldInclude, include, Merge20AuditKind::BatchCheck);
+		}
 	}
 }
 
@@ -4273,6 +4310,75 @@ void CDirView::OnMerge20Summary()
 	case Merge20SummaryDlg::Result::Back:
 		break;
 	}
+}
+
+/**
+ * @brief Merge20 (best-workflow B11, gap analysis section 4.2 B11):
+ * show the folder pair's audit log (chronological list). The dialog
+ * only displays the loaded entries; [Export as CSV...] runs the
+ * same CSV export as the context-menu item. Opening the viewer
+ * writes nothing to the log (viewing is not a judgment).
+ */
+void CDirView::OnMerge20AuditView()
+{
+	CDirDoc* pDoc = GetDocument();
+	if (pDoc == nullptr || !pDoc->HasDiffs())
+		return;
+	std::vector<Merge20AuditEntry> entries;
+	int skippedLines = 0;
+	String filePath;
+	if (!Merge20AuditLoadForDoc(*pDoc, entries, skippedLines, filePath))
+	{
+		AfxMessageBox(_("There are no audit log entries yet. Make a judgment (review state, output check, diff conclusion) and it will be recorded here.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	const std::vector<Merge20AuditCsvRow> rows = Merge20AuditBuildDisplayRows(entries);
+	Merge20AuditDlg dlg(this, rows, skippedLines);
+	if (dlg.DoModal() != IDOK)
+		return; // Close: change nothing.
+	if (dlg.GetResult() == Merge20AuditDlg::Result::Export)
+		OnMerge20AuditCsv();
+}
+
+/**
+ * @brief Merge20 (best-workflow B11, gap analysis section 4.2 B11):
+ * export the folder pair's audit log as CSV (BOM-prefixed UTF-8,
+ * so it opens directly in Excel). The default name is
+ * AuditLog_YYYY-MM-DD.csv, as in the S6 export
+ * (DiffList_YYYY-MM-DD.csv).
+ */
+void CDirView::OnMerge20AuditCsv()
+{
+	CDirDoc* pDoc = GetDocument();
+	if (pDoc == nullptr || !pDoc->HasDiffs())
+		return;
+	std::vector<Merge20AuditEntry> entries;
+	int skippedLines = 0;
+	String filePath;
+	if (!Merge20AuditLoadForDoc(*pDoc, entries, skippedLines, filePath) || entries.empty())
+	{
+		AfxMessageBox(_("There are no audit log entries yet. Make a judgment (review state, output check, diff conclusion) and it will be recorded here.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	const String defaultName = _T("AuditLog_") + String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d")).GetString()) + _T(".csv");
+	String outPath;
+	if (!SelectFile(GetSafeHwnd(), outPath, false, defaultName.c_str(), _T(""),
+		_T("CSV Files (*.csv)|*.csv|All Files (*.*)|*.*||"), _T("csv")))
+		return;
+	String errStr;
+	int exported = 0;
+	if (!Merge20AuditExportCsv(entries, outPath, errStr, exported))
+	{
+		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+		return;
+	}
+	AfxMessageBox(strutils::format_string2(_("%1 entries exported to %2"), strutils::to_str(exported), outPath).c_str(), MB_ICONINFORMATION);
+}
+
+void CDirView::OnUpdateMerge20Audit(CCmdUI* pCmdUI)
+{
+	CDirDoc* pDoc = GetDocument();
+	pCmdUI->Enable(pDoc != nullptr && pDoc->HasDiffs());
 }
 
 /**
@@ -5117,7 +5223,14 @@ void CDirView::Merge20SetOutputForAllFiles(bool include)
 	{
 		const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
 		if (!di.diffcode.isDirectory())
+		{
+			// Merge20 (best-workflow B11): one BatchCheck entry per
+			// changed file (as in the batch-check dialog).
+			const bool bOldInclude = pDoc->GetMerge20IncludeInOutput(di);
 			pDoc->SetMerge20IncludeInOutput(di, include, false);
+			Merge20AuditLogIncludeChange(ctxt,
+				di.getItemRelativePath(), bOldInclude, include, Merge20AuditKind::BatchCheck);
+		}
 	}
 }
 
