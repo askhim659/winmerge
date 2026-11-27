@@ -10,6 +10,7 @@
 #include "Merge20/Merge20Session.h"
 #include "Merge20/Merge20FocusDock.h"
 #include "Merge20/Merge20Grep.h"
+#include "Merge20/Merge20AuditDoc.h"
 #include "Merge.h"
 #include "DirDoc.h"
 #include "MergeDoc.h"
@@ -205,8 +206,13 @@ String Merge20SessionGetFilePath(const CDiffContext& ctxt)
 
 String Merge20SessionGetFilePath(const String& leftPath, const String& rightPath, const String& thirdPath)
 {
-	const String fileName = _T("Merge20Session_") + FormatHex64(Fnv1a64(SessionKey(leftPath, rightPath, thirdPath))) + _T(".json");
+	const String fileName = _T("Merge20Session_") + Merge20SessionPairHashHex(leftPath, rightPath, thirdPath) + _T(".json");
 	return paths::ConcatPath(Merge20SessionGetDirectory(), fileName);
+}
+
+String Merge20SessionPairHashHex(const String& leftPath, const String& rightPath, const String& thirdPath)
+{
+	return FormatHex64(Fnv1a64(SessionKey(leftPath, rightPath, thirdPath)));
 }
 
 bool Merge20SessionBuildFromDoc(CDirDoc& doc, Merge20Session& session)
@@ -481,6 +487,13 @@ namespace
 		{
 			// Spec section 6.1: a changed file does not inherit its
 			// review state. The memo is kept (see ResetMerge20ChangedFile).
+			// Merge20 (best-workflow B11): a reset discards a past
+			// judgment, so it is logged (the one restore action that
+			// writes the audit log; the restore itself does not).
+			// Both the synchronous and the deferred restore run
+			// through here. A file whose saved review was already
+			// TODO logs nothing (the reset changes nothing).
+			Merge20AuditLogChangeReset(doc, file.relPath, file.review);
 			ctxt.ResetMerge20ChangedFile(di);
 			++result.reset;
 			continue;
