@@ -12598,3 +12598,33 @@ msgstr "その差分の結論は、ファイル比較が開いていないため
 msgid "That diff conclusion cannot be redone because its file comparison is not open. Open the file first, then try again."
 msgstr "その差分の結論は、ファイル比較が開いていないためやり直せませんでした。ファイルを開いてからもう一度お試しください。"
 
+#. Merge20 (Wave 5 F7): CSV export button in the FORM compare top bar (design sections 7.1 and 9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Export to CSV"
+msgstr "CSV出力"
+
+#. Merge20 (Wave 5 F7): FORM compare CSV export dialog caption (design section 9)
+#: Src/Merge.rc
+msgid "Export FORM Compare as CSV"
+msgstr "【Wiz】FORM比較をCSV出力"
+
+#. Merge20 (Wave 5 F7): CSV export range, filtered results only (design section 9)
+#: Src/Merge20/Merge20FormCsvExportDlg.cpp
+msgid "Filtered results only (%1 files)"
+msgstr "絞り込んだ結果のみ（%1件）"
+
+#. Merge20 (Wave 5 F7): CSV export range, all changed files (design section 9)
+#: Src/Merge20/Merge20FormCsvExportDlg.cpp
+msgid "All changed files (%1 files)"
+msgstr "変更のあるファイルすべて（%1件）"
+
+#. Merge20 (Wave 5 F7): CSV export dialog note (design section 9)
+#: Src/Merge.rc
+msgid "The CSV has two parts (form summary and per-change details) and is written as UTF-8 with a BOM, so it opens directly in Excel."
+msgstr "CSVは2部構成（帳票サマリと変更箇所別の詳細）で、BOM付きUTF-8で書き出すため、Excelでそのまま開けます。"
+
+#. Merge20 (Wave 5 F7): no comparison results to export yet (design section 9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "There are no comparison results to export. Run the analysis first."
+msgstr "出力する比較結果がありません。先に「解析実行」を行ってください。"
+

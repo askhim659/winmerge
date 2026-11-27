@@ -26,8 +26,11 @@
  * expand on click, and row click -> spotlight for records with
  * a visual. F6 adds the name-master edit button to the top bar
  * (design sections 7.1 and 8): it opens the edit dialog, and
- * after a save the document re-resolves every form name. The
- * document and the list module stay the same.
+ * after a save the document re-resolves every form name. F7 adds
+ * the CSV export button to the top bar (design sections 7.1 and 9):
+ * it opens the range-selection dialog and writes the two-part CSV
+ * (BOM-prefixed UTF-8) for the filtered view or all changed files.
+ * The document and the list module stay the same.
  *
  * The view never changes the document except through the
  * document's SetFilter / SetSearchText / SetSortOrder (which
@@ -88,6 +91,8 @@ protected:
 	afx_msg void OnListItemChanged(NMHDR* pNMHDR, LRESULT* pResult);
 	/** @brief Name-master edit button (F6): open the edit dialog. */
 	afx_msg void OnMasterEdit();
+	/** @brief CSV export button (F7): open the range dialog and write the CSV. */
+	afx_msg void OnCsvExport();
 	/** @brief Zoom 100% button (F3). */
 	afx_msg void OnZoom100();
 	/** @brief Zoom 25% button (F3). */
@@ -173,6 +178,7 @@ private:
 	CComboBox m_wndSort; /**< The five sort orders. */
 	CButton m_btnRerun; /**< Re-run analysis. */
 	CButton m_btnMaster; /**< Name-master edit button (F6). */
+	CButton m_btnCsv; /**< CSV export button (F7). */
 	CButton m_btnPrev; /**< Previous form. */
 	CButton m_btnNext; /**< Next form. */
 	CButton m_btnNavToggle; /**< Show/hide the navigator. */

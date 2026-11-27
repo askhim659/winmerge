@@ -12,11 +12,16 @@
  * F6 adds the name-master edit button to the top bar
  * (design sections 7.1 and 8): the button text carries the
  * count badge, and after a save the document re-resolves every
- * form name.
+ * form name. F7 adds the CSV export button to the top bar
+ * (design sections 7.1 and 9): it opens the range-selection
+ * dialog and writes the two-part CSV (BOM-prefixed UTF-8).
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCompareView.h"
 #include "Merge20/Merge20FormMasterDlg.h"
+#include "Merge20/Merge20FormCsvExport.h"
+#include "Merge20/Merge20FormCsvExportDlg.h"
+#include "FileOrFolderSelect.h"
 #include "resource.h"
 #include "UnicodeString.h"
 #include <cmath>
@@ -86,6 +91,7 @@ BEGIN_MESSAGE_MAP(CFormCompareView, CView)
 	ON_CBN_SELCHANGE(IDC_MERGE20_FORM_SORT, OnSortChanged)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_RERUN, OnRerun)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_MASTER, OnMasterEdit)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_CSV, OnCsvExport)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_PREV, OnPrevForm)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_NEXT, OnNextForm)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_NAV_TOGGLE, OnNavToggle)
@@ -193,7 +199,7 @@ int CFormCompareView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	m_btnRerun.SetFont(pFont);
 	// Name-master edit button (F6, design section 7.1): the top
 	// bar holds the folder display, the re-run button and this
-	// button (no CSV/caching buttons yet; F7 adds the export).
+	// button.
 	if (!m_btnMaster.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
 		rc, this, IDC_MERGE20_FORM_MASTER))
 	{
@@ -201,6 +207,14 @@ int CFormCompareView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_btnMaster.SetFont(pFont);
+	// CSV export button (F7, design sections 7.1 and 9).
+	if (!m_btnCsv.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_CSV))
+	{
+		TRACE0("Failed to create Merge20FormCompareView CSV button\n");
+		return -1;
+	}
+	m_btnCsv.SetFont(pFont);
 	if (!m_btnPrev.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
 		rc, this, IDC_MERGE20_FORM_PREV))
 	{
@@ -464,6 +478,10 @@ void CFormCompareView::LayoutControls()
 	// other buttons in this row.
 	const int masterBtnWidth = 210;
 	m_btnMaster.MoveWindow(x, y, masterBtnWidth, kFormControlHeight);
+	x += masterBtnWidth + kFormRowGap;
+	// CSV export button (F7).
+	const int csvBtnWidth = 120;
+	m_btnCsv.MoveWindow(x, y, csvBtnWidth, kFormControlHeight);
 	y += kFormControlHeight + kFormMargin;
 	// Bottom area: navigator (left) + card list (top) + preview pane (bottom, F3).
 	const int navWidth = m_bNavVisible ? kFormNavWidth : 0;
@@ -628,6 +646,7 @@ void CFormCompareView::UpdateResources()
 	m_stSearchLabel.SetWindowText(_("Search").c_str());
 	m_stSortLabel.SetWindowText(_("Sort by").c_str());
 	m_btnRerun.SetWindowText(_("Re-run analysis").c_str());
+	m_btnCsv.SetWindowText(_("Export to CSV").c_str());
 	RefreshMasterButton();
 	m_btnPrev.SetWindowText(_("Previous form").c_str());
 	m_btnNext.SetWindowText(_("Next form").c_str());
@@ -900,6 +919,55 @@ void CFormCompareView::OnMasterEdit()
 	if (pDoc != nullptr)
 		pDoc->RefreshFormNames();
 	RefreshMasterButton();
+}
+
+void CFormCompareView::OnCsvExport()
+{
+	CFormCompareDoc* pDoc = GetDocument();
+	if (pDoc == nullptr || !pDoc->IsAnalyzed())
+	{
+		AfxMessageBox(_("There are no comparison results to export. Run the analysis first.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	const std::vector<Merge20FormFileResult>& results = pDoc->GetResults();
+	if (results.empty())
+	{
+		AfxMessageBox(_("There are no files with differences to export.").c_str(), MB_ICONINFORMATION);
+		return;
+	}
+	// Range (design section 9): the filtered view or all changed
+	// files, each labelled with its file count.
+	CMerge20FormCsvExportDlg dlg(this,
+		static_cast<int>(pDoc->GetVisibleIndices().size()),
+		static_cast<int>(results.size()));
+	if (dlg.DoModal() != IDOK)
+		return;
+	std::vector<size_t> indices;
+	if (dlg.GetRange() == CMerge20FormCsvExportDlg::Range::FilteredOnly)
+		indices = pDoc->GetVisibleIndices();
+	else
+	{
+		indices.reserve(results.size());
+		for (size_t i = 0; i < results.size(); ++i)
+			indices.push_back(i);
+	}
+	// Default file name, as in the HTML tool
+	// (XML_Diff_Report_YYYY-MM-DD.csv).
+	const String defaultName = _T("XML_Diff_Report_") + String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d")).GetString()) + _T(".csv");
+	String filePath;
+	if (!SelectFile(GetSafeHwnd(), filePath, false, defaultName.c_str(), _T(""),
+		_T("CSV Files (*.csv)|*.csv|All Files (*.*)|*.*||"), _T("csv")))
+		return;
+	// Output date/time for the CSV title line (HTML `exportToExcel`).
+	const String timestamp = String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S")).GetString());
+	String errStr;
+	int exported = 0;
+	if (!Merge20FormCsvExportToFile(results, pDoc->GetGroups(), indices, timestamp, filePath, errStr, exported))
+	{
+		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
+		return;
+	}
+	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(exported), filePath).c_str(), MB_ICONINFORMATION);
 }
 
 void CFormCompareView::RefreshMasterButton()

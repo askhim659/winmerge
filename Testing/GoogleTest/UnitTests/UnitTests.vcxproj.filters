@@ -168,6 +168,9 @@
     <ClCompile Include="..\Merge20\Merge20FormMaster_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20FormCsv_test.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\Merge20\Merge20CloseWarn_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
@@ -451,6 +454,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20FormMaster.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20FormCsv.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20CloseWarn.cpp">
@@ -753,6 +759,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20FormTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20FormCsv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20CloseWarn.h">
