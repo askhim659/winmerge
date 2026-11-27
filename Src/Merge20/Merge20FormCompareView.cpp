@@ -1109,7 +1109,7 @@ void CFormCompareView::UpdateSpotlightBanner()
 			_T(" \u2192 ") + elemRecord.newVal;
 	}
 	if (!attrLine.empty())
-		text += _T("\r\n") + _("Changed attributes: ") + attrLine;
+		text += _T("\r\n") + _("Changed attributes") + _T(": ") + attrLine;
 	m_stSpotText.SetWindowText(text.c_str());
 }
 
