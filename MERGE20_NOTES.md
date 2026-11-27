@@ -6083,3 +6083,53 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - F4（スポットライト）は CI 失敗の修正中（`Merge20FormSpotlight_test.cpp` の 2 引数 `EXPECT_NEAR`、63 Error(s)）。F4 担当に診断ヒントを送付済み。完了報告待ち。
 - B4（未判断の高リスク残量表示）を次に着手する（B2 の次。ギャップ分析書の推奨順序どおり）。
 - ID 割り当て状況（2026-11-27 08:05 JST 時点。master `resource.h` で確認済み）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2` のため使用不可）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・未使用）、B2 が 1882–1885。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み（`resource.h` のコメントに記録）。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38980、`_APS_NEXT_CONTROL_VALUE` 1886。
+## §63 最高峰ワークフロー B2 — 未判断警告ゲート・第1段階（終了時警告）— マージ・CI 検証済み（2026-11-27）
+
+### 63.1 内容（ギャップ分析書 §4.2 B2。柱 1「すべての差分に明示的な結論」の警告ゲート）
+- B2 は本来、出力時（S7 統一選択 ZIP、S5 一括承認）と終了時の 3 か所に警告を掛ける設計だが、**S7・S5 はユーザー作業 B0 の結論待ちで未着手のため、今回は (iii) フォルダ比較文書を閉じるときの警告だけを先行実装**した（ギャップ分析書 §5 の 2 段階化の選択肢どおり）。(i)(ii) の出力ゲートは第2段階とし、今回は実装していない。
+- フック位置は `CDirDoc::SaveModified()`（閉じる直前に呼ばれ、FALSE を返すと閉じる処理が中止される。セッション自動保存はその後の `OnCloseDocument` で走るため「自動保存の直前」になる）。既存の比較中・長時間比較の確認の後に追加。
+- 純粋モジュール `Src/Merge20/Merge20CloseWarn.h/.cpp`：件数集計（`Merge20CloseWarnComputeCounts`／`Merge20CloseWarnHasUndecided`）。集計直前に `Merge20SessionRefreshDiffJudgments` で開いているファイル比較の判定をサイドカーへ反映（セッション自動保存と同じ経路）。
+- ダイアログ `Src/Merge20/Merge20CloseWarnDlg.h/.cpp`：未判断の件数（ファイル X 件・差分 Y 件、うち高リスク Z 件）を表示し、ボタンは［未確認のみ表示］（D3 の TODO-only 巡回へ誘導）・［それでも閉じる］（警告を無視して閉じる処理を続行）・［キャンセル］（何も変えずに閉じる処理を中止する）。［進む］ボタンの文言はコンストラクタ引数のため、第2段階では「それでも出力する」等の文言を渡して同じダイアログを再利用できる。
+- 文言・操作感は B9 の一覧ダイアログと S5 の件数確認ダイアログと統一（同じ「件数＋対象＋キャンセルで無変更」の形）。
+- **件数の定義（二重計上なし）**：未確認ファイル X 件＝確認内容が TODO のファイル数（B9 の undecided と同一）。未判断差分 Y 件＝記録されている差分判定のうち、B1 の結論が「未判断」のものの総数。マージセッションで開いたファイルにだけ記録があるため、未開封ファイルの差分は Y に含めない（そのファイルは X に含まれる）。1 つの差分は最大 1 回だけ数え、ファイルは差分として数えない。うち高リスク Z 件＝上記の未判断のうち、ファイルのリスクが S4 の「高」のもの（TODO かつリスク高のファイル数＋リスク高ファイルに属する未判断差分）。常に Z ≦ X + Y。
+- リソース割り当て：IDD_MERGE20_CLOSE_WARN＝303（302 は `IDI_ROTATE2` のため使用不可）、IDC_MERGE20_CLOSE_WARN_*＝1882–1885（1882 件数行、1883 警告行、1884 未確認のみ表示、1885 進むボタン）。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_CONTROL_VALUE` 1886。**コマンド ID は使っていない**（警告は閉じる操作に自動で掛かるためメニュー項目不要）。38981 は第2段階の出力ゲート用に予約として `resource.h` のコメントに記録した。`.po` 新規 4 件。
+- 第2段階へのフック：件数集計は純粋モジュール `Merge20CloseWarn` に切り出してあるため、S7・S5 の呼び出し側は同じ関数を呼ぶだけでよい。ダイアログの［進む］ボタンの文言はコンストラクタ引数で差し替え可能。件数・警告・残り 2 ボタンは共通。
+
+### 63.2 変更一覧（ブランチ `merge20/wf-b2`、base master `451691d0`。13 コミット、13 ファイル）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20CloseWarn.h` | `957fd015` | 純粋モジュール・ヘッダ |
+| 2 | `Src/Merge20/Merge20CloseWarn.cpp` | `41893e49` | 純粋モジュール |
+| 3 | `Src/Merge20/Merge20CloseWarnDlg.h` | `e19fd63b` | 警告ダイアログ・ヘッダ |
+| 4 | `Src/Merge20/Merge20CloseWarnDlg.cpp` | `bd7b6d48` | 警告ダイアログ |
+| 5 | `Testing/GoogleTest/Merge20/Merge20CloseWarn_test.cpp` | `a6efb5f8` | 単体テスト 7 件 |
+| 6 | `Src/resource.h` | `784e819b` | IDD 303、IDC 1882–1885 |
+| 7 | `Src/Merge.rc` | `ccde5fab` | ダイアログテンプレート＋レイアウト |
+| 8 | `Src/Merge.vcxproj` | `b102ab80` | 登録 |
+| 9 | `Src/Merge.vcxproj.filters` | `386e8cd8` | 登録 |
+| 10 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `d81a3737` | 登録 |
+| 11 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `fd48472a` | 登録 |
+| 12 | `Src/DirDoc.cpp` | `872a7626` | `SaveModified` に警告ゲート |
+| 13 | `Translations/WinMerge/Japanese.po` | `8b87cdc3` | 訳文 4 件追加（ブランチ head） |
+
+- `.po` の確認：追加した 4 エントリはすべて `msgstr` の直後に空行を入れ、ファイル末尾も空行で終えている。`<<<<<<<` の 2 ヒットは、コンフリクト表示の説明文の中の既存の stock WinMerge 翻訳文字列であることをコーディネーターが直接確認済み（`>>>>>>>`／`|||||||` は 0 件）。`diff3` マーカーの残存なし。
+
+### 63.3 検証レポート（コーディネーター検証済み）
+- **PR #60**：open・mergeable=true・mergeable_state=clean、head `8b87cdc3`、base master `451691d0`。13 コミット、変更ファイル 13 件（B2 の 13 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45960856740、completed／success。全文ログ（3,578,941 バイト、ジョブ `build` 140378059474、48,069 行）をコーディネーターが取得・確認（`~/workspace/.coord/b2_final_log.txt`）。GoogleTest `[ PASSED ] 846 tests.`（839＋B2 の 7 件。`EmptyInput`／`AllDecided`／`AcceptanceScenario`／`FilesOnlyUndecided`／`DiffsOnlyUndecided`／`DecidingClearsWarning`／`HighRiskNeverExceedsUndecided` すべて `[ OK ]`）、`[ FAILED ]` 0 件、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。429 warnings は gtest ヘッダ等の既存分。B2 の新規ファイルからの警告は 0 件。`.po` 番兵も通過。
+- **成果物（実行 45960856740）**：`WinMerge-x64.zip` 26,598,578 バイト（ID 15181755124）、`WinMerge-x64-Setup-x64.exe` 40,057,186 バイト（ID 15180753952）。いずれも未失効（expire 2027-02-25）。
+- **マージ**：マージコミット `60a5f113`。マージコミット CI：実行 45962662832、completed／success（head_sha=60a5f113 と一致）。全文ログ（3,578,870 バイト、ジョブ `build` 140383900949、48,067 行）をコーディネーターが取得・確認（`~/workspace/.coord/b2_merge_final_log.txt`）。GoogleTest `[ PASSED ] 846 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,598,021 バイト、`WinMerge-x64-Setup-x64.exe` 40,052,792 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（B2 第1段階）**：
+  - (a) 未判断 0 で警告なし — `Merge20CloseWarnHasUndecided` が偽ならダイアログを出さない。単体テスト `AllDecided`／`DecidingClearsWarning` で検証。コード上は満たす。
+  - (b) 未判断ありで件数付き警告 — 受け入れシナリオ（未確認ファイル 2 件・未判断差分 3 件・うち高リスク 3 件）を単体テスト `AcceptanceScenario` で検証。コード上は満たす。
+  - (c) ［未確認のみ表示］で未確認ファイルへ移動 — `OPT_MERGE20_TODO_ONLY` を ON にして `CDirView::OpenNextFile()` を呼ぶ B9 と同一経路。コード上は満たす。**実機での移動は未検証**。
+  - (d) ［それでも閉じる］の場合に限り続行 — Proceed のときだけ `SaveModified` が TRUE を返す。コード上は満たす。
+  - (e) キャンセルで無変更 — Cancel／ダイアログを閉じた場合は FALSE を返し、判断状態も変えない。コード上は満たす。
+  - (f) 回帰なし — 警告は `SaveModified` の末尾（既存の確認の後）に追加したのみで、通常の閉じる操作・セッション保存・復元・B9・D3 巡回には触れていない。CI 全テスト合格で裏付け。**実機での回帰確認は未実施**。
+- **未検証（実機でしか確認できないもの）**：ダイアログの表示そのもの（レイアウト・日本語表示・ボタン配置）。実機での受け入れ手順 (1)〜(5)：未確認ファイル 2 件・未判断差分 3 件を残した状態で (1) 閉じようとすると警告が出る、(2) ［未確認のみ表示］で未確認ファイルに移動する、(3) ［それでも閉じる］で閉じられる、(4) 全件 DONE にしてから閉じると警告が出ない、(5) キャンセルで閉じられない。ダイアログ表示中にフォルダ比較ウィンドウを閉じる等の実機フロー。
+
+### 63.4 次への移行
+- B4（未判断の高リスク残量表示）はマージ済み（マージコミット `4c359a70`）。マージコミット CI（実行 45967396948）は進行中。検証後に §64 として記録する。
+- F4（スポットライト）は CI 失敗の修正中（`Merge20FormSpotlight_test.cpp` の 2 引数 `EXPECT_NEAR`、63 Error(s)）。F4 担当に診断ヒントを送付済み。完了報告待ち。
+- B3（リスク順巡回）を次に着手する（B4 の次。ギャップ分析書の推奨順序どおり）。
+- ID 割り当て状況（2026-11-27 08:45 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・未使用）、B2 が 1882–1885、B4 が 1886。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 用に 38982 を確保予定。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38980、`_APS_NEXT_CONTROL_VALUE` 1887。
