@@ -3161,6 +3161,18 @@ END
 // text and buttons are created in code by
 // CMerge20BulkClassifyDlg::OnInitDialog (like the Grep dialog), and the
 // dialog is laid out at runtime, so the template size is a placeholder.
+// Merge20 (Wave 5 F6): FORM name-master edit dialog. The dialog has no
+// controls in the template: the hint, count badge, text edit and buttons
+// are created in code by CMerge20FormMasterDlg::OnInitDialog (like the
+// Grep dialog), and the dialog is laid out at runtime, so the template
+// size is a placeholder.
+IDD_MERGE20_FORM_MASTER DIALOGEX 0, 0, 640, 460
+STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Name Master"
+FONT 8, FONTNAME, 0, 0, 0x1
+BEGIN
+END
+
 IDD_MERGE20_BULK_CLASSIFY DIALOGEX 0, 0, 640, 200
 STYLE DS_SETFONT | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
 CAPTION "Bulk Classify"
