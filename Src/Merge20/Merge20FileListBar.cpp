@@ -91,6 +91,26 @@ namespace
 	constexpr LONG Merge20FileListSearchLabelWidth = 160;
 	/** @brief Height of the filter-tab row (P2). */
 	constexpr LONG Merge20FileListTabsHeight = 26;
+	/** @brief Height of the risk-tab row (B3): same as the filter tabs. */
+	constexpr LONG Merge20FileListRiskTabsHeight = 26;
+	/** @brief Risk-filter values of the four B3 risk tabs, in tab
+	 * order: All risks (-1), High (2), Medium (1), None (0). The
+	 * tab order is the patrol order (High first); the values are
+	 * the static_cast<int>(RiskLevel) the filter module takes. */
+	constexpr int Merge20FileListRiskTabValues[4] = { -1, 2, 1, 0 };
+
+	/** @brief Tab index of one risk-filter value (-1 = all risks).
+	 * An unknown value (stale or hand-edited option) falls back
+	 * to the "All risks" tab. */
+	int Merge20FileListRiskTabFromValue(int riskFilter)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			if (Merge20FileListRiskTabValues[i] == riskFilter)
+				return i;
+		}
+		return 0;
+	}
 	/** @brief Height of the button row (P2): batch check / expand all / collapse all. */
 	constexpr LONG Merge20FileListButtonsHeight = 28;
 	/** @brief Widths of the three buttons in the button row (P2). */
@@ -136,6 +156,7 @@ BEGIN_MESSAGE_MAP(CMerge20FileListBar, CSizingControlBarCF)
 	ON_WM_SETTINGCHANGE()
 	ON_EN_CHANGE(IDC_MERGE20_FILELIST_SEARCH, OnSearchChanged)
 	ON_NOTIFY(TCN_SELCHANGE, IDC_MERGE20_FILELIST_FILTER_TABS, OnFilterTabChanged)
+	ON_NOTIFY(TCN_SELCHANGE, IDC_MERGE20_FILELIST_RISK_TABS, OnRiskTabChanged)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_BATCH, OnMerge20BatchCheck)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_EXPAND_ALL, OnExpandAll)
 	ON_BN_CLICKED(IDC_MERGE20_FILELIST_COLLAPSE_ALL, OnCollapseAll)
@@ -216,6 +237,18 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	}
 	m_wndFilterTabs.SetFont(pFont);
 	SetupFilterTabs();
+	// Risk tabs (B3): "All risks" plus High / Medium / None. A
+	// second tab row, owner-drawn like the action tabs (the P2
+	// pattern above); a combo box cannot be laid out in this bar
+	// (its window height carries the drop-down height).
+	if (!m_wndRiskTabs.Create(WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_OWNERDRAWFIXED,
+		rc, this, IDC_MERGE20_FILELIST_RISK_TABS))
+	{
+		TRACE0("Failed to create Merge20FileListBar risk tabs\n");
+		return -1;
+	}
+	m_wndRiskTabs.SetFont(pFont);
+	SetupRiskTabs();
 	// Button row (P2): batch check (P-R3) and expand/collapse all
 	// (P-R5). The texts are re-applied in UpdateResources().
 	if (!m_btnBatch.Create(_("Batch check...").c_str(),
@@ -390,13 +423,15 @@ void CMerge20FileListBar::OnPaint()
 
 /**
  * @brief Route owner-draw requests to DrawFilterTab (U5).
- * Only the filter tabs are owner-drawn (TCS_OWNERDRAWFIXED).
+ * Only the filter tabs and the B3 risk tabs are owner-drawn
+ * (TCS_OWNERDRAWFIXED).
  */
 void CMerge20FileListBar::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
-	if (nIDCtl == IDC_MERGE20_FILELIST_FILTER_TABS && lpDrawItemStruct != nullptr &&
-		lpDrawItemStruct->CtlType == ODT_TAB)
-		DrawFilterTab(lpDrawItemStruct);
+	if (lpDrawItemStruct != nullptr && lpDrawItemStruct->CtlType == ODT_TAB &&
+		(nIDCtl == IDC_MERGE20_FILELIST_FILTER_TABS || nIDCtl == IDC_MERGE20_FILELIST_RISK_TABS))
+		DrawFilterTab(nIDCtl == IDC_MERGE20_FILELIST_FILTER_TABS ? m_wndFilterTabs : m_wndRiskTabs,
+			lpDrawItemStruct);
 	else
 		CSizingControlBarCF::OnDrawItem(nIDCtl, lpDrawItemStruct);
 }
@@ -413,7 +448,7 @@ void CMerge20FileListBar::OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStru
  * the bar background colour. The text comes from the tab item
  * itself (see SetupFilterTabs), so no new strings are needed.
  */
-void CMerge20FileListBar::DrawFilterTab(LPDRAWITEMSTRUCT lpDrawItemStruct)
+void CMerge20FileListBar::DrawFilterTab(CTabCtrl& wndTabs, LPDRAWITEMSTRUCT lpDrawItemStruct)
 {
 	if (lpDrawItemStruct == nullptr)
 		return;
@@ -432,7 +467,7 @@ void CMerge20FileListBar::DrawFilterTab(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	item.mask = TCIF_TEXT;
 	item.pszText = szText;
 	item.cchTextMax = 256;
-	m_wndFilterTabs.GetItem(static_cast<int>(lpDrawItemStruct->itemID), &item);
+	wndTabs.GetItem(static_cast<int>(lpDrawItemStruct->itemID), &item);
 
 	const COLORREF crBarBg = ::GetSysColor(COLOR_BTNFACE);
 	const COLORREF crAccent = Merge20Theme::GetAccentColor(bDark);
@@ -454,7 +489,7 @@ void CMerge20FileListBar::DrawFilterTab(LPDRAWITEMSTRUCT lpDrawItemStruct)
 	rcDraw.DeflateRect(1, 1);
 	Merge20Theme::DrawRoundedRect(pDC, rcDraw, 5, crFill, crLine);
 
-	CFont* pFont = m_wndFilterTabs.GetFont();
+	CFont* pFont = wndTabs.GetFont();
 	if (pFont == nullptr)
 		pFont = CFont::FromHandle(static_cast<HFONT>(::GetStockObject(DEFAULT_GUI_FONT)));
 	CFont* pOldFont = pDC->SelectObject(pFont);
@@ -515,6 +550,7 @@ void CMerge20FileListBar::Refresh()
 	m_stSearchLabel.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_wndSearch.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_wndFilterTabs.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
+	m_wndRiskTabs.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_btnBatch.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_btnExpandAll.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_btnCollapseAll.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
@@ -523,6 +559,7 @@ void CMerge20FileListBar::Refresh()
 	m_stEmpty.ShowWindow(bHasDirDoc ? SW_HIDE : SW_SHOW);	m_stSearchLabel.EnableWindow(bHasDirDoc);
 	m_wndSearch.EnableWindow(bHasDirDoc);
 	m_wndFilterTabs.EnableWindow(bHasDirDoc);
+	m_wndRiskTabs.EnableWindow(bHasDirDoc);
 	m_btnBatch.EnableWindow(bHasDirDoc);
 	m_btnExpandAll.EnableWindow(bHasDirDoc);
 	m_btnCollapseAll.EnableWindow(bHasDirDoc);
@@ -627,6 +664,8 @@ void CMerge20FileListBar::SavePanelState()
 		return;
 	pOptions->SaveOption(OPT_MERGE20_FILELIST_SLIM, m_bSlim);
 	pOptions->SaveOption(OPT_MERGE20_FILELIST_TAB, m_nSelectedTab);
+	pOptions->SaveOption(OPT_MERGE20_FILELIST_RISK_FILTER,
+		Merge20FileListRiskTabValues[static_cast<size_t>(m_nSelectedRiskTab)]);
 	if (m_wndSearch.GetSafeHwnd() != nullptr)
 	{
 		CString text;
@@ -670,9 +709,18 @@ void CMerge20FileListBar::RestorePanelState()
 	m_nSelectedTab = tab;
 	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
 		m_wndFilterTabs.SetCurSel(tab);
+	// B3: the risk tab is restored from the filter value (an
+	// unknown value falls back to "All risks"). The list gets
+	// the value, not the tab index (see SetRiskFilter).
+	m_nSelectedRiskTab = Merge20FileListRiskTabFromValue(
+		pOptions->GetInt(OPT_MERGE20_FILELIST_RISK_FILTER));
+	if (m_wndRiskTabs.GetSafeHwnd() != nullptr)
+		m_wndRiskTabs.SetCurSel(m_nSelectedRiskTab);
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
 		m_wndList.SetActionFilter(tab == 0 ? -1 : tab - 1);
+		m_wndList.SetRiskFilter(
+			Merge20FileListRiskTabValues[static_cast<size_t>(m_nSelectedRiskTab)]);
 		m_wndList.SetCollapsedPaths(Merge20SplitCollapsedPaths(
 			pOptions->GetString(OPT_MERGE20_FILELIST_COLLAPSED)));
 	}
@@ -745,6 +793,20 @@ void CMerge20FileListBar::LayoutChildren()
 		m_wndFilterTabs.MoveWindow(&rcTabs);
 		m_rcTabsRow.SetRect(rcClient.left, y, rcClient.right, y + Merge20FileListTabsHeight);
 		y += Merge20FileListTabsHeight;
+	}
+	// B3: the risk-tab row sits directly under the action tabs
+	// (filters together, B4 remainder below the count line). No
+	// U5 underline strip of its own: the row is a second tab row,
+	// and only the search / tabs / count rows carry one.
+	if (m_wndRiskTabs.GetSafeHwnd() != nullptr)
+		m_wndRiskTabs.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
+	if (bShowTopRows)
+	{
+		CRect rcRiskTabs = rcClient;
+		rcRiskTabs.top = y;
+		rcRiskTabs.bottom = y + Merge20FileListRiskTabsHeight;
+		m_wndRiskTabs.MoveWindow(&rcRiskTabs);
+		y += Merge20FileListRiskTabsHeight;
 	}
 	if (m_btnBatch.GetSafeHwnd() != nullptr)
 		m_btnBatch.ShowWindow(bShowTopRows ? SW_SHOW : SW_HIDE);
@@ -889,6 +951,8 @@ void CMerge20FileListBar::UpdateResources()
 	}
 	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
 		SetupFilterTabs();
+	if (m_wndRiskTabs.GetSafeHwnd() != nullptr)
+		SetupRiskTabs();
 	if (m_stEmpty.GetSafeHwnd() != nullptr)
 	{
 		String sText = _("No folder comparison");
@@ -915,6 +979,8 @@ void CMerge20FileListBar::UpdateResources()
 	Invalidate(FALSE);
 	if (m_wndFilterTabs.GetSafeHwnd() != nullptr)
 		m_wndFilterTabs.Invalidate(FALSE);
+	if (m_wndRiskTabs.GetSafeHwnd() != nullptr)
+		m_wndRiskTabs.Invalidate(FALSE);
 }
 
 /**
@@ -947,6 +1013,61 @@ void CMerge20FileListBar::SetupFilterTabs()
 	for (int i = 0; i < 8; ++i)
 		m_wndFilterTabs.InsertItem(i, labels[static_cast<size_t>(i)].c_str());
 	m_wndFilterTabs.SetCurSel(m_nSelectedTab);
+}
+
+/**
+ * @brief (Re-)insert the four risk-tab labels (B3).
+ *
+ * Tab 0 is "All risks"; tabs 1-3 are High / Medium / None in
+ * patrol order (High first). The filter value rides in the item
+ * data (TCIF_PARAM), so the tab order is free. "High" /
+ * "Medium" / "None" reuse the S4 risk value msgids (ColRiskGet),
+ * so the tab shows exactly what the Risk column shows for that
+ * level. Only "All risks" is a new msgid.
+ */
+void CMerge20FileListBar::SetupRiskTabs()
+{
+	// Literal _() calls again (see Merge20FileListCtrl::
+	// SetupColumns): the .pot generator only scans literal
+	// arguments.
+	const String labels[4] =
+	{
+		_("All risks"),
+		_("High"),
+		_("Medium"),
+		_("None"),
+	};
+	m_wndRiskTabs.DeleteAllItems();
+	for (int i = 0; i < 4; ++i)
+	{
+		TCITEM item = {};
+		item.mask = TCIF_TEXT | TCIF_PARAM;
+		item.pszText = const_cast<LPTSTR>(labels[static_cast<size_t>(i)].c_str());
+		item.lParam = Merge20FileListRiskTabValues[i];
+		m_wndRiskTabs.InsertItem(i, &item);
+	}
+	m_wndRiskTabs.SetCurSel(m_nSelectedRiskTab);
+}
+
+/**
+ * @brief Risk tab changed (B3): filter the panel by the selected
+ * risk level (tab 0 = all risks).
+ */
+void CMerge20FileListBar::OnRiskTabChanged(NMHDR* /*pNMHDR*/, LRESULT* pResult)
+{
+	*pResult = 0;
+	const int sel = m_wndRiskTabs.GetCurSel();
+	if (sel < 0 || sel >= 4)
+		return;
+	m_nSelectedRiskTab = sel;
+	const int riskFilter = Merge20FileListRiskTabValues[static_cast<size_t>(sel)];
+	m_wndList.SetRiskFilter(riskFilter);
+	// P4: the selected tab is saved at once (a discrete user
+	// action; the D11 dual-save precedent). SavePanelState saves
+	// it again at SavePosition.
+	COptionsMgr* pOptions = GetOptionsMgr();
+	if (pOptions != nullptr)
+		pOptions->SaveOption(OPT_MERGE20_FILELIST_RISK_FILTER, riskFilter);
 }
 
 /**
