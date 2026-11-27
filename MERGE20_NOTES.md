@@ -6888,3 +6888,53 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 79.4 次への移行
 - B5 PR2（ドック／スナイパーへの表示追加＋ジャンプ配線）を次に spawn する。
 - ID 割り当て状況（2026-11-27 19:30 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）、B14 が 304、B7 PR2 が 305 を使用、F6 が 306 を使用（307 は `IDR_LOGO`）、F7 が 308 を使用、B11 が 309 を使用（310 は `IDR_MARGIN_ICONS_PNG`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881、B2 が 1882–1885、B4 が 1886、B3 が 1887–1888、B14 が 1889–1892、B7 PR2 が 1893–1897 を使用（1898–1902 は予備）、F5 が 1903–1904 を使用、F6 が 1905–1909 を使用、F7 が 1910–1912 を使用、B11 が 1913–1916 を使用。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第 2 段階用に 38981 を予約済み、B3 が 38982 を使用、B8 が 38983 を使用、B10 PR1 が 38984–38985 を使用、B11 が 38986–38987 を使用。`_APS_NEXT_RESOURCE_VALUE` 311、`_APS_NEXT_COMMAND_VALUE` 38988、`_APS_NEXT_CONTROL_VALUE` 1917（B5 PR1 マージ時点）。
+
+## 80. B5 PR2 — 判断時の他ファイル影響表示（ドック／スナイパーへの表示追加＋ジャンプ配線）（PR #76）
+
+### 80.1 概要
+- PR #76 https://github.com/askhim659/winmerge/pull/76（`merge20/wf-b5-pr2`、head `432dce65`、base master `c337e0ce`）
+- 22 コミット、20 ファイル、+903/−9、mergeable True (clean)
+- 子エージェント b2b0cf33（完了 2026-11-27 20:50 UTC）。マージはコーディネーター実施。
+- B5 完成（PR1 検索エンジン＋ワーカー §79 ＋ PR2 表示／ジャンプ）。
+
+### 80.2 実装内容
+- 表示場所は両方：D4 フォーカスドックの下部と D6 スナイパーの下部の両方に「他ファイルでの使用」一覧。共有コントロール `CMerge20ImpactList` に 1 か所集約（二重実装なし）。
+- 検索起動：`ShowDiff(nDiff)` のたびに `StartForDiff`。シンボルは新規 `Merge20ClassifyOneDiffResult`（`BuildOneDiffRangeLines` を使い分類結果全文を返す。`Merge20ClassifyOneDiffRange` はリスク値しか返さないため追加）→ `Merge20ImpactSymbolsFromClassify`。`files` は `CDirView::Merge20BuildGrepFiles()`、`guessEncodingType` は `OPT_CP_DETECT`。破棄時は `Stop()`。
+- 結果受け取り：`IMerge20ImpactSearchSink` を実装し、mutex キュー＋`PostMessage` で UI スレッドへ転送（D7 と同じ形）。上限到達時は「上限に達しました（80件）」、ヒットなしは「他ファイルでの使用なし」を明示。注記は常設ラベルで常時表示（PR1 決定の msgid、日本語訳を.po に追加）。
+- ジャンプ：`Merge20ImpactHit` を `CDirView::Merge20OpenFileAtLine` の新規オーバーロードに渡す（内部で D7 の `Merge20GrepHit` へ変換して既存経路に委譲）。スナイパー側も同じ経路。
+- 純粋モジュールへの切り出し：表示行の組み立てとジャンプ情報の変換を `Merge20ImpactView` に切り出し、単体テスト 6 件で固定（行番号は表示 1-based、ジャンプは 0-based の一致もテスト）。
+- FORM 比較には適用しない：一覧はファイル比較フレームにのみ存在し、FORM フレームには作られないため構造的に検索が走らない。
+
+### 80.3 ブランチ CI 検証（コーディネーターが全文ログで確認）
+- CI 実行 46063837978（job 140724277638 build）：completed／success。全文ログ `~/workspace/.coord/b5/ci-46063837978-full.log`（3,629,274 バイト）
+- GoogleTest：`[ PASSED] 1048 tests`（1042＋新規 `Merge20ImpactView` 6 件、RUN 6／OK 6）、`[ FAILED]` 0 件（ログ中の "FAILED" 4 件は.po の `IDS_FILESAVE_FAILED` 等の文字列 ID のみ）
+- ビルド：`Build succeeded`、`0 Error(s)`、431 Warning(s)（PR1 と同数。`Merge20ImpactList.cpp` 由来の warning は 0 件）
+- `Merge20 verify: 100 files x 500 lines, 70 ms total, 0 issues`
+- 成果物：`WinMerge-x64.zip` 26,807,422 バイト、`WinMerge-x64-Setup-x64.exe` 40,241,212 バイト、expire 2027-02-25
+- 初回 CI（46061329763）では `Merge20ImpactList.cpp` に C4459（ローカル変数 `files` がグローバルを隠蔽）が 1 件出たため、`grepFiles` に改名して再実行で解消を確認（Warning 数は 431 に戻った）。新規コードで変数名 `files` を使うと同警告が出る。D7/D10 の `DirView.cpp` 等にも同警告が既存。
+
+### 80.4 ID 割り当て実績
+- コントロール ID：1917 `IDC_MERGE20_IMPACT_TITLE`、1918 `IDC_MERGE20_IMPACT_NOTE`、1919 `IDC_MERGE20_IMPACT_LIST`、1920 `IDC_MERGE20_IMPACT_STATUS` を使用。`_APS_NEXT_CONTROL_VALUE` 1917→1921。予約コメントも更新済み。
+- 新規コマンド ID・ダイアログ ID なし。`_APS_NEXT_RESOURCE_VALUE` 311、`_APS_NEXT_COMMAND_VALUE` 38988 のまま。
+-.po：新規 msgid 5 件（日本語訳付き、各 msgstr 直後に空行あり）。`<<<<<<<` 等の混入なし（ヒット 2 件は master 由来の既存文言のみ）。
+
+### 80.5 受け入れ条件の照合（gap 分析 B5）
+- (a) 差分表示時の他ファイル使用箇所の一覧 — コード＋単体テストで固定。**実機未検証**
+- (b) 「他ファイルでの使用なし」の明示 — コードで固定。**実機未検証**
+- (c) 行クリックでのジャンプ — コード＋単体テストで固定。**実機未検証**
+- (d) 推定である旨の注記 — コード＋.po で固定。**実機未検証**
+- (e) 検索中の判断操作 — ワーカー方式により UI を固まらせない設計。**実機未検証**
+- 実機でしか確認できない 12 項目は PR 本文のチェックリストに記載済み（関数 A の表示・ジャンプ、使用なし表示、注記の日本語表示、100 ファイル規模での検索中の応答性、上限表示、単独 2 ファイル比較、FORM 比較、ドック高さ変更、スナイパー 3 列／3 段）。
+
+### 80.6 マージ CI 検証（ウォッチャーが全文ログで確認）
+- マージ：PR #76、merge commit `58a13ee8`（コーディネーターが API でマージ、2026-11-27 20:53 UTC 頃）
+- マージ CI 実行 46066667559（head `58a13ee8`）：completed／success（20:53:32Z 開始、21:05:30Z 完了、約 12 分）。全文ログ（3,627,908 バイト、ジョブ `build` 140733525162）をウォッチャーが取得・確認（`~/workspace/.coord/b5/ci-46066667559-full.log`）
+- GoogleTest：`[ PASSED ] 1048 tests.`（ブランチ CI と同数）、`[ FAILED ]` 0 件（ログ中の "FAILED" 4 件は .po の `IDS_FILESAVE_FAILED` 等の文字列 ID のみ）
+- ビルド：`Build succeeded`、`0 Error(s)`、431 Warning(s)（ブランチ CI と同数）
+- `Merge20 verify: 100 files x 500 lines, 73 ms total, 0 issues`
+- 成果物（実行 46066667559）：`WinMerge-x64.zip` 26,807,350 バイト（外側 ZIP の SHA256 `00f56f8854298d2d9ef8d10d432c34678b544bac5b890b82a1c36af2d9660f82`、内側 `wizmerge-2.16.60-58a13ee-x64-exe.zip`）、`WinMerge-x64-Setup-x64.exe` 40,245,012 バイト（外側 ZIP の SHA256 `ef9830ebd600e7921084d99de994574800ea809244430ab9f122bd196c72bd64`、内側 `WizMerge-2.16.60-58a13ee-x64-Setup.exe` ほか）。いずれも未失効（expire 2027-02-25）
+
+### 80.7 B6 への引き継ぎ
+- B6 は B5 の検索基盤（`Merge20ImpactSearch`＋コレクター＋検索起動経路）をそのまま流用できる。集計は S4 分類タイミングでのバックグラウンド計算とすること。
+- `Merge20ClassifyOneDiffResult` は 2-way 専用（3-way では空の結果を返す）。B6 で 3-way を扱う場合は別途検討が必要。
+- ドックの `LayoutViews` で一覧に最大 120px（残りの 1/3 まで）を割っている。B6 で集計表示を追加する場合は高さ配分の見直しが必要。
