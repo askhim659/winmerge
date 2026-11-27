@@ -23,11 +23,26 @@
  * (`enableDragToScrollAndClickShape`): a drag over 4 px scrolls,
  * a plain click selects a shape (changed shapes only, smallest
  * area wins, design section 3.4).
+ * F4 adds the spotlight (design section 2.7): focusing a diff
+ * record dims the surroundings with a translucent veil
+ * (`AlphaBlend`, HTML rgba(15, 23, 42, 0.32)), re-draws the
+ * old (red dashed) and new (green) shapes of the focused
+ * element inside a white window, draws the old -> new move
+ * arrow and a callout box with the element's changes, and
+ * scrolls the shape into the centre of the viewport. The
+ * spotlight geometry (window, scroll offsets, arrow head,
+ * callout lines) lives in the pure module Merge20FormSpotlight.
+ * F4 fix: OnPaint used to set the viewport origin to the
+ * scroll offset AND use screen coordinates that already
+ * subtract the scroll offset, so the content moved twice as
+ * fast as the scrollbar. All drawing now uses screen
+ * coordinates only (no viewport origin shift).
  * This file uses the default PCH (StdAfx.h), like the other
  * MFC modules; the pure geometry lives in Merge20FormCanvasGeom.
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCanvas.h"
+#include "Merge20/Merge20FormSpotlight.h"
 #include <algorithm>
 #include <cmath>
 #include <wchar.h>
@@ -50,6 +65,16 @@ namespace
 	const COLORREF kUnchangedTextColor = RGB(100, 116, 139); // slate-500 grey
 	const COLORREF kSelectedColor = RGB(79, 70, 229); // #4f46e5 (HTML arrow colour)
 	const COLORREF kNoteColor = RGB(100, 116, 139); // slate-500 grey
+	// Spotlight colours (F4, HTML `renderCanvasWithSpotlight` section 4).
+	const COLORREF kSpotlightDimColor = RGB(15, 23, 42); // #0f172a (veil, alpha 0.32)
+	const COLORREF kSpotlightWindowBorder = RGB(99, 102, 241); // #6366f1
+	const COLORREF kOldSpotFillColor = RGB(252, 207, 215); // rgba(244, 63, 94, 0.25) over white
+	const COLORREF kNewSpotFillColor = RGB(183, 234, 217); // rgba(16, 185, 129, 0.30) over white
+	const COLORREF kSpotlightArrowColor = RGB(245, 158, 11); // #f59e0b
+	const COLORREF kCalloutBgColor = RGB(15, 23, 42); // #0f172a
+	const COLORREF kCalloutHeaderColor = RGB(251, 191, 36); // #fbbf24
+	const COLORREF kCalloutTextColor = RGB(248, 250, 252); // #f8fafc
+	const BYTE kSpotlightVeilAlpha = 82; // 0.32 * 255 (HTML veil opacity)
 
 	const int kScrollLinePx = 16; /**< Pixels per scroll line. */
 	const int kScrollLinesPerWheelNotch = 3; /**< Wheel lines per notch. */
@@ -102,6 +127,8 @@ void CMerge20FormCanvas::SetResult(const Merge20FormFileResult* pResult)
 		return; // Same file: keep the scroll offset and the selection.
 	m_pResult = pResult;
 	m_selectedShapeKey.clear();
+	m_pSpotlightRecord = nullptr;
+	m_spotlightShapeKey.clear();
 	m_scrollX = 0;
 	m_scrollY = 0;
 	UpdateScale();
@@ -134,6 +161,76 @@ void CMerge20FormCanvas::SetSelectedShapeKey(const std::wstring& key)
 	Invalidate();
 }
 
+void CMerge20FormCanvas::SetSpotlight(const Merge20FormDiffRecord* pRecord)
+{
+	if (pRecord == m_pSpotlightRecord)
+		return;
+	m_pSpotlightRecord = pRecord;
+	m_spotlightShapeKey = (pRecord != nullptr) ? pRecord->element : std::wstring();
+	Invalidate();
+}
+
+void CMerge20FormCanvas::ClearSpotlight()
+{
+	if (m_pSpotlightRecord == nullptr && m_spotlightShapeKey.empty())
+		return;
+	m_pSpotlightRecord = nullptr;
+	m_spotlightShapeKey.clear();
+	Invalidate();
+}
+
+void CMerge20FormCanvas::ScrollToShapeKey(const std::wstring& key)
+{
+	if (m_pResult == nullptr || key.empty())
+		return;
+	// The new side first (HTML `scrollToShapeKey`); the old side
+	// when the element was deleted.
+	const int newIndex = Merge20FormSpotlightFindShapeIndex(m_pResult->newShapes, key);
+	const int oldIndex = Merge20FormSpotlightFindShapeIndex(m_pResult->oldShapes, key);
+	const Merge20FormShape* pShape = nullptr;
+	if (newIndex >= 0)
+		pShape = &m_pResult->newShapes[static_cast<size_t>(newIndex)];
+	else if (oldIndex >= 0)
+		pShape = &m_pResult->oldShapes[static_cast<size_t>(oldIndex)];
+	if (pShape == nullptr)
+		return;
+	CRect rcClient;
+	GetClientRect(&rcClient);
+	const std::pair<int, int> scroll = Merge20FormSpotlightScrollToCenter(
+		(pShape->x + pShape->x2) / 2.0, (pShape->y + pShape->y2) / 2.0,
+		m_scale, rcClient.Width(), rcClient.Height());
+	ScrollTo(scroll.first, scroll.second);
+}
+
+void CMerge20FormCanvas::ScrollToChangedArea()
+{
+	if (m_pResult == nullptr)
+		return;
+	if (!m_spotlightShapeKey.empty())
+	{
+		ScrollToShapeKey(m_spotlightShapeKey);
+		return;
+	}
+	// No spotlight: the first changed shape (new side first,
+	// HTML `scrollToChangedArea`).
+	for (const Merge20FormShape& shape : m_pResult->newShapes)
+	{
+		if (IsChangedKey(shape.key))
+		{
+			ScrollToShapeKey(shape.key);
+			return;
+		}
+	}
+	for (const Merge20FormShape& shape : m_pResult->oldShapes)
+	{
+		if (IsChangedKey(shape.key))
+		{
+			ScrollToShapeKey(shape.key);
+			return;
+		}
+	}
+}
+
 void CMerge20FormCanvas::OnPaint()
 {
 	CPaintDC dc(this);
@@ -143,13 +240,13 @@ void CMerge20FormCanvas::OnPaint()
 	if (m_pResult == nullptr)
 		return;
 	m_bFontApproximate = false;
-	// Draw in content space: the viewport origin is the scroll
-	// offset, so every coordinate below is a screen pixel at the
-	// current zoom.
-	dc.SetViewportOrg(-m_scrollX, -m_scrollY);
+	// All drawing uses screen coordinates (XmlToScreen already
+	// subtracts the scroll offset; F4 removed the viewport
+	// origin shift that used to apply it a second time).
 	DrawGrid(dc);
 	DrawShapes(dc);
-	dc.SetViewportOrg(0, 0);
+	if (HasSpotlight())
+		DrawSpotlight(dc);
 	if (m_bFontApproximate)
 	{
 		// Design section 6 (6): the font is an approximation when
@@ -428,7 +525,10 @@ void CMerge20FormCanvas::DrawShapes(CDC& dc)
 		if (IsChangedKey(shape.key))
 			DrawOneShape(dc, shape, true, true);
 	}
-	DrawSelectedOutline(dc);
+	// The spotlight re-draws the focused shape itself, so the
+	// plain selection outline is skipped while it is active.
+	if (!HasSpotlight())
+		DrawSelectedOutline(dc);
 }
 
 void CMerge20FormCanvas::DrawOneShape(CDC& dc, const Merge20FormShape& shape, bool isNew, bool changed)
@@ -637,6 +737,271 @@ void CMerge20FormCanvas::DrawSelectedOutline(CDC& dc)
 	dc.Rectangle(&rc);
 	dc.SelectObject(pOldPen);
 	dc.SelectObject(pOldBrush);
+}
+
+void CMerge20FormCanvas::DrawSpotlight(CDC& dc)
+{
+	if (m_pResult == nullptr || m_pSpotlightRecord == nullptr)
+		return;
+	const int oldIndex = Merge20FormSpotlightFindShapeIndex(m_pResult->oldShapes, m_spotlightShapeKey);
+	const int newIndex = Merge20FormSpotlightFindShapeIndex(m_pResult->newShapes, m_spotlightShapeKey);
+	const Merge20FormShape* pOldShape = (oldIndex >= 0) ?
+		&m_pResult->oldShapes[static_cast<size_t>(oldIndex)] : nullptr;
+	const Merge20FormShape* pNewShape = (newIndex >= 0) ?
+		&m_pResult->newShapes[static_cast<size_t>(newIndex)] : nullptr;
+	const Merge20FormSpotlightWindow window =
+		Merge20FormSpotlightWindowRect(pOldShape, pNewShape);
+	if (window.width <= 0.0 || window.height <= 0.0)
+		return;
+	CRect rcClient;
+	GetClientRect(&rcClient);
+	if (rcClient.Width() <= 0 || rcClient.Height() <= 0)
+		return;
+	// 1. Dim the surroundings (HTML rgba(15, 23, 42, 0.32)).
+	{
+		CDC dcMem;
+		if (dcMem.CreateCompatibleDC(&dc))
+		{
+			CBitmap bitmap;
+			if (bitmap.CreateCompatibleBitmap(&dc, rcClient.Width(), rcClient.Height()))
+			{
+				CBitmap* pOldBitmap = dcMem.SelectObject(&bitmap);
+				dcMem.FillSolidRect(&rcClient, kSpotlightDimColor);
+				BLENDFUNCTION blend = {};
+				blend.BlendOp = AC_SRC_OVER;
+				blend.SourceConstantAlpha = kSpotlightVeilAlpha;
+				blend.AlphaFormat = 0;
+				dc.AlphaBlend(0, 0, rcClient.Width(), rcClient.Height(),
+					&dcMem, 0, 0, rcClient.Width(), rcClient.Height(), blend);
+				dcMem.SelectObject(pOldBitmap);
+			}
+		}
+	}
+	// 2. Spotlight window: a clear white window with an indigo border.
+	const CPoint ptWin1 = XmlToScreen(window.x, window.y);
+	const CPoint ptWin2 = XmlToScreen(window.x + window.width, window.y + window.height);
+	CRect rcWindow(ptWin1, ptWin2);
+	rcWindow.NormalizeRect();
+	CRect rcWindowClipped = rcWindow;
+	rcWindowClipped.IntersectRect(&rcWindowClipped, &rcClient);
+	dc.FillSolidRect(&rcWindowClipped, RGB(255, 255, 255));
+	CPen penWindow(PS_SOLID, 2, kSpotlightWindowBorder);
+	CBrush* pOldBrush = dc.SelectObject(CBrush::FromHandle(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH))));
+	CPen* pOldPen = dc.SelectObject(&penWindow);
+	dc.Rectangle(&rcWindowClipped);
+	dc.SelectObject(pOldPen);
+	dc.SelectObject(pOldBrush);
+	// 3. Re-draw the focused shapes inside the window.
+	const bool badgeBelow = (pOldShape != nullptr && pNewShape != nullptr &&
+		std::abs(pNewShape->y - pOldShape->y) < 26.0);
+	if (pOldShape != nullptr)
+		DrawSpotlightShape(dc, *pOldShape, true, false);
+	if (pNewShape != nullptr)
+		DrawSpotlightShape(dc, *pNewShape, false, badgeBelow);
+	// 4. Move arrow from the old centre to the new centre (HTML section C).
+	if (pOldShape != nullptr && pNewShape != nullptr &&
+		(pOldShape->x != pNewShape->x || pOldShape->y != pNewShape->y ||
+			pOldShape->x2 != pNewShape->x2 || pOldShape->y2 != pNewShape->y2))
+	{
+		const double oldCx = (pOldShape->x + pOldShape->x2) / 2.0;
+		const double oldCy = (pOldShape->y + pOldShape->y2) / 2.0;
+		const double newCx = (pNewShape->x + pNewShape->x2) / 2.0;
+		const double newCy = (pNewShape->y + pNewShape->y2) / 2.0;
+		const Merge20FormSpotlightArrowHead head =
+			Merge20FormSpotlightArrowHead(oldCx, oldCy, newCx, newCy);
+		const CPoint ptFrom = XmlToScreen(oldCx, oldCy);
+		const CPoint ptTip = XmlToScreen(head.tipX, head.tipY);
+		const CPoint ptBase1 = XmlToScreen(head.base1X, head.base1Y);
+		const CPoint ptBase2 = XmlToScreen(head.base2X, head.base2Y);
+		CPen penArrow(PS_SOLID, 3, kSpotlightArrowColor);
+		CBrush brushArrow(kSpotlightArrowColor);
+		CPen* pOldArrowPen = dc.SelectObject(&penArrow);
+		CBrush* pOldArrowBrush = dc.SelectObject(&brushArrow);
+		dc.MoveTo(ptFrom);
+		dc.LineTo(ptTip);
+		const CPoint points[3] = { ptTip, ptBase1, ptBase2 };
+		dc.Polygon(points, 3);
+		dc.SelectObject(pOldArrowPen);
+		dc.SelectObject(pOldArrowBrush);
+	}
+	// 5. Callout box with the focused element's changes.
+	DrawSpotlightCallout(dc, rcWindowClipped);
+}
+
+void CMerge20FormCanvas::DrawSpotlightShape(CDC& dc, const Merge20FormShape& shape, bool isOld, bool badgeBelow)
+{
+	const COLORREF borderColor = isOld ? kOldBorderColor : kNewBorderColor;
+	const COLORREF fillColor = isOld ? kOldSpotFillColor : kNewSpotFillColor;
+	const int borderWidth = isOld ? 3 : 4;
+	CPoint pt1 = XmlToScreen(shape.x, shape.y);
+	CPoint pt2 = XmlToScreen(shape.x2, shape.y2);
+	CRect rc(pt1, pt2);
+	rc.NormalizeRect();
+	// HTML minimum spotlight size (8 units).
+	const int minPx = (std::max)(1, static_cast<int>(std::lround(8.0 * m_scale)));
+	if (rc.Width() < minPx)
+		rc.right = rc.left + minPx;
+	if (rc.Height() < minPx)
+		rc.bottom = rc.top + minPx;
+	// Ruler guides to the top / left edges (HTML dotted guides).
+	{
+		CPen penGuide(PS_DOT, 1, borderColor);
+		CPen* pOldPen = dc.SelectObject(&penGuide);
+		const CPoint ptOrigin = XmlToScreen(0.0, 0.0);
+		dc.MoveTo(pt1.x, ptOrigin.y);
+		dc.LineTo(pt1.x, pt1.y);
+		dc.MoveTo(ptOrigin.x, pt1.y);
+		dc.LineTo(pt1.x, pt1.y);
+		dc.SelectObject(pOldPen);
+	}
+	if (shape.isLine)
+	{
+		// A line is a segment, not a rect (HTML rule).
+		if (isOld)
+		{
+			HPEN hPen = CreateDashedPen(borderWidth, borderColor);
+			HPEN hOldPen = static_cast<HPEN>(dc.SelectObject(hPen));
+			dc.MoveTo(pt1);
+			dc.LineTo(pt2);
+			dc.SelectObject(hOldPen);
+			::DeleteObject(hPen);
+		}
+		else
+		{
+			CPen pen(PS_SOLID, borderWidth, borderColor);
+			CPen* pOldPen = dc.SelectObject(&pen);
+			dc.MoveTo(pt1);
+			dc.LineTo(pt2);
+			dc.SelectObject(pOldPen);
+		}
+	}
+	else
+	{
+		dc.FillSolidRect(&rc, fillColor);
+		CBrush* pOldBrush = dc.SelectObject(CBrush::FromHandle(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH))));
+		if (isOld)
+		{
+			HPEN hPen = CreateDashedPen(borderWidth, borderColor);
+			HPEN hOldPen = static_cast<HPEN>(dc.SelectObject(hPen));
+			dc.Rectangle(&rc);
+			dc.SelectObject(hOldPen);
+			::DeleteObject(hPen);
+		}
+		else
+		{
+			CPen pen(PS_SOLID, borderWidth, borderColor);
+			CPen* pOldPen = dc.SelectObject(&pen);
+			dc.Rectangle(&rc);
+			dc.SelectObject(pOldPen);
+		}
+		dc.SelectObject(pOldBrush);
+		if (!shape.text.empty())
+			DrawShapeText(dc, shape, borderColor);
+	}
+	// Tag badge (HTML: [old (before)] (x, y) / [new (after)] name (x, y)).
+	const std::wstring badge = isOld ?
+		(std::wstring(L"\u3010\u65e7(\u5909\u66f4\u524d)\u3011(") +
+			std::to_wstring(static_cast<int>(std::lround(shape.x))) + L", " +
+			std::to_wstring(static_cast<int>(std::lround(shape.y))) + L")") :
+		(std::wstring(L"\u3010\u65b0(\u5909\u66f4\u5f8c)\u3011") + shape.name + L" (" +
+			std::to_wstring(static_cast<int>(std::lround(shape.x))) + L", " +
+			std::to_wstring(static_cast<int>(std::lround(shape.y))) + L")");
+	LOGFONT lf = {};
+	::GetObject(::GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
+	lf.lfWeight = FW_BOLD;
+	CFont fontBadge;
+	if (fontBadge.CreateFontIndirect(&lf))
+	{
+		CFont* pOldFont = dc.SelectObject(&fontBadge);
+		const CSize textSize = dc.GetTextExtent(badge.c_str(), static_cast<int>(badge.size()));
+		const int badgeW = textSize.cx + 12;
+		const int badgeH = 20;
+		int badgeY = badgeBelow ? rc.bottom + 4 : rc.top - 24;
+		if (badgeY < 2)
+			badgeY = 2;
+		CRect rcBadge(rc.left, badgeY, rc.left + badgeW, badgeY + badgeH);
+		dc.FillSolidRect(&rcBadge, borderColor);
+		dc.SetBkMode(TRANSPARENT);
+		dc.SetTextColor(RGB(255, 255, 255));
+		CRect rcBadgeText(rcBadge);
+		rcBadgeText.DeflateRect(6, 0, 0, 0);
+		dc.DrawText(badge.c_str(), -1, &rcBadgeText, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+		dc.SelectObject(pOldFont);
+	}
+}
+
+void CMerge20FormCanvas::DrawSpotlightCallout(CDC& dc, const CRect& rcWindow)
+{
+	if (m_pResult == nullptr)
+		return;
+	std::vector<Merge20FormDiffRecord> elemRecords;
+	for (const Merge20FormDiffRecord& record : m_pResult->diffRecords)
+	{
+		if (record.element == m_spotlightShapeKey)
+			elemRecords.push_back(record);
+	}
+	if (elemRecords.empty())
+		return;
+	const std::vector<std::wstring> lines = Merge20FormSpotlightCalloutLines(elemRecords);
+	const String header = _("Change details: ") + m_spotlightShapeKey;
+	CRect rcClient;
+	GetClientRect(&rcClient);
+	// Measure the widest line (HTML: box width = widest text + 24).
+	LOGFONT lf = {};
+	::GetObject(::GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
+	lf.lfWeight = FW_BOLD;
+	CFont fontHeader;
+	CFont fontBody;
+	if (!fontHeader.CreateFontIndirect(&lf))
+		return;
+	::GetObject(::GetStockObject(DEFAULT_GUI_FONT), sizeof(lf), &lf);
+	if (!fontBody.CreateFontIndirect(&lf))
+		return;
+	CFont* pOldFont = dc.SelectObject(&fontHeader);
+	int maxTextW = dc.GetTextExtent(header.c_str(), static_cast<int>(header.size())).cx;
+	dc.SelectObject(&fontBody);
+	for (const std::wstring& line : lines)
+	{
+		maxTextW = (std::max)(maxTextW,
+			dc.GetTextExtent(line.c_str(), static_cast<int>(line.size())).cx);
+	}
+	const int boxW = maxTextW + 24;
+	const int boxH = 30 + static_cast<int>(lines.size()) * 20;
+	// Below the window when it fits, otherwise above it (HTML rule).
+	int boxX = (std::min)(rcClient.right - boxW - 12, (std::max)(8, rcWindow.left));
+	int boxY = (rcWindow.bottom + boxH + 12 < rcClient.bottom) ?
+		rcWindow.bottom + 10 : (std::max)(8, rcWindow.top - boxH - 10);
+	if (boxX < 4)
+		boxX = 4;
+	if (boxY < 4)
+		boxY = 4;
+	CRect rcBox(boxX, boxY, boxX + boxW, boxY + boxH);
+	dc.FillSolidRect(&rcBox, kCalloutBgColor);
+	CPen penBox(PS_SOLID, 2, kSpotlightArrowColor);
+	CBrush* pOldBrush = dc.SelectObject(CBrush::FromHandle(static_cast<HBRUSH>(::GetStockObject(NULL_BRUSH))));
+	CPen* pOldPen = dc.SelectObject(&penBox);
+	dc.Rectangle(&rcBox);
+	dc.SelectObject(pOldPen);
+	dc.SelectObject(pOldBrush);
+	dc.SetBkMode(TRANSPARENT);
+	dc.SelectObject(&fontHeader);
+	dc.SetTextColor(kCalloutHeaderColor);
+	CRect rcHeader(rcBox);
+	rcHeader.DeflateRect(12, 0, 12, 0);
+	rcHeader.top += 4;
+	rcHeader.bottom = rcHeader.top + 20;
+	dc.DrawText(header.c_str(), -1, &rcHeader, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	dc.SelectObject(&fontBody);
+	dc.SetTextColor(kCalloutTextColor);
+	for (size_t i = 0; i < lines.size(); ++i)
+	{
+		CRect rcLine(rcBox);
+		rcLine.DeflateRect(12, 0, 12, 0);
+		rcLine.top += 26 + static_cast<int>(i) * 20;
+		rcLine.bottom = rcLine.top + 20;
+		dc.DrawText(lines[i].c_str(), -1, &rcLine, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+	}
+	dc.SelectObject(pOldFont);
 }
 
 bool CMerge20FormCanvas::IsChangedKey(const std::wstring& key) const
