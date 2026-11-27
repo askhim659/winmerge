@@ -35,6 +35,7 @@
 #include "Merge20/Merge20HighRiskConfirm.h"
 #include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "Merge20/Merge20Split.h"
+#include "Merge20/Merge20AuditDoc.h"
 #include "Merge20/Merge20VerifyGate.h"
 #include "Merge20/Merge20VerifyReportExport.h"
 #include "DiffContext.h"
@@ -1671,6 +1672,15 @@ bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclu
 		entry.oldInclude = bUndoOldInclude;
 		entry.newInclude = ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem);
 		ctxt.Merge20RecordUndo(entry);
+		// Merge20 (best-workflow B11): one audit entry per changed
+		// conclusion (the B1 linkage may also have moved the review
+		// state and the output flag; both go into the note). The
+		// session restore and the undo paths do not come through
+		// here, so they log nothing.
+		Merge20AuditLogConclusion(ctxt, entry.relPath, nDiff,
+			prevConclusion, conclusion, undoOldReview,
+			ctxt.GetMerge20ReviewState(entry.relPath),
+			bUndoOldInclude, ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem));
 	}
 	// Refresh the focus dock (its header shows the conclusion and
 	// the judged/total progress) and, for Keep, the result view
@@ -2213,6 +2223,12 @@ bool CMergeDoc::Merge20SplitDiff(int nDiff, bool bRecordUndo /*= false*/)
 				entry.splitSegmentState = static_cast<int>(parentState);
 				entry.splitSrcPanes = parentSrcPanes;
 				pUndoFolderDoc->GetDiffContext().Merge20RecordUndo(entry);
+				// Merge20 (best-workflow B11): one audit entry per
+				// split (the row count is the new value). The session
+				// restore passes bRecordUndo=false, so it logs nothing.
+				Merge20AuditLogSplit(pUndoFolderDoc->GetDiffContext(),
+					pUndoFolderItem->getItemRelativePath(), nDiff,
+					Merge20AuditKind::SplitDiff, static_cast<int>(rows.size()));
 			}
 		}
 	}
@@ -2291,6 +2307,12 @@ bool CMergeDoc::Merge20RegroupDiff(int nDiff, bool bRecordUndo /*= false*/)
 				entry.splitSegmentState = static_cast<int>(firstState);
 				entry.splitSrcPanes = firstSrcPanes;
 				pUndoFolderDoc->GetDiffContext().Merge20RecordUndo(entry);
+				// Merge20 (best-workflow B11): one audit entry per
+				// regroup (the row count is the old value). The session
+				// restore passes bRecordUndo=false, so it logs nothing.
+				Merge20AuditLogSplit(pUndoFolderDoc->GetDiffContext(),
+					pUndoFolderItem->getItemRelativePath(), nFirst,
+					Merge20AuditKind::RegroupDiff, group.rows);
 			}
 		}
 	}
@@ -2983,6 +3005,15 @@ void CMergeDoc::OnMerge20LearnApply()
 			entry.learnSrcPanes = srcPanes;
 			entry.hadCandidate = true;
 			ctxt.Merge20RecordUndo(entry);
+			// Merge20 (best-workflow B11): one audit entry per
+			// accepted candidate (the candidate's "exact"/"feat"
+			// goes into the note; the B1 linkage may also have
+			// moved the review state and the output flag).
+			Merge20AuditLogLearn(ctxt, entry.relPath, nDiff,
+				Merge20AuditKind::LearnAccept, prevConclusion, conclusion,
+				undoOldReview, ctxt.GetMerge20ReviewState(entry.relPath),
+				bUndoOldInclude, ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem),
+				_T("via ") + it->second.via);
 		}
 		bGroupWithPrevious = true;
 	}
@@ -3043,6 +3074,13 @@ void CMergeDoc::OnMerge20LearnDismiss()
 		const DIFFRANGE* pRange = m_diffList.DiffRangeAt(nDiff);
 		if (pRange == nullptr)
 			continue;
+		// Merge20 (best-workflow B11): the candidate's strategy is
+		// needed for the audit note, and the dismiss call below
+		// erases the candidate from the map, so read it first.
+		const auto dismissCandidateIt = m_merge20LearnCandidates.find(nDiff);
+		const Merge20LearnStrategy dismissStrategy =
+			dismissCandidateIt != m_merge20LearnCandidates.end() ?
+			dismissCandidateIt->second.strategy : Merge20LearnStrategy::KeepNew;
 		if (Merge20LearnDismissCandidate(*this, nDiff))
 		{
 			bChanged = true;
@@ -3065,6 +3103,22 @@ void CMergeDoc::OnMerge20LearnDismiss()
 				}
 				entry.hadCandidate = true;
 				pUndoFolderDoc->GetDiffContext().Merge20RecordUndo(entry);
+				// Merge20 (best-workflow B11): one audit entry per
+				// dismissed candidate (the candidate's strategy goes
+				// into the note; a dismissal changes no conclusion
+				// and no file state). Nothing is recorded in the
+				// learning data by a dismissal, and nothing is
+				// recorded here for the undo of one.
+				CDiffContext& auditCtxt = pUndoFolderDoc->GetDiffContext();
+				const Merge20DiffConclusion dismissConclusion = Merge20GetDiffConclusion(nDiff);
+				Merge20AuditLogLearn(auditCtxt, pUndoFolderItem->getItemRelativePath(), nDiff,
+					Merge20AuditKind::LearnDismiss, dismissConclusion, dismissConclusion,
+					auditCtxt.GetMerge20ReviewState(pUndoFolderItem->getItemRelativePath()),
+					auditCtxt.GetMerge20ReviewState(pUndoFolderItem->getItemRelativePath()),
+					auditCtxt.GetMerge20IncludeInOutput(*pUndoFolderItem),
+					auditCtxt.GetMerge20IncludeInOutput(*pUndoFolderItem),
+					_T("candidate ") + Merge20AuditConclusionCode(
+						Merge20ConclusionFromLearnStrategy(dismissStrategy, static_cast<int>(pRange->op))));
 			}
 		}
 	}
