@@ -55,6 +55,12 @@ struct Merge20SessionRestoreResult
 	bool deferred = false;
 };
 
+/** @brief Folder-pair hash (16 lowercase hex digits) shared by the
+ * session file and the audit log (B11): the FNV-1a hash of the
+ * normalized, lowercased folder paths. The audit log reuses it so
+ * its file can be found the same way, without duplicating the hash.
+ */
+String Merge20SessionPairHashHex(const String& leftPath, const String& rightPath, const String& thirdPath);
 /** @brief Session file path for the folder pair of a compare context. */
 String Merge20SessionGetFilePath(const CDiffContext& ctxt);
 /** @brief Session file path for explicit (already normalized) folder paths. */
