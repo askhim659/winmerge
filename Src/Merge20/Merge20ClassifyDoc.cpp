@@ -332,6 +332,14 @@ RiskLevel Merge20ClassifyOneDiffRange(const CMergeDoc& doc, int nDiff, const std
 	return Merge20ClassifyDiffRisk(lines, riskKeywords);
 }
 
+Merge20ClassifyResult Merge20ClassifyOneDiffResult(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords)
+{
+	std::vector<Merge20DiffLine> lines;
+	if (!BuildOneDiffRangeLines(doc, nDiff, lines))
+		return Merge20ClassifyResult();
+	return Merge20ClassifyDiffLines(lines, riskKeywords);
+}
+
 String Merge20ClassifyOneDiffSummary(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords)
 {
 	std::vector<Merge20DiffLine> lines;
