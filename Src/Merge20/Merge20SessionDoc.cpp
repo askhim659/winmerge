@@ -14,6 +14,8 @@
 #include "Merge.h"
 #include "DirDoc.h"
 #include "MergeDoc.h"
+#include "MergeEditView.h"
+#include "MergeEditFrm.h"
 #include "DiffContext.h"
 #include "DiffItem.h"
 #include "DirItem.h"
@@ -30,6 +32,7 @@
 #include "UnicodeString.h"
 #include "MergeApp.h"
 #include "I18n.h"
+#include <algorithm>
 #include <map>
 
 namespace
@@ -253,6 +256,25 @@ bool Merge20SessionBuildFromDoc(CDirDoc& doc, Merge20Session& session)
 	fresh.display.dedPinned = GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED);
 	fresh.display.todoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
 	fresh.display.dedZoom = GetOptionsMgr()->GetInt(OPT_MERGE20_DED_ZOOM);
+	// Merge20 (best-workflow B12): remember the file compare open
+	// at save time, with its current diff and first visible line,
+	// so a restore can reopen it at the same position. The folder
+	// item is found through the same lookup as the judgment stash
+	// (including the swapped-paths fallback); a merge doc with no
+	// folder item (a standalone file pair) leaves no resume target.
+	// The scroll position is the active view's top (apparent) line;
+	// the panes scroll together, so one pane's top line is the
+	// position of the whole compare.
+	if (CMergeDoc* pLast = doc.Merge20GetLastOpenMergeDoc())
+	{
+		if (DIFFITEM* pItem = FindItemForMergeDoc(doc, *pLast))
+		{
+			fresh.display.resumeRelPath = pItem->getItemRelativePath();
+			fresh.display.resumeDiff = pLast->GetCurrentDiff();
+			if (CMergeEditView* pView = pLast->GetActiveMergeView())
+				fresh.display.resumeTopLine = pView->GetTopLine();
+		}
+	}
 	const std::vector<String> grepHistory = Merge20GrepParseHistory(
 		GetOptionsMgr()->GetString(OPT_MERGE20_GREP_HISTORY));
 	fresh.display.grepText = grepHistory.empty() ? String() : grepHistory.front();
@@ -519,6 +541,18 @@ namespace
 		ctxt.SetMerge20SessionState(di.getItemRelativePath(), st);
 		++result.restored;
 		result.diffsRestored += static_cast<int>(file.diffs.size());
+		// Merge20 (best-workflow B12): the resume target is only
+		// carried over when this file was restored unchanged. A
+		// file that was reset (changed since the save) is not
+		// reopened: its diff indices and scroll lines may have
+		// shifted, so reopening at the saved position would mislead.
+		// A missing file never reaches here (skipped above).
+		if (file.relPath == session.display.resumeRelPath)
+		{
+			result.resumeRelPath = file.relPath;
+			result.resumeDiff = session.display.resumeDiff;
+			result.resumeTopLine = session.display.resumeTopLine;
+		}
 	}
 
 	// Display settings: hidden items first (they affect the list the
@@ -540,7 +574,16 @@ namespace
 	// the saved session left it. Open file compares are not forced
 	// into dedicated mode by a restore.
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_MODE, session.display.dedMode);
-	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, session.display.dedPinned);
+	// Merge20 (best-workflow B12, NOTES §53.4 hole): do not write
+	// the pin back while a dedicated-mode frame is open. Its
+	// IDT_DEDHIDE timer reads the key every 500ms and hides the bar
+	// once the flash grace is over and the cursor has been away for
+	// 3s, so writing back a saved (or default false) pin would hide
+	// the bar of a frame the user is working in. The saved value
+	// stays in the session file for the next restore; entering
+	// dedicated mode pins on entry anyway (PR #46).
+	if (!CMergeEditFrame::HasOpenDedicatedModeFrame())
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_PINNED, session.display.dedPinned);
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_TODO_ONLY, session.display.todoOnly);
 	if (session.display.dedZoom > 0)
 		GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_ZOOM, session.display.dedZoom);
@@ -642,6 +685,14 @@ void Merge20SessionOfferRestore(CDirDoc& doc)
 		session.savedAt, strutils::to_str(static_cast<int>(session.files.size())));
 	if (skippedFiles > 0)
 		msg += _T("\n") + strutils::format_string1(_("%1 saved entries could not be read and will be ignored."), strutils::to_str(skippedFiles));
+	// Merge20 (best-workflow B12): say that the last open file
+	// compare will be opened too, so the user can decline the whole
+	// restore when that is not wanted. There is no separate
+	// checkbox: the offer is a plain message box, and reopening at
+	// the saved position is the point of the restore (a changed
+	// target is simply not reopened; see ApplySessionStates).
+	if (!session.display.resumeRelPath.empty())
+		msg += _T("\n") + strutils::format_string1(_("The file compare \"%1\" that was open last time will also be opened."), session.display.resumeRelPath);
 	if (AfxMessageBox(msg.c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
 		return;
 	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(doc, session, skippedFiles);
@@ -654,6 +705,10 @@ void Merge20SessionOfferRestore(CDirDoc& doc)
 		return;
 	}
 	AfxMessageBox(Merge20SessionFormatRestoreReport(result, skippedFiles).c_str(), MB_ICONINFORMATION);
+	// Merge20 (best-workflow B12): reopen the file compare that was
+	// open at save time, at its saved diff and scroll position. The
+	// report above is shown first, so the reopen does not hide it.
+	Merge20SessionResumeLastFileCompare(doc, result);
 }
 
 String Merge20SessionFormatRestoreReport(const Merge20SessionRestoreResult& result, int skippedFiles)
@@ -676,6 +731,59 @@ String Merge20SessionFormatRestoreReport(const Merge20SessionRestoreResult& resu
 		report += _T("\n") + strutils::format_string1(_("Note: the saved compare options differ from the current ones and were not applied: %1."), names);
 	}
 	return report;
+}
+
+void Merge20SessionResumeLastFileCompare(CDirDoc& doc, const Merge20SessionRestoreResult& result)
+{
+	if (result.resumeRelPath.empty())
+		return;
+	// Already open: activate its frame instead of opening a
+	// duplicate (same frame activation as CDirDoc::Merge20MoveToFile).
+	CMergeDoc* pMergeDoc = doc.Merge20FindOpenMergeDoc(result.resumeRelPath);
+	if (pMergeDoc != nullptr)
+	{
+		if (POSITION pos = pMergeDoc->GetFirstViewPosition())
+		{
+			if (CView* pView = pMergeDoc->GetNextView(pos))
+			{
+				if (CFrameWnd* pFrame = pView->GetParentFrame())
+					pFrame->ActivateFrame();
+			}
+		}
+	}
+	else
+	{
+		// Not open: open it quietly through the folder view. A file
+		// hidden by the current filter cannot be opened, and a
+		// failed open leaves no doc behind; both fall back to the
+		// folder list alone, with no error (acceptance (d)).
+		const DIFFITEM* pItem = doc.Merge20FindItemByRelPath(result.resumeRelPath);
+		if (pItem == nullptr)
+			return;
+		CDirView* pDirView = doc.GetMainView();
+		if (pDirView == nullptr || !pDirView->Merge20OpenFileQuiet(*pItem))
+			return;
+		pMergeDoc = doc.Merge20FindOpenMergeDoc(result.resumeRelPath);
+		if (pMergeDoc == nullptr)
+			return;
+	}
+	// Put the reopened compare back where it was: the saved diff
+	// first (SelectDiff sets the current diff and scrolls to it),
+	// then the exact saved top line. Both are clamped to the
+	// reopened compare, never forced: the diff count and the line
+	// count come from the live document.
+	CMergeEditView* pView = pMergeDoc->GetActiveMergeView();
+	if (pView == nullptr)
+		return;
+	if (result.resumeDiff >= 0 && result.resumeDiff < pMergeDoc->m_diffList.GetSize())
+		pView->SelectDiff(result.resumeDiff, true, false);
+	const int nLines = pView->GetLineCount();
+	if (nLines > 0)
+	{
+		const int nTop = std::clamp(result.resumeTopLine, 0, nLines - 1);
+		pView->ScrollToSubLine(pView->GetSubLineIndex(nTop));
+		pView->UpdateSiblingScrollPos(false);
+	}
 }
 
 void Merge20SessionRestoreMergeDoc(CMergeDoc& doc)
