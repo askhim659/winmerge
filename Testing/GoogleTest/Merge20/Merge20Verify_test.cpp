@@ -134,7 +134,10 @@ int CountCheckIssues(const Merge20VerifyResult& result, Merge20VerifyCheck check
 }
 
 // The changed-line scenario used by most tests: OLD "b", NEW
-// "B" on line 2 of a 3-line file.
+// "B2" on line 2 of a 3-line file. The NEW line differs from
+// the OLD line beyond case (a plain "B" would be equal to "b"
+// under the default ignore-case compare, so a conclusion-vs-
+// output mismatch built on it would not be a mismatch at all).
 Merge20VerifyDiffInput ChangedLineDiff(Merge20DiffConclusion conclusion, int segState,
 	std::vector<int> srcPanes, int savedLines)
 {
@@ -146,7 +149,7 @@ Merge20VerifyDiffInput ChangedLineDiff(Merge20DiffConclusion conclusion, int seg
 
 TEST(Merge20Verify, RediffCleanUseNew)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "B", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "B2", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseNew, Merge20VerifySegChosen, { 1 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
@@ -157,7 +160,7 @@ TEST(Merge20Verify, RediffCleanUseNew)
 
 TEST(Merge20Verify, RediffCleanUseOld)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "b", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "b", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseOld, Merge20VerifySegChosen, { 0 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
@@ -166,7 +169,7 @@ TEST(Merge20Verify, RediffCleanUseOld)
 
 TEST(Merge20Verify, RediffCleanUseBoth)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "b", "B", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "b", "B2", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseBoth, Merge20VerifySegChosen, { 0, 1 }, 2) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
@@ -176,7 +179,7 @@ TEST(Merge20Verify, RediffCleanUseBoth)
 // Acceptance scenario (2): one result line hand-deleted.
 TEST(Merge20Verify, RediffDetectsDeletedLine)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseNew, Merge20VerifySegChosen, { 1 }, 0) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_FALSE(result.passed);
@@ -216,7 +219,7 @@ TEST(Merge20Verify, RediffTwoDeletedLines)
 // content for a UseOld-concluded diff.
 TEST(Merge20Verify, RediffUnexplainedInUseNewDiff)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "X", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "X", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseNew, Merge20VerifySegChosen, { 1 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_FALSE(result.passed);
@@ -399,7 +402,7 @@ TEST(Merge20Verify, SyntaxSuppressedWhenInputUnbalanced)
 // conclusion whose output holds the NEW lines.
 TEST(Merge20Verify, ConsistencyMismatch)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "B", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "B2", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseOld, Merge20VerifySegChosen, { 1 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_FALSE(result.passed);
@@ -419,8 +422,8 @@ TEST(Merge20Verify, ConsistencyMismatch)
 // A judged diff left Unresolved has no chosen content.
 TEST(Merge20Verify, ConsistencyUnresolved)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" },
-		{ "a", "<<<<<<< new", "B", "=======", "b", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" },
+		{ "a", "<<<<<<< new", "B2", "=======", "b", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseNew, Merge20VerifySegConflict, {}, 4) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_FALSE(result.passed);
@@ -433,8 +436,8 @@ TEST(Merge20Verify, ConsistencyUnresolved)
 // expected saved form.
 TEST(Merge20Verify, ConsistencyRejectChangedConflictPasses)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" },
-		{ "a", "<<<<<<< new", "B", "=======", "b", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" },
+		{ "a", "<<<<<<< new", "B2", "=======", "b", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::Reject, Merge20VerifySegConflict, {}, 4) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
@@ -443,7 +446,7 @@ TEST(Merge20Verify, ConsistencyRejectChangedConflictPasses)
 // ...but Reject with chosen content means the Reject did not stick.
 TEST(Merge20Verify, ConsistencyRejectChangedChosenFails)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "B", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "B2", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::Reject, Merge20VerifySegChosen, { 1 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_FALSE(result.passed);
@@ -465,7 +468,7 @@ TEST(Merge20Verify, ConsistencyRejectOneSidedPasses)
 // Keep means "the current result stands": no expected content.
 TEST(Merge20Verify, ConsistencyKeepSkipped)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "X", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "X", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::Keep, Merge20VerifySegChosen, { 0 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
@@ -474,7 +477,7 @@ TEST(Merge20Verify, ConsistencyKeepSkipped)
 // Undecided diffs have no expected content either.
 TEST(Merge20Verify, ConsistencyUndecidedSkipped)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "b", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "b", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::Undecided, Merge20VerifySegAuto, { 0 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
@@ -483,7 +486,7 @@ TEST(Merge20Verify, ConsistencyUndecidedSkipped)
 // A hand edit after a conclusion no longer reflects it.
 TEST(Merge20Verify, ConsistencyEditedAfterConclusionFails)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "X", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "X", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseOld, Merge20VerifySegEdited, { 0 }, 1) });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_FALSE(result.passed);
@@ -497,8 +500,8 @@ TEST(Merge20Verify, ConsistencyThreeWayUseBoth)
 	auto diff = ChangedLineDiff(Merge20DiffConclusion::UseBoth, Merge20VerifySegChosen, { 0, 2 }, 2);
 	diff.thirdBegin = 1;
 	diff.thirdEnd = 1;
-	auto input = Build3Way({ "a", "b", "c" }, { "a", "b", "c" }, { "a", "B", "c" },
-		{ "a", "b", "B", "c" }, { diff });
+	auto input = Build3Way({ "a", "b", "c" }, { "a", "b", "c" }, { "a", "B2", "c" },
+		{ "a", "b", "B2", "c" }, { diff });
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
 	EXPECT_TRUE(result.passed);
 }
@@ -506,7 +509,7 @@ TEST(Merge20Verify, ConsistencyThreeWayUseBoth)
 // OP_NONE entries are not differences: skipped everywhere.
 TEST(Merge20Verify, OpNoneSkipped)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "B", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "B2", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseOld, Merge20VerifySegChosen, { 1 }, 1) });
 	input.diffs[0].op = Merge20ConclusionOpNone;
 	const Merge20VerifyResult result = Merge20VerifyRunFile(input, AllOn());
@@ -525,7 +528,7 @@ TEST(Merge20Verify, EmptyNoDiffsPasses)
 // Each check switches off on its own; the others still fire.
 TEST(Merge20Verify, OptionsSwitchOffPerCheck)
 {
-	auto input = Build({ "a", "b", "c" }, { "a", "B", "c" }, { "a", "X", "c" },
+	auto input = Build({ "a", "b", "c" }, { "a", "B2", "c" }, { "a", "X", "c" },
 		{ ChangedLineDiff(Merge20DiffConclusion::UseNew, Merge20VerifySegChosen, { 1 }, 1) });
 	Merge20VerifyOptions options = AllOn();
 	options.consistency = false;
