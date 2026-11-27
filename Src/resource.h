@@ -934,11 +934,13 @@
 #define IDC_MERGE20_CLOSE_WARN_PROCEED      1885
 // Merge20 (B4): high-risk remainder line in the file-list panel header.
 #define IDC_MERGE20_FILELIST_HIGHRISK     1886
-// Merge20 (best-workflow B3): risk filter in the file-list panel header
-// (label + combo) and the dedicated-bar risk-order toggle button.
-#define IDC_MERGE20_FILELIST_RISK_LABEL 1887
-#define IDC_MERGE20_FILELIST_RISK_FILTER 1888
-#define IDC_MERGE20_DED_RISK_ORDER      1889
+// Merge20 (best-workflow B3): risk filter tabs in the file-list panel
+// header (a second tab row, like the action-category tabs: a combo
+// box cannot be laid out in this bar, because its window height
+// carries the drop-down height) and the dedicated-bar risk-order
+// toggle button.
+#define IDC_MERGE20_FILELIST_RISK_TABS  1887
+#define IDC_MERGE20_DED_RISK_ORDER      1888
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2702,8 +2704,8 @@
 // B4 consumes control 1886 (file-list panel high-risk remainder line). It uses no command ID:
 // the remainder is a display, not a menu item.
 // B3 consumes command 38982 (risk-order patrol toggle: View menu +
-// dedicated-bar button) and controls 1887-1889 (panel risk-filter
-// label + combo, dedicated-bar risk-order button). Command 38980 is
+// dedicated-bar button) and controls 1887-1888 (panel risk-filter
+// tabs, dedicated-bar risk-order button). Command 38980 is
 // held for F4.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
@@ -2713,9 +2715,9 @@
 //   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1890 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1889 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
-//   F4 holds 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1889.
+//   F4 holds 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1888.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2735,7 +2737,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        304
 #define _APS_NEXT_COMMAND_VALUE         38983
-#define _APS_NEXT_CONTROL_VALUE         1890
+#define _APS_NEXT_CONTROL_VALUE         1889
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
