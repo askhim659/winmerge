@@ -230,10 +230,36 @@ bool CDiffContext::GetMerge20IncludeInOutput(const DIFFITEM& di) const
  * @brief Merge20 (S2): set the output checkbox flag of one file.
  * @param [in] di Difference item.
  * @param [in] include New output flag.
+ * @param [in] bRecordUndo False for bulk / linkage / restore callers
+ *             (batch check, conclusion linkage): only a single user
+ *             toggle is an undo step (B10). A toggle that changes
+ *             nothing is never recorded.
  */
-void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
+void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, bool bRecordUndo /*= true*/)
 {
+	const bool bOldInclude = GetMerge20IncludeInOutput(di);
 	m_merge20FileStates.SetIncludeInOutput(di.getItemRelativePath(), include);
+	if (bRecordUndo && bOldInclude != include)
+	{
+		Merge20UndoEntry entry;
+		entry.kind = Merge20UndoKind::IncludeInOutput;
+		entry.relPath = di.getItemRelativePath();
+		entry.oldInclude = bOldInclude;
+		entry.newInclude = include;
+		Merge20RecordUndo(entry);
+	}
+	NotifyMerge20FileListChanged();
+}
+
+/**
+ * @brief Merge20 (B10): set the output checkbox flag of one file, by relative path.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @param [in] include New output flag.
+ * Raw setter for undo application: no linkage, no recording.
+ */
+void CDiffContext::SetMerge20IncludeInOutput(const String& relPath, bool include)
+{
+	m_merge20FileStates.SetIncludeInOutput(relPath, include);
 	NotifyMerge20FileListChanged();
 }
 
@@ -241,9 +267,17 @@ void CDiffContext::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
  * @brief Merge20 (S2): set the review state and apply the output linkage.
  * @param [in] di Difference item.
  * @param [in] state New review state.
+ * @param [in] bRecordUndo False for non-user callers (none today:
+ *             every caller is a user operation -- folder-list keys,
+ *             panel cycling -- so the default records). The entry
+ *             holds the review state and the output flag before and
+ *             after the linkage, so undo rewinds both at once (B10).
  */
-void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
+void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state, bool bRecordUndo /*= true*/)
 {
+	const String relPath = di.getItemRelativePath();
+	const ReviewState oldReview = GetMerge20ReviewState(relPath);
+	const bool bOldInclude = GetMerge20IncludeInOutput(di);
 	SetMerge20ReviewState(di, state);
 	Merge20FileState& st = m_merge20FileStates.GetOrCreateState(di.getItemRelativePath());
 	switch (state)
@@ -266,6 +300,17 @@ void CDiffContext::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state
 	// The output flag above changed after SetMerge20ReviewState
 	// already notified, so notify once more with the final state.
 	NotifyMerge20FileListChanged();
+	if (bRecordUndo)
+	{
+		Merge20UndoEntry entry;
+		entry.kind = Merge20UndoKind::ReviewState;
+		entry.relPath = relPath;
+		entry.oldReview = oldReview;
+		entry.newReview = state;
+		entry.oldInclude = bOldInclude;
+		entry.newInclude = GetMerge20IncludeInOutput(di);
+		Merge20RecordUndo(entry);
+	}
 }
 
 /**
