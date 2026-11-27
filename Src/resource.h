@@ -920,6 +920,16 @@
 #define IDC_MERGE20_FORM_ZOOM_SLIDER        1863
 #define IDC_MERGE20_FORM_ZOOM_LABEL         1864
 #define IDC_MERGE20_FORM_VIEWPORT_TOGGLE    1865
+#define IDC_MERGE20_FORM_SPOT_PANEL         1872
+#define IDC_MERGE20_FORM_SPOT_OLD_LABEL     1873
+#define IDC_MERGE20_FORM_SPOT_OLD           1874
+#define IDC_MERGE20_FORM_SPOT_NEW_LABEL     1875
+#define IDC_MERGE20_FORM_SPOT_NEW           1876
+#define IDC_MERGE20_FORM_SPOT_TEXT          1877
+#define IDC_MERGE20_FORM_SPOT_PREV          1878
+#define IDC_MERGE20_FORM_SPOT_NEXT          1879
+#define IDC_MERGE20_FORM_SPOT_CLEAR         1880
+#define IDC_MERGE20_FORM_SPOT_GOTO          1881
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2670,6 +2680,9 @@
 // F2 consumes command 38976 (FORM compare launch) and controls 1837-1857 (FORM compare view).
 // F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
 // zoom slider, zoom label, viewport height toggle).
+// B9 reserves controls 1866-1871.
+// F4 consumes controls 1872-1881 (FORM compare spotlight: banner panel, old/new preview
+// labels + previews, banner text, previous / next / clear / go-to-changed-area buttons).
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
@@ -2696,7 +2709,7 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
 #define _APS_NEXT_COMMAND_VALUE         38979
-#define _APS_NEXT_CONTROL_VALUE         1866
+#define _APS_NEXT_CONTROL_VALUE         1882
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
