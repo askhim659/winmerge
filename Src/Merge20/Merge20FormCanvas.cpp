@@ -943,7 +943,7 @@ void CMerge20FormCanvas::DrawSpotlightCallout(CDC& dc, const CRect& rcWindow)
 	if (elemRecords.empty())
 		return;
 	const std::vector<std::wstring> lines = Merge20FormSpotlightCalloutLines(elemRecords);
-	const String header = _("Change details: ") + m_spotlightShapeKey;
+	const String header = _("Change details") + _T(": ") + m_spotlightShapeKey;
 	CRect rcClient;
 	GetClientRect(&rcClient);
 	// Measure the widest line (HTML: box width = widest text + 24).
