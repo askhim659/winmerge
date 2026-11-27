@@ -103,6 +103,122 @@ TEST(Merge20Patrol, FindNextInvalidDirection)
 	EXPECT_EQ(Merge20FindNextTarget(Mixed(), 0, 2), -1);
 }
 
+// B3 (risk-order patrol): ranks, order, stepping and ordinals.
+// Fixture: five rows with risks [None, High, unclassified, Medium,
+// High], all patrol targets. The risk order is [1, 4, 3, 0, 2]:
+// High first (1, 4 in list order), then Medium (3), then None (0),
+// unclassified (2) last.
+using Ranks = std::vector<Merge20RiskRank>;
+
+Ranks MixedRanks()
+{
+	return {
+		Merge20RiskRank::NONE,
+		Merge20RiskRank::HIGH,
+		Merge20RiskRank::UNCLASSIFIED,
+		Merge20RiskRank::MEDIUM,
+		Merge20RiskRank::HIGH,
+	};
+}
+
+std::vector<int> MixedRiskOrder()
+{
+	return Merge20BuildRiskOrder(MixedRanks(), { true, true, true, true, true });
+}
+
+TEST(Merge20Patrol, RiskRankOfRiskAndFile)
+{
+	EXPECT_EQ(Merge20RiskRankOfRisk(RiskLevel::HIGH), Merge20RiskRank::HIGH);
+	EXPECT_EQ(Merge20RiskRankOfRisk(RiskLevel::MEDIUM), Merge20RiskRank::MEDIUM);
+	EXPECT_EQ(Merge20RiskRankOfRisk(RiskLevel::NONE), Merge20RiskRank::NONE);
+	// A classified file keeps its risk rank; an unclassified file
+	// (never opened) ranks last whatever its stored risk says.
+	EXPECT_EQ(Merge20RiskRankOfFile(true, RiskLevel::HIGH), Merge20RiskRank::HIGH);
+	EXPECT_EQ(Merge20RiskRankOfFile(true, RiskLevel::NONE), Merge20RiskRank::NONE);
+	EXPECT_EQ(Merge20RiskRankOfFile(false, RiskLevel::HIGH), Merge20RiskRank::UNCLASSIFIED);
+	EXPECT_EQ(Merge20RiskRankOfFile(false, RiskLevel::NONE), Merge20RiskRank::UNCLASSIFIED);
+}
+
+TEST(Merge20Patrol, BuildRiskOrder)
+{
+	// High, High, Medium, None, unclassified: stable within a rank.
+	ASSERT_EQ(MixedRiskOrder(), std::vector<int>({ 1, 4, 3, 0, 2 }));
+	// Non-targets are skipped, the ranks of the rest still rule.
+	EXPECT_EQ(Merge20BuildRiskOrder(MixedRanks(), { true, false, true, false, true }),
+		std::vector<int>({ 4, 0, 2 }));
+	// No targets: empty order.
+	EXPECT_TRUE(Merge20BuildRiskOrder(MixedRanks(), { false, false, false, false, false }).empty());
+	// Equal risks keep list order (stable sort).
+	EXPECT_EQ(Merge20BuildRiskOrder(
+		{ Merge20RiskRank::MEDIUM, Merge20RiskRank::MEDIUM, Merge20RiskRank::MEDIUM },
+		{ true, true, true }), std::vector<int>({ 0, 1, 2 }));
+}
+
+TEST(Merge20Patrol, FindNextInOrderWraps)
+{
+	const std::vector<int> order = MixedRiskOrder(); // [1, 4, 3, 0, 2]
+	// Forward through the whole risk order, then wraps to the first High.
+	EXPECT_EQ(Merge20FindNextInOrder(order, 1, 1, true), 4);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 4, 1, true), 3);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 3, 1, true), 0);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 0, 1, true), 2);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 2, 1, true), 1);
+	// Backward through the whole risk order, then wraps to the last entry.
+	EXPECT_EQ(Merge20FindNextInOrder(order, 1, -1, true), 2);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 2, -1, true), 0);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 0, -1, true), 3);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 3, -1, true), 4);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 4, -1, true), 1);
+}
+
+TEST(Merge20Patrol, FindNextInOrderNoWrap)
+{
+	const std::vector<int> order = MixedRiskOrder(); // [1, 4, 3, 0, 2]
+	// The ends stop instead of wrapping (plain list-order patrol).
+	EXPECT_EQ(Merge20FindNextInOrder(order, 2, 1, false), -1);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 1, -1, false), -1);
+	// Mid-order steps are the same with or without wrapping.
+	EXPECT_EQ(Merge20FindNextInOrder(order, 4, 1, false), 3);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 3, -1, false), 4);
+}
+
+TEST(Merge20Patrol, FindNextInOrderNoCurrentOrOnlyTarget)
+{
+	const std::vector<int> order = MixedRiskOrder(); // [1, 4, 3, 0, 2]
+	// A current row that is not in the order counts as no current
+	// row: forward starts at the first entry, backward at the last.
+	EXPECT_EQ(Merge20FindNextInOrder(order, -1, 1, true), 1);
+	EXPECT_EQ(Merge20FindNextInOrder(order, -1, -1, true), 2);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 99, 1, true), 1);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 99, -1, false), 2);
+	// No target at all: -1 either way.
+	EXPECT_EQ(Merge20FindNextInOrder({}, 0, 1, true), -1);
+	EXPECT_EQ(Merge20FindNextInOrder({}, -1, -1, false), -1);
+	// The current row is the only target: wrapping returns it (the
+	// callers treat "target == current" as no move), without
+	// wrapping there is no move.
+	EXPECT_EQ(Merge20FindNextInOrder({ 3 }, 3, 1, true), 3);
+	EXPECT_EQ(Merge20FindNextInOrder({ 3 }, 3, -1, true), 3);
+	EXPECT_EQ(Merge20FindNextInOrder({ 3 }, 3, 1, false), -1);
+	// Invalid direction: -1.
+	EXPECT_EQ(Merge20FindNextInOrder(order, 1, 0, true), -1);
+	EXPECT_EQ(Merge20FindNextInOrder(order, 1, 2, true), -1);
+}
+
+TEST(Merge20Patrol, OrdinalInOrder)
+{
+	const std::vector<int> order = MixedRiskOrder(); // [1, 4, 3, 0, 2]
+	EXPECT_EQ(Merge20OrdinalInOrder(order, 1), 1);
+	EXPECT_EQ(Merge20OrdinalInOrder(order, 4), 2);
+	EXPECT_EQ(Merge20OrdinalInOrder(order, 3), 3);
+	EXPECT_EQ(Merge20OrdinalInOrder(order, 0), 4);
+	EXPECT_EQ(Merge20OrdinalInOrder(order, 2), 5);
+	// Not in the order, or no current row: 0.
+	EXPECT_EQ(Merge20OrdinalInOrder(order, 99), 0);
+	EXPECT_EQ(Merge20OrdinalInOrder(order, -1), 0);
+	EXPECT_EQ(Merge20OrdinalInOrder({}, 0), 0);
+}
+
 TEST(Merge20Patrol, HasOtherTarget)
 {
 	EXPECT_TRUE(Merge20HasOtherTarget(Mixed(), 0));
