@@ -164,6 +164,13 @@ int CMerge20FocusDock::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		}
 		pButtons[i]->SetFont(pFont);
 	}
+	// Merge20 (best-workflow B5): the impact list at the bottom
+	// of the dock (created here, laid out in LayoutViews).
+	if (!m_wndImpactList.Create(this))
+	{
+		TRACE0("Failed to create Merge20FocusDock impact list\n");
+		return -1;
+	}
 	UpdateResources();
 	LayoutHeader();
 	return 0;
@@ -188,7 +195,10 @@ void CMerge20FocusDock::SetMergeDoc(CMergeDoc* pDoc)
 void CMerge20FocusDock::ShowDiff(int nDiff)
 {
 	if (m_pDoc == nullptr)
+	{
+		m_wndImpactList.StartForDiff(nullptr, nDiff);
 		return;
+	}
 	m_nCurrentDiff = nDiff;
 	m_nBuffers = m_pDoc->m_nBuffers;
 	m_nDiffCount = m_pDoc->m_diffList.GetSize();
@@ -220,6 +230,11 @@ void CMerge20FocusDock::ShowDiff(int nDiff)
 		m_pResultView->SetSegmentText(sText);
 	}
 	UpdateHeader();
+	// Merge20 (best-workflow B5): the impact search follows the
+	// shown diff (a new search per diff; the list restarts it
+	// when the diff changes, and the search runs off the UI
+	// thread so judging stays responsive).
+	m_wndImpactList.StartForDiff(m_pDoc, nDiff);
 }
 
 void CMerge20FocusDock::SyncFocusFromDetail(int nDetailTopOffset)
@@ -384,6 +399,7 @@ void CMerge20FocusDock::UpdateResources()
 	sText = _("Regroup");
 	m_btnRegroup.SetWindowText(sText.c_str());
 	UpdateHeader();
+	m_wndImpactList.UpdateResources();
 	// U5: repaint the header accent underline.
 	Invalidate(FALSE);
 }
@@ -420,11 +436,18 @@ void CMerge20FocusDock::LayoutViews(int cx, int cy)
 	int nRest = cy - Merge20FocusHeaderHeight;
 	if (nRest < 0)
 		nRest = 0;
-	// Old/new panes take three fifths, the result segment two fifths.
-	const int nSplitterH = nRest * 3 / 5;
-	const int nResultH = nRest - nSplitterH;
+	// Merge20 (best-workflow B5): the impact list takes a fixed
+	// strip at the bottom (at most a third of the rest, so a short
+	// bar still leaves room for the panes). Old/new panes take
+	// three fifths of what is left, the result segment two fifths.
+	const int nImpactH = nRest / 3 < 120 ? nRest / 3 : 120;
+	const int nMain = nRest - nImpactH;
+	const int nSplitterH = nMain * 3 / 5;
+	const int nResultH = nMain - nSplitterH;
 	m_pDetailSplitterView->MoveWindow(0, Merge20FocusHeaderHeight, cx, nSplitterH);
 	m_pResultView->MoveWindow(0, Merge20FocusHeaderHeight + nSplitterH, cx, nResultH);
+	if (m_wndImpactList.GetSafeHwnd() != nullptr)
+		m_wndImpactList.MoveWindow(0, Merge20FocusHeaderHeight + nSplitterH + nResultH, cx, nImpactH);
 }
 
 void CMerge20FocusDock::UpdateHeader()
