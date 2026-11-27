@@ -277,6 +277,32 @@ TEST(Merge20FormXml, ShapeEstimationAndLines)
 	EXPECT_FALSE(upper->isEstimated);
 }
 
+TEST(Merge20FormXml, ShapeFontName)
+{
+	// F3 (design section 6 (6)): the font name of a shape comes
+	// from the `fontname` / `font` / `fontName` attribute when
+	// present, and stays empty otherwise (the canvas then draws
+	// with the default font and shows the approximation note).
+	const wchar_t* xml =
+		L"<form>\n"
+		L"  <label name=\"a\" x=\"10\" y=\"20\" width=\"100\" height=\"30\" fontname=\"MS Gothic\" />\n"
+		L"  <label name=\"b\" x=\"10\" y=\"60\" width=\"100\" height=\"30\" font=\"Arial\" />\n"
+		L"  <label name=\"c\" x=\"10\" y=\"100\" width=\"100\" height=\"30\" />\n"
+		L"</form>\n";
+	const Merge20FormParseResult result = Merge20ParseFormXml(xml);
+	ASSERT_TRUE(result.ok);
+	ASSERT_EQ(result.shapes.size(), static_cast<size_t>(3));
+	const Merge20FormShape* a = FindShape(result, L"label[name='a']");
+	ASSERT_NE(a, nullptr);
+	EXPECT_EQ(a->fontName, L"MS Gothic");
+	const Merge20FormShape* b = FindShape(result, L"label[name='b']");
+	ASSERT_NE(b, nullptr);
+	EXPECT_EQ(b->fontName, L"Arial");
+	const Merge20FormShape* c = FindShape(result, L"label[name='c']");
+	ASSERT_NE(c, nullptr);
+	EXPECT_TRUE(c->fontName.empty());
+}
+
 TEST(Merge20FormXml, DuplicateKeysUseGlobalCounter)
 {
 	// HTML ground truth: the counter is global, so the second `i`
@@ -359,3 +385,4 @@ TEST(Merge20FormXml, ParseNumber)
 	EXPECT_TRUE(Merge20FormParseNumber(L"NaN", value));
 	EXPECT_TRUE(std::isnan(value));
 }
+
