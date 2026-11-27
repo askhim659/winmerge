@@ -12249,3 +12249,139 @@ msgstr "高リスクのファイル：%1"
 msgid "Next state: %1"
 msgstr "次の状態：%1"
 
+
+#. Merge20 (best-workflow B7): problem-list dialog title (Merge.rc)
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Verification Problems"
+msgstr "【Wiz】検証の問題一覧"
+
+#. Merge20 (best-workflow B7): jump button (Merge.rc)
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Jump to location"
+msgstr "該当箇所へ移動"
+
+#. Merge20 (best-workflow B7): output-anyway button (Merge.rc)
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Output anyway"
+msgstr "それでも出力する"
+
+#. Merge20 (best-workflow B7): problem-list summary line
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Found %1 problem(s) in %2 file(s). Output is stopped."
+msgstr "%2 ファイルに %1 件の問題があります。出力を中止しました。"
+
+#. Merge20 (best-workflow B7): syntax simple-check note, shown only when a syntax issue is present
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Note: the syntax check only checks bracket pairing (a simple check, not a full syntax guarantee)."
+msgstr "注：構文チェックは括弧の対応のみを見る簡易チェックです（完全な構文保証ではありません）。"
+
+#. Merge20 (best-workflow B7): problem-list column header
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Check"
+msgstr "検証項目"
+
+#. Merge20 (best-workflow B7): problem-list column header
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Detail"
+msgstr "詳細"
+
+#. Merge20 (best-workflow B7): check name in the problem list
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Re-diff"
+msgstr "再差分"
+
+#. Merge20 (best-workflow B7): check name in the problem list
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Lines / encoding"
+msgstr "行数・文字コード"
+
+#. Merge20 (best-workflow B7): check name in the problem list
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Syntax (simple check)"
+msgstr "構文（簡易チェック）"
+
+#. Merge20 (best-workflow B7): check name in the problem list
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Judgment consistency"
+msgstr "判断と出力の整合性"
+
+#. Merge20 (best-workflow B7): location of a problem tied to a diff and a result line
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Diff %1, result line %2"
+msgstr "差分 %1、結果 %2 行目"
+
+#. Merge20 (best-workflow B7): location of a problem tied to a diff
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Diff %1"
+msgstr "差分 %1"
+
+#. Merge20 (best-workflow B7): location of a problem tied to a result line
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Result line %1"
+msgstr "結果 %1 行目"
+
+#. Merge20 (best-workflow B7): location of a file-wide problem
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Whole file"
+msgstr "ファイル全体"
+
+#. Merge20 (best-workflow B7): re-diff detail (NEW line known)
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Unexplained difference from NEW (NEW line %1)"
+msgstr "NEW との説明のつかない差分（NEW %1 行目）"
+
+#. Merge20 (best-workflow B7): re-diff detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Unexplained difference from NEW"
+msgstr "NEW との説明のつかない差分"
+
+#. Merge20 (best-workflow B7): line-count detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Expected %1 lines, got %2 lines"
+msgstr "想定 %1 行、実際 %2 行"
+
+#. Merge20 (best-workflow B7): unrepresentable-character detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Character U+%1 cannot be written in the output encoding"
+msgstr "文字 U+%1 は出力文字コードで書けません"
+
+#. Merge20 (best-workflow B7): invalid-byte detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Invalid byte at offset %1"
+msgstr "オフセット %1 に不正なバイトがあります"
+
+#. Merge20 (best-workflow B7): syntax detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Unmatched closing bracket"
+msgstr "対応する開き括弧のない閉じ括弧"
+
+#. Merge20 (best-workflow B7): syntax detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Opening bracket is never closed"
+msgstr "閉じられていない開き括弧"
+
+#. Merge20 (best-workflow B7): syntax detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Closing bracket does not match its opener"
+msgstr "閉じ括弧が開き括弧と対応していません"
+
+#. Merge20 (best-workflow B7): consistency detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "The output does not match its judgment (expected %1 line(s), got %2)"
+msgstr "出力が判断と一致しません（想定 %1 行、実際 %2 行）"
+
+#. Merge20 (best-workflow B7): consistency detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Judged, but still unresolved"
+msgstr "判断済みですが未解決です"
+
+#. Merge20 (best-workflow B7): fallback detail
+#: Src/Merge20/Merge20VerifyDlg.cpp
+msgid "Problem found"
+msgstr "問題があります"
+
+#. Merge20 (best-workflow B7): non-interactive log when verification stops the output
+#: Src/Merge20/Merge20VerifyGate.cpp
+msgid "Merge20 verification found %1 problem(s); the merge result was not saved."
+msgstr "【Wiz】検証で %1 件の問題が見つかったため、マージ結果を保存しませんでした。"
+
