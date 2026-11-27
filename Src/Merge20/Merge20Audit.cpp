@@ -316,6 +316,7 @@ String Merge20AuditFormatCsvRow(const Merge20AuditCsvRow& row)
 		Merge20CsvEscapeField(row.oldValue),
 		Merge20CsvEscapeField(row.newValue),
 		Merge20CsvEscapeField(row.operatorId),
+		Merge20CsvEscapeField(row.note),
 	};
 	return strutils::join(fields.begin(), fields.end(), String(_T(",")));
 }
