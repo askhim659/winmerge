@@ -28,6 +28,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include "Merge20/Merge20Conclusion.h"
 #include "Merge20/Merge20Learn.h"
 #include "Merge20/Merge20Types.h"
 
@@ -369,7 +370,7 @@ public:
 	/** @brief Would deleting the given range destroy a placeholder line? */
 	bool IsResultDeleteTouchingPlaceholder(int nStartLine, int nStartPos,
 		int nEndLine, int nEndPos) const;
-	/** @brief Margin provenance marker for a result line ('1'..'3', 'm', '?'), 0 for none */
+	/** @brief Margin provenance marker for a result line ('1'..'3', 'm', '?', 'K' for a Keep conclusion, 'X' for a Reject conclusion), 0 for none */
 	tchar_t GetResultLineMarker(int nLine) const;
 	const MergeResultSegment* GetResultSegmentByLine(int nLine) const;
 	const MergeResultSegment* GetResultSegmentByDiff(int nDiff) const;
@@ -393,9 +394,17 @@ public:
 	 * @param [out] nOp The diff's DIFFRANGE op value (Merge20FocusOp*), or 0.
 	 * @return False when there is no merge session yet or the diff has no segment. */
 	bool Merge20GetFocusResultText(int nDiff, String& sText, int& nState, int& nOp);
-	/** @brief Merge20 (Phase 4 D4): apply a focus-dock judgement (ResultChooseSources plus the
-	 * Phase 3 L2 learning record, like OnMergeChooseSource). Refreshes the focus dock. */
-	void Merge20FocusApplyJudgment(int nDiff, const std::vector<int>& srcPanes);
+	/** @brief Merge20 (best-workflow B1): the explicit conclusion of one diff (Undecided when the diff was never judged). The map is the source of truth for the "judged X of Y diffs" progress; it is keyed by diff index and shifted when a split/regroup moves indices, and cleared when the diff list is rebuilt (Rescan). */
+	Merge20DiffConclusion Merge20GetDiffConclusion(int nDiff) const;
+	/** @brief Merge20 (best-workflow B1): set the conclusion of one diff. This is the single entry point for every conclusion: it rewrites the result segment (except Keep, which leaves the result untouched, and Undecided, which clears the selection), records the judgment for learning when the conclusion changed to a chosen strategy, and applies the one linkage rule to the file's review state and output checkbox (gap analysis section 4.2 B1). No-op without a built merge session or for a non-significant diff.
+	 * @param [in] bSaveLearn Save the learning store and recompute candidates after recording (single-diff callers). Range callers pass false and save once after the loop.
+	 * @return True when a learning judgment was recorded for this diff. */
+	bool Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclusion, bool bSaveLearn = true);
+	/** @brief Merge20 (best-workflow B1): judged/total significant diffs of this file ("judged X of Y diffs"). */
+	void Merge20GetConclusionProgress(int& nJudged, int& nTotal) const;
+	/** @brief Merge20 (best-workflow B1): set the conclusions of the targeted diffs (result pane context menu, Diff conclusion submenu). The target rule is the same as the learning commands: the current diff when nothing is selected, else the selected diffs. */
+	void OnMerge20SetConclusion(UINT nID);
+	void OnUpdateMerge20SetConclusion(CCmdUI* pCmdUI);
 	/** @brief Merge20 (Phase 4 D5): split groups of this merge doc (the original ranges that were split into per-row hunks). Cleared when the diff list is rebuilt (Rescan); persisted in the session file so a restore can re-apply the splits. */
 	const std::vector<Merge20SplitGroup>& Merge20GetSplitGroups() const { return m_merge20SplitGroups; }
 	/** @brief Merge20 (Phase 4 D5): can this diff be split into per-row hunks (a significant diff of at least two apparent rows, in a built merge session)? */
@@ -464,6 +473,7 @@ private:
 	std::map<int, Merge20LearnCandidate> m_merge20LearnCandidates; /**< Merge20 (Phase 3 L2): learning candidate per diff index, kept apart from m_resultSegments so a candidate never changes the result (spec section 4(c)) */
 	std::set<String> m_merge20LearnDismissed; /**< Merge20 (Phase 3 L2): dismissed diff identities ("op:begin0-end0:begin1-end1"); a dismissed diff gets no candidate on recompute */
 	std::vector<Merge20SplitGroup> m_merge20SplitGroups; /**< Merge20 (Phase 4 D5): split groups (original ranges + row counts). Indices are never stored: groups are found again by their first row's identity. */
+	std::map<int, Merge20DiffConclusion> m_merge20DiffConclusions; /**< Merge20 (best-workflow B1): explicit conclusion per diff index (Undecided diffs have no entry). Shifted by split/regroup, cleared on Rescan; the session stores it through Merge20DiffJudgment::conclusion (B1b). */
 	std::map<int, std::vector<MergeResultSegment>> m_resultSegUndo; /**< table before undo group (key: group start) */
 	std::map<int, std::vector<MergeResultSegment>> m_resultSegRedo; /**< table after undo group (key: group start) */
 	bool m_bResultBuilt; /**< Result buffer has been generated */

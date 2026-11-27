@@ -30,6 +30,7 @@
 class CDirDoc;
 class CMergeDoc;
 struct IMergeDoc;
+struct DIFFITEM;
 class CDiffContext;
 
 /** @brief Outcome of applying a loaded session to a folder compare. */
@@ -138,6 +139,14 @@ String Merge20SessionFormatDeferredMessage(const Merge20SessionRestoreResult& re
 void Merge20SessionOfferRestore(CDirDoc& doc);
 /** @brief Human-readable report of a restore result, for the message boxes (offer + manual restore). */
 String Merge20SessionFormatRestoreReport(const Merge20SessionRestoreResult& result, int skippedFiles);
+/**
+ * @brief Find the folder compare item of a merge doc's files (same
+ * lookup as CDirDoc::SetMerge20Classification, including the
+ * swapped-paths fallback). Public so a merge doc can reach its own
+ * folder item (best-workflow B1 conclusion linkage); the session
+ * save/restore uses the same lookup.
+ */
+DIFFITEM* Merge20FindItemForMergeDoc(CDirDoc& doc, const CMergeDoc& mergeDoc);
 /**
  * @brief Restore the saved diff judgments into a merge doc whose
  * merge session just started (called from CMergeDoc::StartMergeSession

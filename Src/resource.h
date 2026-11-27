@@ -1868,6 +1868,12 @@
 #define ID_MERGE20_FILELIST_TOGGLE_OUTPUT 38967
 #define ID_VIEW_MERGE20_FILTER_DECK     38968
 #define ID_MERGE20_USER_MANUAL          38969
+#define ID_MERGE20_CONCLUSION_UNDECIDED 38970
+#define ID_MERGE20_CONCLUSION_USE_OLD   38971
+#define ID_MERGE20_CONCLUSION_USE_NEW   38972
+#define ID_MERGE20_CONCLUSION_USE_BOTH  38973
+#define ID_MERGE20_CONCLUSION_REJECT    38974
+#define ID_MERGE20_CONCLUSION_KEEP      38975
 #define IDS_SPLASH_GPLTEXT              38977
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
@@ -2629,6 +2635,7 @@
 // H-FILTER consumes controls 1819-1836 (deck checkboxes 1819-1834, preset 1835,
 // show-all 1836) and command 38968 (deck bar toggle).
 // H-DOC consumes command 38969 (user manual menu item).
+// B1 consumes commands 38970-38975 (per-diff conclusion menu items).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2641,7 +2648,8 @@
 //   are the D5 split/regroup commands; 38958-38959 are the D9
 //   diffs-only and slim commands; 38968 is the H-FILTER deck toggle;
 //   38969 is the H-DOC user manual command;
-//   _APS_NEXT_COMMAND_VALUE is now 38970), free up to 38976
+//   38970-38975 are the B1 conclusion commands;
+//   _APS_NEXT_COMMAND_VALUE is now 38976), free up to 38976
 //   (38977 is IDS_SPLASH_GPLTEXT).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2651,7 +2659,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
-#define _APS_NEXT_COMMAND_VALUE         38970
+#define _APS_NEXT_COMMAND_VALUE         38976
 #define _APS_NEXT_CONTROL_VALUE         1837
 #define _APS_NEXT_SYMED_VALUE           134
 #endif

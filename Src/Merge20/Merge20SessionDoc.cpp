@@ -171,6 +171,17 @@ namespace
 
 } // namespace
 
+/**
+ * @brief Merge20 (best-workflow B1): public wrapper for the folder
+ * item lookup above, so a merge doc can reach its own folder item
+ * for the conclusion linkage without duplicating the lookup
+ * (including the swapped-paths fallback).
+ */
+DIFFITEM* Merge20FindItemForMergeDoc(CDirDoc& doc, const CMergeDoc& mergeDoc)
+{
+	return FindItemForMergeDoc(doc, mergeDoc);
+}
+
 String Merge20SessionGetDirectory()
 {
 	if (dynamic_cast<CIniOptionsMgr*>(GetOptionsMgr()) != nullptr)
