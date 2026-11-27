@@ -12031,5 +12031,54 @@ msgstr "【Wiz】ブランドヘッダ"
 msgid "File Compare"
 msgstr "ファイル比較"
 
+#. Merge20 (Wave 5 F4): spotlight inspector banner, previous button (design section 2.7)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Previous change"
+msgstr "前の変更"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, next button (design section 2.7)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Next change"
+msgstr "次の変更"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, clear button (design section 2.7)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Clear spotlight"
+msgstr "スポットライトを解除"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, go-to-changed-area button (design section 2.7)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Go to changed area"
+msgstr "変更箇所へ移動"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, old preview label (design section 6 (4))
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Old (before)"
+msgstr "旧（変更前）"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, new preview label (design section 6 (4))
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "New (after)"
+msgstr "新（変更後）"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, header (design section 2.7)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Spotlight"
+msgstr "スポットライト"
+
+#. Merge20 (Wave 5 F4): spotlight inspector banner, changed-attributes prefix (design section 2.7)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Changed attributes"
+msgstr "変更属性"
+
+#. Merge20 (Wave 5 F4): spotlight callout header on the canvas (design section 2.7)
+#: Src/Merge20/Merge20FormCanvas.cpp
+msgid "Change details"
+msgstr "変更詳細"
+
+#. Merge20 (Wave 5 F4): spotlight old/new preview, empty state (design section 6 (4))
+#: Src/Merge20/Merge20FormSpotPreview.cpp
+msgid "No shape"
+msgstr "図形なし"
 
 
