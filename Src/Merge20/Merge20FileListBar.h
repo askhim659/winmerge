@@ -75,6 +75,10 @@ public:
 	void SetFrameHwnd(HWND hwndFrame);
 	/** @brief Folder document to list (nullptr = no folder compare). */
 	void SetDirDoc(CDirDoc* pDirDoc) { m_pDirDoc = pDirDoc; }
+	/** @brief Folder document the panel lists (nullptr = none attached).
+	 * The frame reads it to attach only once (see
+	 * CMergeEditFrame::RefreshFileListPanel). */
+	CDirDoc* GetDirDoc() const { return m_pDirDoc; }
 	/** @brief Rebuild the list from the folder document. No-op while hidden. */
 	void Refresh();
 	void UpdateResources();
