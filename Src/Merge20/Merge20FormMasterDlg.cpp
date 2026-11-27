@@ -174,7 +174,7 @@ BOOL CMerge20FormMasterDlg::OnInitDialog()
 		// and the default list is shown instead.
 		std::error_code ec;
 		if (std::filesystem::exists(std::filesystem::path(Merge20FormMasterGetFilePath()), ec))
-			AfxMessageBox(_("Could not read the name master. Showing the default list."), MB_ICONWARNING);
+			AfxMessageBox(_("Could not read the name master. Showing the default list.").c_str(), MB_ICONWARNING);
 		text = Merge20FormMasterGetDefaultText();
 	}
 
