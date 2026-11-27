@@ -100,6 +100,22 @@ Merge20FileState Merge20ClassifyFromRanges(const std::vector<Merge20BulkRange>& 
 RiskLevel Merge20ClassifyOneDiffRange(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords);
 
 /**
+ * @brief Summary text of one diff range of an open (2-way) merge doc (B14).
+ * @param [in] doc Opened merge doc (2-way; other buffer counts return
+ *             an empty string, like the risk function).
+ * @param [in] nDiff Index in the doc's diff list.
+ * @param [in] riskKeywords Risk keywords from the
+ *             OPT_MERGE20_RISK_KEYWORDS option (see
+ *             Merge20ParseRiskKeywords).
+ * @return The S4 summary of that one diff's lines, composed with
+ *         Merge20FormatSummary (counts, insights, risk keyword,
+ *         affected functions): the risk reason the B14 dialog shows.
+ *         Empty for an out-of-range index, a non-diff range or a
+ *         non-2-way doc.
+ */
+String Merge20ClassifyOneDiffSummary(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords);
+
+/**
  * @brief Compose the summary column text from a classification result.
  * @param [in] result Structured classification result.
  * @return Single-line summary: counts first, then the detected
