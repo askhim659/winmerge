@@ -36,6 +36,7 @@
 #include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "Merge20/Merge20Split.h"
 #include "Merge20/Merge20VerifyGate.h"
+#include "Merge20/Merge20VerifyReportExport.h"
 #include "DiffContext.h"
 #include "DiffItem.h"
 #include "DirDoc.h"
@@ -1262,7 +1263,10 @@ bool CMergeDoc::SaveMergeResult(bool bSaveAs)
 	// before the unresolved-diffs prompt, so a stopped output
 	// never double-prompts: problems show the problem-list dialog
 	// (Close/Jump stop the save, Output anyway proceeds).
-	if (!Merge20VerifyBeforeOutput(*this))
+	// B8: the gate result is kept so the verification report can
+	// be saved from this run, without verifying twice.
+	Merge20VerifyFileResult verifyResult;
+	if (!Merge20VerifyBeforeOutput(*this, &verifyResult))
 		return false;
 
 	const int nUnresolved = GetResultUnresolvedCount();
@@ -1358,6 +1362,20 @@ bool CMergeDoc::SaveMergeResult(bool bSaveAs)
 	m_pMergeResultView->Invalidate(false);
 	m_strMergeResultSavePath = strPath;
 	m_bResultSaved = true;
+	// Merge20 (B8): save the verification report next to the merge
+	// output (same folder, VerifyReport_YYYY-MM-DD.csv; a same-day
+	// repeat save gets a time suffix instead of overwriting). The
+	// report is the evidence for this save: it is written even when
+	// the user proceeded anyway (the problems stay listed). The
+	// merge result itself is already saved: a report failure only
+	// warns, it never fails the save.
+	String reportPath, reportErr;
+	if (!Merge20VerifySaveReportAfterOutput(verifyResult, strPath, reportPath, reportErr))
+	{
+		const String msg = strutils::format_string1(
+			_("The verification report could not be saved, but the merge result was saved:\n%1"), reportErr);
+		ShowMessageBox(msg, MB_OK | MB_ICONWARNING);
+	}
 	return true;
 }
 

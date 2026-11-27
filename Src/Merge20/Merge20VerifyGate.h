@@ -78,7 +78,8 @@ Merge20VerifyResult Merge20VerifyCheckMergeDoc(const CMergeDoc& doc);
 struct Merge20VerifyFileResult
 {
 	int fileIndex = 0;  /**< Caller-side file index (S7: folder-list index) */
-	String fileName;    /**< Display name of the file */
+	String fileName;    /**< Display name of the file (always set: the NEW pane's file name when no merge result was built) */
+	bool verified = true; /**< False when no merge result was built: the engine never ran for this file */
 	Merge20VerifyResult result; /**< Engine result for the file */
 };
 
@@ -119,6 +120,25 @@ Merge20VerifyGateDecision Merge20VerifyShowIssuesAndDecide(CWnd* pParent,
 	int& jumpFileIndex, int& jumpDiff, int& jumpResultLine);
 
 /**
+ * @brief Translated name of one check ("Re-diff" etc.), shared
+ * by the problem-list dialog and the B8 report.
+ */
+String Merge20VerifyCheckDisplayName(Merge20VerifyCheck check);
+
+/**
+ * @brief Translated location of one issue ("Diff %1, result line %2"
+ * etc.), shared by the problem-list dialog and the B8 report.
+ */
+String Merge20VerifyFormatIssueLocation(const Merge20VerifyIssue& issue);
+
+/**
+ * @brief Translated detail of one issue (kind + counts + the
+ * offending line, verbatim), shared by the problem-list dialog
+ * and the B8 report.
+ */
+String Merge20VerifyFormatIssueDetail(const Merge20VerifyIssue& issue);
+
+/**
  * @brief Navigate a merge doc to one issue: the diff's segment
  * in the result pane (and the diff in the compare panes) when
  * the issue has a diff, else the result line in the result
@@ -137,6 +157,9 @@ void Merge20VerifyJumpToIssue(CMergeDoc& doc, const Merge20VerifyIssue& issue);
  * to the problem and stops the output (false). In a
  * non-interactive run there is no dialog: problems are logged
  * and the output is stopped (false).
+ * @param [out] pLastResult When non-null, receives the check result
+ *             of this run (B8: SaveMergeResult saves the report
+ *             from it, without running the verification twice).
  * @return True when the output may proceed, false when it must stop.
  */
-bool Merge20VerifyBeforeOutput(CMergeDoc& doc);
+bool Merge20VerifyBeforeOutput(CMergeDoc& doc, Merge20VerifyFileResult* pLastResult = nullptr);
