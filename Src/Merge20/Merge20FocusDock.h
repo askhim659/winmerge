@@ -17,9 +17,11 @@
  * The dock owns no state of its own: the document tells it the
  * current diff (CMergeDoc::SetCurrentDiff, ResultChooseSources,
  * BuildMergeResult), and it asks the document for the segment text.
- * Button clicks apply through CMergeDoc::Merge20FocusApplyJudgment
- * (ResultChooseSources + the Phase 3 L2 learning record). The
- * split/regroup buttons are display only in D4 (D5 wires the body).
+ * Button clicks apply through CMergeDoc::Merge20SetDiffConclusion
+ * (best-workflow B1: result rewrite + learning record + file
+ * linkage). The header shows the current diff's conclusion and the
+ * judged/total progress. The split/regroup buttons are display only
+ * in D4 (D5 wires the body).
  * Folding and height adjustment are the docking bar's standard
  * resize and ShowControlBar display switch (design section 3.5,
  * T-4-7): the dock lays its two panes out proportionally, so a
@@ -27,6 +29,7 @@
  */
 #pragma once
 
+#include "Merge20/Merge20Conclusion.h"
 #include "Merge20/Merge20Focus.h"
 
 class CMergeDoc;
@@ -88,6 +91,8 @@ private:
 	void LayoutViews(int cx, int cy);
 	void UpdateHeader();
 	String StateWord(int nState) const;
+	/** @brief Merge20 (best-workflow B1): the header word for the current diff: its conclusion when judged, else the segment state word. */
+	String ConclusionWord(Merge20DiffConclusion conclusion, int nState) const;
 
 	CStatic m_stInfo; /**< Diff position + state label, first in the header */
 	// Judgement buttons, in header order (HTML focus dock order):
