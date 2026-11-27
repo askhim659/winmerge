@@ -12,6 +12,7 @@
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCompareDoc.h"
+#include "Merge20/Merge20FormImpact.h"
 #include "Merge20/Merge20FormCompareView.h"
 #include "Merge.h"
 #include "MergeApp.h"
@@ -213,6 +214,14 @@ bool CFormCompareDoc::RunAnalysis()
 	// The large-change flag (design section 4.4) runs over the
 	// whole folder result before the KPI is computed.
 	Merge20ApplyLargeChangeFlag(m_results);
+	// Impact analysis (Wave 5 F5, design section 6 (5)): the
+	// geometry warnings are attached to the records' impact text
+	// and may raise the severity to LayoutBreaking. Runs after
+	// the large-change flag so the upgrade is not overwritten.
+	// The paper size is unknown (design T-F-4), so only the
+	// canvas native size limits the page-overflow check.
+	for (Merge20FormFileResult& result : m_results)
+		Merge20ApplyFormImpact(result, 0.0, 0.0);
 	RefreshKpi();
 	m_bAnalyzed = true;
 	RefreshVisible();

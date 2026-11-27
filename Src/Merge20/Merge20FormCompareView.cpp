@@ -6,6 +6,9 @@
  * Child controls follow the Merge20FileListBar precedent
  * (DEFAULT_GUI_FONT, dummy rect at creation, layout in OnSize,
  * literal _() calls for the .pot generator).
+ * F5 adds the structured diff table under the preview pane
+ * (Merge20FormTable rows; group rows expand/collapse on click,
+ * record rows spotlight through FocusDiffRecord).
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCompareView.h"
@@ -37,6 +40,16 @@ namespace
 	const int kFormSpotlightHeight = 132;
 	const int kFormSpotPreviewWidth = 150;
 	const int kFormSpotLabelHeight = 18;
+	// Diff table (F5): label + list strip at the bottom of the
+	// bottom area (the preview pane gives way to it).
+	const int kFormTableHeight = 200;
+
+	// Column widths of the diff table (F5; the last column takes
+	// the remaining width and scrolls horizontally).
+	const int kFormTableColType = 110;
+	const int kFormTableColElement = 280;
+	const int kFormTableColValue = 280;
+	const int kFormTableColDesc = 600;
 
 	// Column widths of the card list (headers only in F2).
 	const int kFormColFileName = 180;
@@ -71,6 +84,8 @@ BEGIN_MESSAGE_MAP(CFormCompareView, CView)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_NAV_TOGGLE, OnNavToggle)
 	ON_LBN_SELCHANGE(IDC_MERGE20_FORM_NAV, OnNavSelChanged)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_MERGE20_FORM_LIST, OnListItemChanged)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_MERGE20_FORM_TABLE, OnTableItemChanged)
+	ON_NOTIFY(NM_CLICK, IDC_MERGE20_FORM_TABLE, OnTableClick)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_100, OnZoom100)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_25, OnZoom25)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_ZOOM_FIT, OnZoomFit)
@@ -269,6 +284,23 @@ int CFormCompareView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create Merge20FormCompareView canvas\n");
 		return -1;
 	}
+	// Structured diff table (F5): label + list under the
+	// preview pane.
+	if (!m_stTableLabel.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP | SS_CENTERIMAGE,
+		rc, this, IDC_MERGE20_FORM_TABLE_LABEL))
+	{
+		TRACE0("Failed to create Merge20FormCompareView diff table label\n");
+		return -1;
+	}
+	m_stTableLabel.SetFont(pFont);
+	if (!m_wndTable.Create(WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
+		rc, this, IDC_MERGE20_FORM_TABLE))
+	{
+		TRACE0("Failed to create Merge20FormCompareView diff table\n");
+		return -1;
+	}
+	m_wndTable.SetFont(pFont);
+	m_wndTable.SetExtendedStyle(m_wndTable.GetExtendedStyle() | LVS_EX_FULLROWSELECT);
 	// Spotlight inspector banner (F4): created hidden; the panel
 	// is created first so it stays behind the other controls.
 	if (!m_stSpotPanel.Create(_T(""), WS_CHILD | WS_BORDER,
@@ -343,6 +375,7 @@ void CFormCompareView::OnInitialUpdate()
 {
 	CView::OnInitialUpdate();
 	SetupColumns();
+	SetupTableColumns();
 	SetupTabs();
 	SetupSort();
 	UpdateResources();
@@ -415,13 +448,19 @@ void CFormCompareView::LayoutControls()
 	const int bottomHeight = (std::max)(0, height - bottomTop - kFormMargin);
 	const int listLeft = kFormMargin + navWidth + (m_bNavVisible ? kFormRowGap : 0);
 	const int listWidth = (std::max)(0, width - listLeft - kFormMargin);
+	// Diff table (F5): a fixed strip at the bottom of the bottom
+	// area; the preview pane gives way to it.
+	const int tableTotal = (std::min)(kFormTableHeight,
+		(std::max)(0, bottomHeight - kFormMinListHeight));
 	// Preview pane height: 640 px fixed (HTML toggleViewportHeight)
-	// or the full bottom area minus a minimal list strip.
+	// or the full bottom area minus a minimal list strip and the
+	// diff table.
 	const int previewTotal = (std::max)(0, (std::min)(
-		m_bCanvasFullHeight ? bottomHeight - kFormMinListHeight :
+		m_bCanvasFullHeight ? bottomHeight - kFormMinListHeight - tableTotal :
 			kFormPreviewFixedHeight + kFormControlHeight + kFormRowGap,
-		bottomHeight - kFormMinListHeight));
-	const int listHeight = (std::max)(0, bottomHeight - previewTotal - (previewTotal > 0 ? kFormRowGap : 0));
+		bottomHeight - kFormMinListHeight - tableTotal));
+	const int listHeight = (std::max)(0, bottomHeight - previewTotal - tableTotal -
+		(previewTotal > 0 ? kFormRowGap : 0) - (tableTotal > 0 ? kFormRowGap : 0));
 	if (m_bNavVisible)
 		m_wndNav.MoveWindow(kFormMargin, bottomTop, navWidth, bottomHeight);
 	else
@@ -474,6 +513,17 @@ void CFormCompareView::LayoutControls()
 		m_btnSpotGoto.ShowWindow(spotShow);
 	}
 	m_wndCanvas.MoveWindow(listLeft, canvasTop, listWidth, canvasHeight);
+	// Diff table (F5): label + list under the preview pane.
+	const int tableTop = previewTop + previewTotal + (previewTotal > 0 ? kFormRowGap : 0);
+	if (m_stTableLabel.GetSafeHwnd() != nullptr && m_wndTable.GetSafeHwnd() != nullptr)
+	{
+		m_stTableLabel.MoveWindow(listLeft, tableTop, listWidth, kFormControlHeight);
+		m_wndTable.MoveWindow(listLeft, tableTop + kFormControlHeight + kFormRowGap,
+			listWidth, (std::max)(0, tableTotal - kFormControlHeight - kFormRowGap));
+		const int tableShow = tableTotal > 0 ? SW_SHOW : SW_HIDE;
+		m_stTableLabel.ShowWindow(tableShow);
+		m_wndTable.ShowWindow(tableShow);
+	}
 	UpdateZoomControls();
 }
 
@@ -580,6 +630,15 @@ void CFormCompareView::UpdateResources()
 	m_btnSpotGoto.SetWindowText(_("Go to changed area").c_str());
 	if (m_bSpotlightVisible)
 		UpdateSpotlightBanner();
+	// Diff-table texts (F5).
+	m_stTableLabel.SetWindowText(_("Structured diff table").c_str());
+	if (m_wndTable.GetSafeHwnd() != nullptr)
+	{
+		while (m_wndTable.DeleteColumn(0))
+			;
+		SetupTableColumns();
+	}
+	RefreshTableLabel();
 	// Column headers (delete + re-insert keeps the order).
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
@@ -800,6 +859,7 @@ void CFormCompareView::OnRerun()
 	// spotlight state (and the borrowed record pointer in the
 	// canvas) is dropped first.
 	m_spotlightByFile.clear();
+	m_expandedTableGroups.clear();
 	HideSpotlightBanner();
 	CWaitCursor wait;
 	pDoc->RunAnalysis();
@@ -871,6 +931,7 @@ void CFormCompareView::RefreshCanvas()
 	m_stPreviewLabel.SetWindowText(label.c_str());
 	UpdateZoomControls();
 	ApplySpotlight();
+	RefreshTable();
 }
 
 void CFormCompareView::UpdateZoomControls()
@@ -982,6 +1043,7 @@ void CFormCompareView::FocusDiffRecord(int recordIndex)
 	UpdateSpotlightBanner();
 	LayoutControls();
 	m_wndCanvas.ScrollToShapeKey(state.shapeKey);
+	EnsureTableRowVisible(state.recordIndex);
 }
 
 void CFormCompareView::ApplySpotlight()
@@ -1150,4 +1212,246 @@ void CFormCompareView::OnHScroll(UINT /*nCode*/, UINT /*nPos*/, CScrollBar* pScr
 		return;
 	}
 	CView::OnHScroll(0, 0, pScrollBar);
+}
+
+int CFormCompareView::GetSelectedResultIndex() const
+{
+	CFormCompareDoc* pDoc = GetDocument();
+	if (pDoc == nullptr)
+		return -1;
+	const int selected = GetSelectedVisibleIndex();
+	if (selected < 0)
+		return -1;
+	const std::vector<size_t>& visible = pDoc->GetVisibleIndices();
+	if (selected >= static_cast<int>(visible.size()))
+		return -1;
+	return static_cast<int>(visible[static_cast<size_t>(selected)]);
+}
+
+void CFormCompareView::SetupTableColumns()
+{
+	// Literal _() calls (FileListBar precedent); the column order
+	// is the HTML tool's (design section 2.9).
+	m_wndTable.InsertColumn(0, _("Change type").c_str(), LVCFMT_LEFT, kFormTableColType);
+	m_wndTable.InsertColumn(1, _("Element / attribute").c_str(), LVCFMT_LEFT, kFormTableColElement);
+	m_wndTable.InsertColumn(2, _("Old value -> New value").c_str(), LVCFMT_LEFT, kFormTableColValue);
+	m_wndTable.InsertColumn(3, _("Change description & impact analysis").c_str(), LVCFMT_LEFT, kFormTableColDesc);
+}
+
+void CFormCompareView::RefreshTable()
+{
+	if (m_wndTable.GetSafeHwnd() == nullptr)
+		return;
+	m_bSyncingTable = true;
+	m_wndTable.SetRedraw(FALSE);
+	m_wndTable.DeleteAllItems();
+	m_tableRows.clear();
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult != nullptr)
+	{
+		static const std::vector<Merge20FormDiffGroup> emptyGroups;
+		const std::vector<Merge20FormDiffGroup>* pGroups = &emptyGroups;
+		CFormCompareDoc* pDoc = GetDocument();
+		const int resultIndex = GetSelectedResultIndex();
+		if (pDoc != nullptr && resultIndex >= 0 &&
+			resultIndex < static_cast<int>(pDoc->GetGroups().size()))
+			pGroups = &pDoc->GetGroups()[static_cast<size_t>(resultIndex)];
+		const std::set<std::wstring>& expanded = m_expandedTableGroups[pResult->fileName];
+		m_tableRows = Merge20BuildFormDiffTableRows(*pResult, *pGroups, expanded);
+		int row = 0;
+		for (const Merge20FormTableRow& tableRow : m_tableRows)
+		{
+			const int item = m_wndTable.InsertItem(row, tableRow.typeText.c_str());
+			if (item < 0)
+				continue;
+			m_wndTable.SetItemText(item, 1, tableRow.elementText.c_str());
+			m_wndTable.SetItemText(item, 2, tableRow.valueText.c_str());
+			m_wndTable.SetItemText(item, 3, tableRow.descText.c_str());
+			++row;
+		}
+	}
+	m_wndTable.SetRedraw(TRUE);
+	m_bSyncingTable = false;
+	RefreshTableLabel();
+	// Keep the spotlighted record selected in the table when its
+	// row is visible (a collapsed group stays collapsed here;
+	// FocusDiffRecord expands it through EnsureTableRowVisible).
+	if (pResult != nullptr)
+	{
+		const std::map<std::wstring, Merge20FormSpotlightState>::const_iterator spotIt =
+			m_spotlightByFile.find(pResult->fileName);
+		if (spotIt != m_spotlightByFile.end() && Merge20FormSpotlightIsActive(spotIt->second))
+		{
+			const int spotRow = FindTableRowForRecord(spotIt->second.recordIndex);
+			if (spotRow >= 0)
+			{
+				m_bSyncingTable = true;
+				m_wndTable.SetItemState(spotRow, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+				m_wndTable.EnsureVisible(spotRow, FALSE);
+				m_bSyncingTable = false;
+			}
+		}
+	}
+}
+
+void CFormCompareView::RefreshTableLabel()
+{
+	if (m_stTableLabel.GetSafeHwnd() == nullptr)
+		return;
+	String label = _("Structured diff table");
+	CFormCompareDoc* pDoc = GetDocument();
+	const int resultIndex = GetSelectedResultIndex();
+	if (pDoc != nullptr && resultIndex >= 0)
+	{
+		// Ignored-noise count (design sections 5.2 and 7.2).
+		const int ignored = pDoc->GetIgnoredNoiseCount(static_cast<size_t>(resultIndex));
+		if (ignored > 0)
+		{
+			label += _T(" (") + _("Minor differences ignored") + _T(": ") +
+				std::to_wstring(ignored) + _T("\u4ef6)");
+		}
+	}
+	m_stTableLabel.SetWindowText(label.c_str());
+}
+
+int CFormCompareView::FindTableRowForRecord(int recordIndex) const
+{
+	for (size_t i = 0; i < m_tableRows.size(); ++i)
+	{
+		if (!m_tableRows[i].isGroup && m_tableRows[i].recordIndex == recordIndex)
+			return static_cast<int>(i);
+	}
+	return -1;
+}
+
+void CFormCompareView::EnsureTableRowVisible(int recordIndex)
+{
+	const Merge20FormFileResult* pResult = GetSelectedResult();
+	if (pResult == nullptr || m_wndTable.GetSafeHwnd() == nullptr ||
+		recordIndex < 0 || recordIndex >= static_cast<int>(pResult->diffRecords.size()))
+		return;
+	const int row = FindTableRowForRecord(recordIndex);
+	if (row < 0)
+	{
+		// Inside a collapsed group: expand it and rebuild once
+		// (RefreshTable's spotlight sync then selects the row).
+		const std::wstring& groupId =
+			pResult->diffRecords[static_cast<size_t>(recordIndex)].groupId;
+		if (groupId.empty())
+			return;
+		m_expandedTableGroups[pResult->fileName].insert(groupId);
+		RefreshTable();
+		return;
+	}
+	m_bSyncingTable = true;
+	m_wndTable.SetItemState(row, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+	m_wndTable.EnsureVisible(row, FALSE);
+	m_bSyncingTable = false;
+}
+
+void CFormCompareView::OnTableItemChanged(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	if (m_bSyncingTable)
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	const NMLISTVIEW* pInfo = reinterpret_cast<NMLISTVIEW*>(pNMHDR);
+	if ((pInfo->uChanged & LVIF_STATE) == 0 ||
+		(pInfo->uNewState & LVIS_SELECTED) == 0)
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	const int item = pInfo->iItem;
+	if (item < 0 || item >= static_cast<int>(m_tableRows.size()))
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	// Group rows are handled by OnTableClick (a click on the
+	// already-selected group row fires no LVN_ITEMCHANGED).
+	const Merge20FormTableRow tableRow = m_tableRows[static_cast<size_t>(item)];
+	if (tableRow.isGroup || tableRow.recordIndex < 0)
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	const Merge20FormFileResult* pFileResult = GetSelectedResult();
+	if (pFileResult == nullptr ||
+		tableRow.recordIndex >= static_cast<int>(pFileResult->diffRecords.size()))
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	// A record row click spotlights it when it has a visual;
+	// records without one (file add/delete, XML error, an element
+	// without a shape) are shown but never spotlighted (design
+	// section 2.9).
+	if (pFileResult->diffRecords[static_cast<size_t>(tableRow.recordIndex)].hasVisual)
+		FocusDiffRecord(tableRow.recordIndex);
+	if (pResult != nullptr)
+		*pResult = 0;
+}
+
+void CFormCompareView::OnTableClick(NMHDR* /*pNMHDR*/, LRESULT* pResult)
+{
+	if (m_wndTable.GetSafeHwnd() == nullptr)
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	CPoint point;
+	::GetCursorPos(&point);
+	m_wndTable.ScreenToClient(&point);
+	const int item = m_wndTable.HitTest(point);
+	if (item < 0 || item >= static_cast<int>(m_tableRows.size()))
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	const Merge20FormTableRow tableRow = m_tableRows[static_cast<size_t>(item)];
+	if (!tableRow.isGroup)
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	const Merge20FormFileResult* pFileResult = GetSelectedResult();
+	if (pFileResult == nullptr)
+	{
+		if (pResult != nullptr)
+			*pResult = 0;
+		return;
+	}
+	// A group row click expands / collapses the group (a
+	// selection change alone cannot do this: clicking the
+	// already-selected group row fires no LVN_ITEMCHANGED).
+	std::set<std::wstring>& expanded = m_expandedTableGroups[pFileResult->fileName];
+	if (tableRow.expanded)
+		expanded.erase(tableRow.groupId);
+	else
+		expanded.insert(tableRow.groupId);
+	RefreshTable();
+	// Keep the group row selected after the rebuild.
+	for (size_t i = 0; i < m_tableRows.size(); ++i)
+	{
+		if (m_tableRows[i].isGroup && m_tableRows[i].groupId == tableRow.groupId)
+		{
+			m_bSyncingTable = true;
+			m_wndTable.SetItemState(static_cast<int>(i), LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+			m_wndTable.EnsureVisible(static_cast<int>(i), FALSE);
+			m_bSyncingTable = false;
+			break;
+		}
+	}
+	if (pResult != nullptr)
+		*pResult = 0;
 }

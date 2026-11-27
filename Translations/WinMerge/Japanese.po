@@ -12081,6 +12081,36 @@ msgstr "変更詳細"
 msgid "No shape"
 msgstr "図形なし"
 
+#. Merge20 (Wave 5 F5): diff table label (design section 2.9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Structured diff table"
+msgstr "構造化差分テーブル"
+
+#. Merge20 (Wave 5 F5): diff table column, change type (design section 2.9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Change type"
+msgstr "種別"
+
+#. Merge20 (Wave 5 F5): diff table column, element / attribute (design section 2.9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Element / attribute"
+msgstr "対象要素／属性"
+
+#. Merge20 (Wave 5 F5): diff table column, old value -> new value (design section 2.9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Old value -> New value"
+msgstr "旧値→新値"
+
+#. Merge20 (Wave 5 F5): diff table column, change description & impact analysis (design section 2.9)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Change description & impact analysis"
+msgstr "考えうる変更内容＆及ぼす影響分析"
+
+#. Merge20 (Wave 5 F5): diff table label suffix, ignored-noise count (design sections 5.2 and 7.2)
+#: Src/Merge20/Merge20FormCompareView.cpp
+msgid "Minor differences ignored"
+msgstr "微小差を無視"
+
 #. Merge20 (UI U2): title-bar progress (CMainFrame::OnUpdateFrameTitle)
 #: Src/MainFrm.cpp
 msgid "WizMerge - %1 unreviewed - %2"

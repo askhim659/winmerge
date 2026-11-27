@@ -862,6 +862,45 @@ namespace
 		}
 	}
 
+	// Re-key the result shapes to the stable keys (design section
+	// 4.1: a shape key is the element's stable key). F0 leaves the
+	// HTML key (`tag[name='...']`) on the shapes; the records, the
+	// changed-shape list, the canvas and the spotlight all address
+	// elements by the stable key, so without this step every shape
+	// lookup by record key misses: the canvas never highlights a
+	// changed shape, the shape click never finds its record, and
+	// the spotlight never scrolls and shows no old/new preview
+	// (found while wiring the F5 table rows to FocusDiffRecord).
+	// Runs last, on the result copies only: the work's own maps
+	// still use the F0 keys. Old and new sides get separate maps:
+	// the same HTML key can sit at different structural paths on
+	// the two sides (a moved element), so one shared map would
+	// hand the old shape the new side's key.
+	void ReKeyShapes(FormDiffWork& work)
+	{
+		Merge20FormFileResult& result = work.outcome.result;
+		std::unordered_map<std::wstring, std::wstring> oldStableByHtmlKey;
+		for (size_t i = 0; i < work.oldParsed.elements.size(); ++i)
+			oldStableByHtmlKey[work.oldParsed.elements[i].key] = work.oldKeys[i];
+		std::unordered_map<std::wstring, std::wstring> newStableByHtmlKey;
+		for (size_t i = 0; i < work.newParsed.elements.size(); ++i)
+			newStableByHtmlKey[work.newParsed.elements[i].key] = work.newKeys[i];
+		for (Merge20FormShape& shape : result.oldShapes)
+		{
+			const std::unordered_map<std::wstring, std::wstring>::const_iterator it =
+				oldStableByHtmlKey.find(shape.key);
+			if (it != oldStableByHtmlKey.end())
+				shape.key = it->second;
+		}
+		for (Merge20FormShape& shape : result.newShapes)
+		{
+			const std::unordered_map<std::wstring, std::wstring>::const_iterator it =
+				newStableByHtmlKey.find(shape.key);
+			if (it != newStableByHtmlKey.end())
+				shape.key = it->second;
+		}
+	}
+
 	// Counts, totals, tendency, canvas size, summary and severity
 	// for one finished file result.
 	void FinishOutcome(FormDiffWork& work, const std::wstring& tendency)
@@ -938,6 +977,7 @@ namespace
 		}
 		result.oldShapes = allOld;
 		result.newShapes = allNew;
+		ReKeyShapes(work);
 		result.tendency = tendency;
 		// A file-level record (file added / deleted, XML error)
 		// summarises as its tendency text.

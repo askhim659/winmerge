@@ -458,6 +458,8 @@
     <ClCompile Include="..\..\..\Src\Merge20\Merge20FormList.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20FormCanvasGeom.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20FormSpotlight.cpp" />
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20FormImpact.cpp" />
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20FormTable.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20CloseWarn.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Summary.cpp" />
     <ClCompile Include="..\..\..\Src\Merge20\Merge20HighRiskRemain.cpp" />
@@ -800,6 +802,16 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20FormImpact_test.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20FormTable_test.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
     <ClCompile Include="..\Merge20\Merge20CloseWarn_test.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
@@ -1055,6 +1067,8 @@
     <ClInclude Include="..\..\..\Src\Merge20\Merge20FormList.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20FormCanvasGeom.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20FormSpotlight.h" />
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20FormImpact.h" />
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20FormTable.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20CloseWarn.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Summary.h" />
     <ClInclude Include="..\..\..\Src\Merge20\Merge20HighRiskRemain.h" />
