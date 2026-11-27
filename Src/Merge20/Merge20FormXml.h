@@ -63,6 +63,7 @@ struct Merge20FormShape
 	double x2 = 0.0; /**< Right coordinate (estimated when absent, see isEstimated). */
 	double y2 = 0.0; /**< Bottom coordinate (estimated when absent). */
 	double point = 10.0; /**< Font size (`point` / `fontsize` attribute, 10 when absent). */
+	std::wstring fontName; /**< Font name (`fontname` / `font` attribute, empty when absent; F3 text drawing, design section 6 (6)). */
 	bool isLine = false; /**< True when the tag name contains `line` (case-insensitive). */
 	std::wstring text; /**< Element text content (for the F3 text drawing). */
 	bool isEstimated = false; /**< True when x2 and/or y2 was estimated (design section 4.1). Estimated shapes are excluded from the F5 impact analysis. */
@@ -162,3 +163,4 @@ Merge20FormParseResult Merge20ParseFormXml(const std::wstring& xml);
  * point is always `.`).
  */
 bool Merge20FormParseNumber(const std::wstring& text, double& value);
+

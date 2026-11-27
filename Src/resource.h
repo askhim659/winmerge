@@ -913,12 +913,20 @@
 #define IDC_MERGE20_FORM_NAV                1855
 #define IDC_MERGE20_FORM_LIST               1856
 #define IDC_MERGE20_FORM_EMPTY              1857
-#define IDC_MERGE20_SUMMARY_COUNTS          1858
-#define IDC_MERGE20_SUMMARY_SUBCOUNTS       1859
-#define IDC_MERGE20_SUMMARY_WARNING         1860
-#define IDC_MERGE20_SUMMARY_LIST            1861
-#define IDC_MERGE20_SUMMARY_TODO_ONLY       1862
-#define IDC_MERGE20_SUMMARY_CONFIRM         1863
+#define IDC_MERGE20_FORM_CANVAS             1858
+#define IDC_MERGE20_FORM_PREVIEW_LABEL      1859
+#define IDC_MERGE20_FORM_ZOOM_100           1860
+#define IDC_MERGE20_FORM_ZOOM_25            1861
+#define IDC_MERGE20_FORM_ZOOM_FIT           1862
+#define IDC_MERGE20_FORM_ZOOM_SLIDER        1863
+#define IDC_MERGE20_FORM_ZOOM_LABEL         1864
+#define IDC_MERGE20_FORM_VIEWPORT_TOGGLE    1865
+#define IDC_MERGE20_SUMMARY_COUNTS          1866
+#define IDC_MERGE20_SUMMARY_SUBCOUNTS       1867
+#define IDC_MERGE20_SUMMARY_WARNING         1868
+#define IDC_MERGE20_SUMMARY_LIST            1869
+#define IDC_MERGE20_SUMMARY_TODO_ONLY       1870
+#define IDC_MERGE20_SUMMARY_CONFIRM         1871
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2668,16 +2676,18 @@
 // H-DOC consumes command 38969 (user manual menu item).
 // B1 consumes commands 38970-38975 (per-diff conclusion menu items).
 // F2 consumes command 38976 (FORM compare launch) and controls 1837-1857 (FORM compare view).
+// F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
+// zoom slider, zoom label, viewport height toggle).
+// B9 consumes dialog 301, controls 1866-1871 and command 38979 (end-of-session summary dialog).
 // U1 consumes command 38978 (brand header toggle).
-// B9 consumes dialog 301, controls 1858-1863 and command 38979 (end-of-session summary dialog).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 303 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 301 is the B9 summary
 //   dialog, 302 (IDI_ROTATE2), 307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1864 (_APS_NEXT_CONTROL_VALUE), free
-//   contiguously up to 8602 (the next IDC_* is 8603). B9 takes 1858-1863.
+// - controls (IDC_*): from 1872 (_APS_NEXT_CONTROL_VALUE), free
+//   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2696,7 +2706,9 @@
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        303
 #define _APS_NEXT_COMMAND_VALUE         38980
-#define _APS_NEXT_CONTROL_VALUE         1864
+#define _APS_NEXT_CONTROL_VALUE         1872
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
+
+

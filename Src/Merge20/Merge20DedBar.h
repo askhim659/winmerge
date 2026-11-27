@@ -18,6 +18,14 @@
  * clicks are forwarded as WM_COMMAND (ID_MERGE20_DED_*) to the parent
  * frame, which applies them and refreshes the button states through
  * the setters below.
+ *
+ * U5 (UI redesign, design sections 2.1 and 4/U5) owner-draws the
+ * buttons (BS_OWNERDRAW + DrawItem) with the WizMerge accent
+ * (Merge20Theme): the five review buttons become coloured pills
+ * (HTML .ded-rev colours), the exit button an accent fill, and the
+ * bar background the HTML .ded-bar gradient with a 2px accent
+ * underline. Layout, widths, commands and toggle behaviour are
+ * unchanged (D2).
  */
 #pragma once
 
@@ -70,11 +78,21 @@ public:
 	afx_msg void OnWindowPosChanged(WINDOWPOS* lpwndpos);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnButtonClicked(UINT nID);
+	afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
+	afx_msg void OnPaint();
+	afx_msg HBRUSH OnCtlColor(CDC* pDC, CWnd* pWnd, UINT nCtlColor);
+	afx_msg void OnSysColorChange();
+	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 private:
 	void LayoutButtons();
+	/** @brief Owner-draw one bar button (U5): coloured review pill,
+	 * accent exit button, or flat button with an accent fill when
+	 * its toggle is checked. The button state comes from
+	 * lpDrawItemStruct->itemState (ODS_CHECKED for the toggles). */
+	void DrawDedButton(LPDRAWITEMSTRUCT lpDrawItemStruct);
 
 	HWND m_hwndFrame; //*< Frame window handle */
 	// File-info label, first in the bar (spec section 5.2, D3): the

@@ -50,6 +50,12 @@
  * LoadState). Slim is a toggle button in the button row: file
  * name + review state only (design section 12.4), the search /
  * filter / batch rows folding away with it.
+ *
+ * U5 (UI redesign, design sections 2.1 and 4/U5) adds the WizMerge
+ * accent: a 2px accent underline under the count, search and
+ * filter-tab rows, and owner-drawn filter tabs (HTML .pill.on:
+ * only the selected tab gets an accent border + opaque tinted
+ * fill). Columns, rows, buttons and their IDs are unchanged.
  */
 #pragma once
 
@@ -133,6 +139,10 @@ public:
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnWindowPosChanged(WINDOWPOS* lpwndpos);
+	afx_msg void OnDrawItem(int nIDCtl, LPDRAWITEMSTRUCT lpDrawItemStruct);
+	afx_msg void OnPaint();
+	afx_msg void OnSysColorChange();
+	afx_msg void OnSettingChange(UINT uFlags, LPCTSTR lpszSection);
 	afx_msg void OnSearchChanged();
 	afx_msg void OnFilterTabChanged(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnMerge20BatchCheck();
@@ -192,6 +202,10 @@ private:
 	 * folded-away top rows (LayoutChildren). Used by SetSlim
 	 * and by RestorePanelState. */
 	void ApplySlimState(bool slim);
+	/** @brief Owner-draw one filter tab (U5, HTML .pill.on):
+	 * the selected tab gets an accent border + opaque tinted
+	 * fill, unselected tabs a muted outline and muted text. */
+	void DrawFilterTab(LPDRAWITEMSTRUCT lpDrawItemStruct);
 
 	HWND m_hwndFrame; //*< Frame window handle */
 	CDirDoc* m_pDirDoc; /**< Folder document (owned by the folder compare, not by this bar) */
@@ -207,6 +221,12 @@ private:
 	CStatic m_stCount; /**< Count line (P1, P-R6): "N displayed, M checked, K unreviewed" */
 	CMerge20FileListCtrl m_wndList; /**< Virtual file list */
 	CStatic m_stEmpty; /**< Empty state: "No folder comparison" */
+	/** @brief U5: row rects whose bottom 2px carry the accent
+	 * underline (OnPaint). Set by LayoutChildren; empty while
+	 * the row is hidden (slim mode, or no folder document). */
+	CRect m_rcSearchRow;
+	CRect m_rcTabsRow;
+	CRect m_rcCountRow;
 	String m_sCurrentRelPath; /**< P3: relative path of the file the compare window shows (panel selection follows it) */
 	String m_sPendingOpenRelPath; /**< P3: relative path stashed by OpenRowFile for the frame's open message */
 };
