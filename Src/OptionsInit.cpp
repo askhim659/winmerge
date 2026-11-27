@@ -280,6 +280,8 @@ void Init(COptionsMgr *pOptions)
 	// Merge20 (Panel P0): the file-list panel starts shown when
 	// there is a folder compare to list (frame OnCreate decides).
 	pOptions->InitOption(OPT_MERGE20_FILELIST_VISIBLE, true);
+	// Merge20 (UI U1): the brand header starts shown.
+	pOptions->InitOption(OPT_MERGE20_BRAND_HEADER, true);
 	// Merge20 (Panel P4): the panel state restored by the frame
 	// (design section 12.7). Search empty, tab 0 = all categories
 	// (range 0-7: all + seven action categories), no folded

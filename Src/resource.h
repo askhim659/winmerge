@@ -1905,6 +1905,7 @@
 #define ID_MERGE20_CONCLUSION_KEEP      38975
 #define ID_MERGE20_FORM_COMPARE         38976
 #define IDS_SPLASH_GPLTEXT              38977
+#define ID_VIEW_MERGE20_BRAND_HEADER   38978
 #define IDS_MESSAGEBOX_OK               39001
 #define IDS_MESSAGEBOX_CANCEL           39002
 #define IDS_MESSAGEBOX_ABORT            39003
@@ -2669,6 +2670,7 @@
 // F2 consumes command 38976 (FORM compare launch) and controls 1837-1857 (FORM compare view).
 // F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
 // zoom slider, zoom label, viewport height toggle).
+// U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 300 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 302 (IDI_ROTATE2), 307
@@ -2682,8 +2684,9 @@
 //   diffs-only and slim commands; 38968 is the H-FILTER deck toggle;
 //   38969 is the H-DOC user manual command;
 //   38970-38975 are the B1 conclusion commands; 38976 is the F2 FORM compare command;
-//   _APS_NEXT_COMMAND_VALUE is now 38978), free from 38978
-//   (38977 is IDS_SPLASH_GPLTEXT).
+//   38978 is the U1 brand header toggle;
+//   _APS_NEXT_COMMAND_VALUE is now 38979), free from 38979
+//   (38977 is IDS_SPLASH_GPLTEXT: not usable as a command ID).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
 // Next default values for new objects
@@ -2692,9 +2695,10 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        301
-#define _APS_NEXT_COMMAND_VALUE         38978
+#define _APS_NEXT_COMMAND_VALUE         38979
 #define _APS_NEXT_CONTROL_VALUE         1866
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
+
 

@@ -492,6 +492,7 @@ BEGIN
         MENUITEM "Men&u Bar",                   ID_VIEW_MENU_BAR
         MENUITEM "&Output Pane",                ID_VIEW_OUTPUT_BAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM "Brand Header",                ID_VIEW_MERGE20_BRAND_HEADER
     END
     POPUP "&Tools"
     BEGIN
@@ -647,6 +648,7 @@ BEGIN
         MENUITEM "Filter Deck",                 ID_VIEW_MERGE20_FILTER_DECK
         MENUITEM "&Output Pane",                ID_VIEW_OUTPUT_BAR
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM "Brand Header",                ID_VIEW_MERGE20_BRAND_HEADER
         MENUITEM SEPARATOR
         MENUITEM "Com&pare Statistics...",      ID_VIEW_DIR_STATISTICS
         MENUITEM SEPARATOR
@@ -898,6 +900,7 @@ BEGIN
         MENUITEM "Men&u Bar",                   ID_VIEW_MENU_BAR
         MENUITEM "Displa&y Filter Bar\tCtrl+Shift+L", ID_VIEW_DISPLAY_FILTER_BAR_MENU
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM "Brand Header",                ID_VIEW_MERGE20_BRAND_HEADER
         MENUITEM "Diff &Pane",                  ID_VIEW_DETAIL_BAR
         MENUITEM "Lo&cation Pane",              ID_VIEW_LOCATION_BAR
         MENUITEM "Merge Result Pane",           ID_VIEW_MERGE_RESULT_BAR

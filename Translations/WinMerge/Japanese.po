@@ -12017,6 +12017,16 @@ msgstr "枠高さ：640pxに固定"
 #: Src/Merge20/Merge20FormCanvas.cpp
 msgid "Font is shown approximately."
 msgstr "フォントは近似表示です"
+#. Merge20 (UI U1): brand header menu item (Merge.rc) and bar caption (Merge20BrandBar.cpp)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20BrandBar.cpp
+msgid "Brand Header"
+msgstr "【Wiz】ブランドヘッダ"
 
-||||||| base/Translations_WinMerge_Japanese.po
+#. Merge20 (UI U1): file-compare state text on the brand header (Merge20BrandBar.cpp)
+#: Src/Merge20/Merge20BrandBar.cpp
+msgid "File Compare"
+msgstr "ファイル比較"
+
+
 

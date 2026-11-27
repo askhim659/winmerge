@@ -211,9 +211,11 @@ public:
 	// CDirDoc::Merge20UpdateDirViewItem / Merge20UpdateDirViewStatus
 	// after panel-initiated state changes (P-R8), so the count
 	// follows panel changes at once (the P2 known limitation).
-	// Public like UpdateDiffItemStatus above; the text itself stays
-	// private (GetMerge20StatusCountText).
+	// Public like UpdateDiffItemStatus above. UI U1 makes the text
+	// itself public too (GetMerge20StatusCountText, below): the brand
+	// header shows the same count on its right end.
 	void UpdateMerge20StatusCount();
+	String GetMerge20StatusCountText();
 private:
 	void InitiateSort();
 	void NameColumn(const DirColInfo *col, int subitem);
@@ -534,7 +536,6 @@ private:
 	void HeaderContextMenu(CPoint point, int i);
 	void ListContextMenu(CPoint point, int i);
 	// Merge20 (S3): batch check, per-directory check/uncheck, status count
-	String GetMerge20StatusCountText();
 	void Merge20CountDisplayedByReviewState(int counts[5]);
 	// Merge20 (Phase 4 D3): patrol targets over the displayed rows
 	// (true = file in the patrol set), and the Up/Down-key patrol move.

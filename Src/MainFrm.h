@@ -18,6 +18,7 @@
 #include "MenuBar.h"
 #include "MDITabBar.h"
 #include "OutputBar.h"
+#include "Merge20/Merge20BrandBar.h"
 #include "BasicFlatStatusBar.h"
 #include "PathContext.h"
 #include "OptionsDef.h"
@@ -260,6 +261,7 @@ public:
 	virtual BOOL PreTranslateMessage(MSG* pMsg);
 	virtual void OnUpdateFrameTitle(BOOL bAddToTitle);
 	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
+	virtual BOOL OnBarCheck(UINT nID);
 	//}}AFX_VIRTUAL
 
 // Implementation methods
@@ -278,6 +280,7 @@ protected:
 	CMenuBar m_wndMenuBar;
 	CToolBar m_wndToolBar;
 	CMDITabBar m_wndTabBar;
+	CMerge20BrandBar m_wndBrandBar; /**< WizMerge brand header (UI U1) */
 	COutputBar m_wndOutputBar;
 	CWindowsManager m_wndManager;
 	Poco::Channel::Ptr m_pLogChannel;
