@@ -417,6 +417,10 @@ public:
 	void Merge20SetDiffConclusionRestored(int nDiff, Merge20DiffConclusion conclusion);
 	/** @brief Merge20 (best-workflow B10): apply one conclusion undo / redo step. Rewrites the result segment for the target conclusion (or leaves it untouched for Keep), stores it without any learning record, and restores the file's review state and output checkbox through the folder doc's raw setters. Returns Stale when the diff is gone, no longer significant, no longer holds the expected conclusion, or its identity (op / first / last real lines) moved on; the caller (CDirDoc) drops such an entry. */
 	Merge20UndoApplyResult Merge20ApplyConclusionUndo(const Merge20UndoEntry& entry, bool bUndo);
+	/** @brief Merge20 (best-workflow B10 PR2): apply one split / regroup undo / redo step. The direction follows the entry kind: undoing a split regroups it (and redoing one splits it again); undoing a regroup splits it again (and redoing one regroups it again). Both directions call the same Merge20SplitDiff / Merge20RegroupDiff the menus call, with recording suppressed, so the result pane is rebuilt exactly as the manual operation rebuilds it. Returns Stale when the group / parent can no longer be found by its identity, when a row was re-judged since the operation (the entry is dropped instead of discarding that row's judgment), or when the result has hand-edited lines; TargetNotOpen is never returned here (the caller checks the doc is open). */
+	Merge20UndoApplyResult Merge20ApplySplitUndo(const Merge20UndoEntry& entry, bool bUndo);
+	/** @brief Merge20 (best-workflow B10 PR2): apply one learning accept / dismiss undo / redo step. Undoing an acceptance puts the diff back to its undecided display, restores the stored conclusion and file state, and recomputes the candidates so the candidate shows again; redoing one re-applies the stored source panes. Undoing a dismissal drops the diff identity from the dismissed set and recomputes the candidates; redoing one dismisses it again. Neither direction records learning or rewrites the learning JSON: the acceptance's +1 record stays in the store as a past judgment. Returns Stale when the diff is gone, no longer significant, no longer holds the expected conclusion / file state, or its identity moved on; TargetNotOpen is never returned here (the caller checks the doc is open). */
+	Merge20UndoApplyResult Merge20ApplyLearnUndo(const Merge20UndoEntry& entry, bool bUndo);
 	/** @brief Merge20 (best-workflow B10): undo the newest judgment of this folder compare (result pane context menu). Disabled without a folder doc or when there is nothing to undo. */
 	void OnMerge20UndoJudgment();
 	void OnUpdateMerge20UndoJudgment(CCmdUI* pCmdUI);
@@ -432,10 +436,10 @@ public:
 	bool Merge20CanSplitDiff(int nDiff) const;
 	/** @brief Merge20 (Phase 4 D5): is this diff a row of a split group (so it can be regrouped)? */
 	bool Merge20CanRegroupDiff(int nDiff) const;
-	/** @brief Merge20 (Phase 4 D5): split one diff group into per-row hunks. The parent judgment (Chosen/Auto srcPanes) is carried to every row; the split itself is not recorded for learning (a split is not an explicit judgment). Refused (false) when the diff cannot be split or the result has hand-edited lines, which a rebuild would discard. */
-	bool Merge20SplitDiff(int nDiff);
-	/** @brief Merge20 (Phase 4 D5): regroup the split group containing this diff (from any of its rows). The first row's judgment is carried to the regrouped diff (HTML regroupHunk). Refused (false) when the diff is in no split group or the result has hand-edited lines. */
-	bool Merge20RegroupDiff(int nDiff);
+	/** @brief Merge20 (Phase 4 D5): split one diff group into per-row hunks. The parent judgment (Chosen/Auto srcPanes) is carried to every row; the split itself is not recorded for learning (a split is not an explicit judgment). Refused (false) when the diff cannot be split or the result has hand-edited lines, which a rebuild would discard. @param [in] bRecordUndo Record the operation as an undo step (best-workflow B10 PR2, menu commands only). The session restore calls this with false: a restore is not a judgment and its history is cleared anyway. */
+	bool Merge20SplitDiff(int nDiff, bool bRecordUndo = false);
+	/** @brief Merge20 (Phase 4 D5): regroup the split group containing this diff (from any of its rows). The first row's judgment is carried to the regrouped diff (HTML regroupHunk). Refused (false) when the diff is in no split group or the result has hand-edited lines. @param [in] bRecordUndo Record the operation as an undo step (best-workflow B10 PR2, menu commands only). */
+	bool Merge20RegroupDiff(int nDiff, bool bRecordUndo = false);
 	/** @brief Merge20 (Phase 4 D5): re-apply saved split groups to the current (fresh) diff list, locating each parent by its range identity. Used by the session restore before the saved per-row judgments are applied. @return Number of groups re-applied. */
 	int Merge20ReapplySplitGroups(const std::vector<Merge20SplitGroup>& groups);
 	/** @brief Merge20 (Phase 4 D5): split the targeted diffs (result pane context menu). */
