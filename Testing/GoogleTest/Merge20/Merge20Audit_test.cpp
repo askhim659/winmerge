@@ -72,14 +72,14 @@ void RemoveTempFile(const char* name)
 std::vector<Merge20AuditCsvRow> MakeCsvRows()
 {
 	return {
-		{ L"2026-11-28 00:21:00", L"src\\foo.cpp", L"ReviewState", L"TODO", L"DONE", L"u-1" },
-		{ L"2026-11-28 00:22:00", L"src\\a,\"b\".cpp", L"BatchCheck", L"OFF", L"ON", L"u-1" },
+		{ L"2026-11-28 00:21:00", L"src\\foo.cpp", L"ReviewState", L"TODO", L"DONE", L"u-1", L"include OFF->ON" },
+		{ L"2026-11-28 00:22:00", L"src\\a,\"b\".cpp", L"BatchCheck", L"OFF", L"ON", L"u-1", L"" },
 	};
 }
 
 std::vector<String> CsvHeaders()
 {
-	return { L"Date/time", L"File", L"Operation", L"Old value", L"New value", L"Operator" };
+	return { L"Date/time", L"File", L"Operation", L"Old value", L"New value", L"Operator", L"Note" };
 }
 
 TEST(Merge20Audit, EntryJsonRoundTrip)
@@ -281,7 +281,7 @@ TEST(Merge20Audit, CsvTextIsCrlfJoinedAndQuoted)
 	const String text = Merge20AuditBuildCsvText(MakeCsvRows(), CsvHeaders());
 	// Header first, then one CRLF-joined row per entry, no
 	// trailing line ending.
-	EXPECT_EQ(text.find(L"Date/time,File,Operation,Old value,New value,Operator"), 0u);
+	EXPECT_EQ(text.find(L"Date/time,File,Operation,Old value,New value,Operator,Note"), 0u);
 	// Every line ending is CRLF: no bare LF anywhere.
 	for (size_t i = 0; i < text.size(); ++i)
 	{
@@ -319,7 +319,7 @@ TEST(Merge20Audit, CsvFileStartsWithBom)
 	EXPECT_EQ(static_cast<unsigned char>(bytes[0]), 0xEFu);
 	EXPECT_EQ(static_cast<unsigned char>(bytes[1]), 0xBBu);
 	EXPECT_EQ(static_cast<unsigned char>(bytes[2]), 0xBFu);
-	EXPECT_NE(bytes.find("Date/time,File,Operation"), std::string::npos);
+	EXPECT_NE(bytes.find("Date/time,File,Operation,Old value,New value,Operator,Note"), std::string::npos);
 	EXPECT_NE(bytes.find("\r\n"), std::string::npos);
 	RemoveTempFile(name);
 }
