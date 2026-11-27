@@ -37,7 +37,7 @@ namespace
 	// Returns < 0 / 0 / > 0 like wcscmp.
 	int FormCompareFileName(const std::wstring& a, const std::wstring& b)
 	{
-		const size_t len = std::min(a.size(), b.size());
+		const size_t len = (std::min)(a.size(), b.size());
 		for (size_t i = 0; i < len; ++i)
 		{
 			const wchar_t ca = std::towlower(a[i]);
