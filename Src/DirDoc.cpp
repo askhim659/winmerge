@@ -25,6 +25,7 @@
 #include "DirView.h"
 #include "DirFrame.h"
 #include "MainFrm.h"
+#include "MergeDoc.h"
 #include "paths.h"
 #include "locality.h"
 #include "7zCommon.h"
@@ -669,11 +670,11 @@ bool CDirDoc::GetMerge20IncludeInOutput(const DIFFITEM& di) const
  * @param [in] di Difference item.
  * @param [in] include New output flag.
  */
-void CDirDoc::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
+void CDirDoc::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, bool bRecordUndo /*= true*/)
 {
 	if (m_pCtxt == nullptr)
 		return;
-	m_pCtxt->SetMerge20IncludeInOutput(di, include);
+	m_pCtxt->SetMerge20IncludeInOutput(di, include, bRecordUndo);
 }
 
 /**
@@ -681,11 +682,162 @@ void CDirDoc::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include)
  * @param [in] di Difference item.
  * @param [in] state New review state.
  */
-void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state)
+void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state, bool bRecordUndo /*= true*/)
 {
 	if (m_pCtxt == nullptr)
 		return;
-	m_pCtxt->ApplyMerge20ReviewState(di, state);
+	m_pCtxt->ApplyMerge20ReviewState(di, state, bRecordUndo);
+}
+
+/**
+ * @brief Merge20 (best-workflow B10): true when a judgment undo step is available.
+ */
+bool CDirDoc::Merge20CanUndo() const
+{
+	return m_pCtxt != nullptr && m_pCtxt->GetMerge20UndoStack().CanUndo();
+}
+
+/**
+ * @brief Merge20 (best-workflow B10): true when a judgment redo step is available.
+ */
+bool CDirDoc::Merge20CanRedo() const
+{
+	return m_pCtxt != nullptr && m_pCtxt->GetMerge20UndoStack().CanRedo();
+}
+
+/**
+ * @brief Merge20 (best-workflow B10): open merge doc showing one file of this compare.
+ * @param [in] relPath Relative path (DIFFITEM::getItemRelativePath()).
+ * @return The open CMergeDoc for the file, or nullptr when the file
+ *         is not open (a conclusion entry then waits: TargetNotOpen
+ *         leaves it on the stack so it can be retried after the
+ *         file is opened).
+ */
+CMergeDoc* CDirDoc::Merge20FindOpenMergeDoc(const String& relPath)
+{
+	if (m_pCtxt == nullptr)
+		return nullptr;
+	for (IMergeDoc* pOpenDoc : m_MergeDocs)
+	{
+		CMergeDoc* pMergeDoc = dynamic_cast<CMergeDoc*>(pOpenDoc);
+		if (pMergeDoc == nullptr)
+			continue;
+		DIFFITEM* pItem = Merge20FindItemForMergeDoc(*this, *pMergeDoc);
+		if (pItem != nullptr && pItem->getItemRelativePath() == relPath)
+			return pMergeDoc;
+	}
+	return nullptr;
+}
+
+/**
+ * @brief Merge20 (best-workflow B10): apply one undo / redo entry.
+ * @param [in] entry Entry to apply.
+ * @param [in] bUndo True to rewind (old values), false to re-apply (new values).
+ * @return Applied when the values were rewound / re-applied; Stale
+ *         when the file vanished or its current values no longer
+ *         match the entry (batch check, session restore, changed
+ *         file reset, or another path changed it since); TargetNotOpen
+ *         when a conclusion entry's file compare is not open.
+ *         Review / output changes use the raw setters (no linkage,
+ *         no recording); a conclusion goes through
+ *         CMergeDoc::Merge20ApplyConclusionUndo, which rewrites the
+ *         result segment without any learning record.
+ */
+Merge20UndoApplyResult CDirDoc::Merge20ApplyUndoEntry(const Merge20UndoEntry& entry, bool bUndo)
+{
+	if (m_pCtxt == nullptr)
+		return Merge20UndoApplyResult::Stale;
+	CDiffContext& ctxt = *m_pCtxt;
+	const DIFFITEM* pItem = nullptr;
+	for (DIFFITEM* pPos = ctxt.GetFirstDiffPosition(); pPos != nullptr;)
+	{
+		const DIFFITEM& di = ctxt.GetNextDiffPosition(pPos);
+		if (di.diffcode.isDirectory())
+			continue;
+		if (di.getItemRelativePath() == entry.relPath)
+		{
+			pItem = &di;
+			break;
+		}
+	}
+	if (pItem == nullptr)
+		return Merge20UndoApplyResult::Stale;
+	const ReviewState expectedReview = bUndo ? entry.newReview : entry.oldReview;
+	const bool bExpectedInclude = bUndo ? entry.newInclude : entry.oldInclude;
+	switch (entry.kind)
+	{
+	case Merge20UndoKind::ReviewState:
+		if (ctxt.GetMerge20ReviewState(entry.relPath) != expectedReview ||
+			ctxt.GetMerge20IncludeInOutput(*pItem) != bExpectedInclude)
+			return Merge20UndoApplyResult::Stale;
+		ctxt.SetMerge20ReviewState(entry.relPath, bUndo ? entry.oldReview : entry.newReview);
+		ctxt.SetMerge20IncludeInOutput(entry.relPath, bUndo ? entry.oldInclude : entry.newInclude);
+		Merge20UpdateDirViewItem(*pItem);
+		return Merge20UndoApplyResult::Applied;
+	case Merge20UndoKind::IncludeInOutput:
+		if (ctxt.GetMerge20IncludeInOutput(*pItem) != bExpectedInclude)
+			return Merge20UndoApplyResult::Stale;
+		ctxt.SetMerge20IncludeInOutput(entry.relPath, bUndo ? entry.oldInclude : entry.newInclude);
+		Merge20UpdateDirViewItem(*pItem);
+		return Merge20UndoApplyResult::Applied;
+	case Merge20UndoKind::DiffConclusion:
+	default:
+	{
+		CMergeDoc* pMergeDoc = Merge20FindOpenMergeDoc(entry.relPath);
+		if (pMergeDoc == nullptr)
+			return Merge20UndoApplyResult::TargetNotOpen;
+		return pMergeDoc->Merge20ApplyConclusionUndo(entry, bUndo);
+	}
+	}
+}
+
+/**
+ * @brief Merge20 (best-workflow B10): undo the newest judgment operation.
+ * @return Applied when rewound. A stale entry is dropped (never
+ *         offered as redo); a not-open conclusion entry is left in
+ *         place so it can be retried after the file is opened.
+ */
+Merge20UndoApplyResult CDirDoc::Merge20Undo()
+{
+	if (m_pCtxt == nullptr)
+		return Merge20UndoApplyResult::NothingToUndo;
+	Merge20UndoStack& stack = m_pCtxt->GetMerge20UndoStack();
+	const Merge20UndoEntry* pTop = stack.PeekUndo();
+	if (pTop == nullptr)
+		return Merge20UndoApplyResult::NothingToUndo;
+	const Merge20UndoEntry entry = *pTop;
+	const Merge20UndoApplyResult result = Merge20ApplyUndoEntry(entry, true);
+	if (result == Merge20UndoApplyResult::TargetNotOpen)
+		return result;
+	if (result == Merge20UndoApplyResult::Applied)
+		stack.PopUndoToRedo();
+	else
+		stack.DiscardUndoTop();
+	return result;
+}
+
+/**
+ * @brief Merge20 (best-workflow B10): redo the newest undone judgment operation.
+ * @return Applied when re-applied. A stale entry is dropped; a
+ *         not-open conclusion entry is left in place.
+ */
+Merge20UndoApplyResult CDirDoc::Merge20Redo()
+{
+	if (m_pCtxt == nullptr)
+		return Merge20UndoApplyResult::NothingToRedo;
+	Merge20UndoStack& stack = m_pCtxt->GetMerge20UndoStack();
+	const Merge20UndoEntry* pTop = stack.PeekRedo();
+	if (pTop == nullptr)
+		return Merge20UndoApplyResult::NothingToRedo;
+	const Merge20UndoEntry entry = *pTop;
+	const Merge20UndoApplyResult result = Merge20ApplyUndoEntry(entry, false);
+	if (result == Merge20UndoApplyResult::TargetNotOpen)
+		return result;
+	if (result == Merge20UndoApplyResult::Applied)
+		stack.PopRedoToUndo();
+	else
+		stack.DiscardRedoTop();
+	return result;
 }
 
 namespace
