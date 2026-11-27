@@ -19,10 +19,12 @@
  * height toggle (640 px fixed / full). F4 adds the spotlight
  * inspector banner under the zoom row (old/new side-by-side
  * previews, previous / next stepping, clear, go-to-changed-area)
- * and the public FocusDiffRecord hook the F5 diff table will
- * call when a row is clicked. The diff table (F5) replaces the
- * card list rows with card windows later; the document and the
- * list module stay the same.
+ * and the public FocusDiffRecord hook the F5 diff table calls
+ * when a row is clicked. F5 adds the structured diff table
+ * under the preview pane (design sections 2.9, 5.2, 5.3): the
+ * four HTML columns, group rows collapsed by default with
+ * expand on click, and row click -> spotlight for records with
+ * a visual. The document and the list module stay the same.
  *
  * The view never changes the document except through the
  * document's SetFilter / SetSearchText / SetSortOrder (which
@@ -34,10 +36,12 @@
 #pragma once
 
 #include <map>
+#include <set>
 #include "Merge20/Merge20FormCanvas.h"
 #include "Merge20/Merge20FormCompareDoc.h"
 #include "Merge20/Merge20FormList.h"
 #include "Merge20/Merge20FormSpotlight.h"
+#include "Merge20/Merge20FormTable.h"
 #include "Merge20/Merge20FormSpotPreview.h"
 
 class CFormCompareView : public CView
@@ -99,6 +103,8 @@ protected:
 	afx_msg void OnSpotGoto();
 	/** @brief Zoom slider (F3). */
 	afx_msg void OnHScroll(UINT nCode, UINT nPos, CScrollBar* pScrollBar);
+	/** @brief Diff table row clicked (F5). */
+	afx_msg void OnTableItemChanged(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -130,6 +136,18 @@ private:
 	void UpdateZoomControls();
 	/** @brief Selected file result, or nullptr when nothing is selected (F3). */
 	const Merge20FormFileResult* GetSelectedResult() const;
+	/** @brief Index of the selected file result, or -1 (F5). */
+	int GetSelectedResultIndex() const;
+	/** @brief Set up the four diff-table columns (F5). */
+	void SetupTableColumns();
+	/** @brief Rebuild the diff table of the selected file (F5). */
+	void RefreshTable();
+	/** @brief Update the diff-table label (F5; ignored-noise count). */
+	void RefreshTableLabel();
+	/** @brief Make the row of this record visible and selected (F5). */
+	void EnsureTableRowVisible(int recordIndex);
+	/** @brief Table row index of this record, or -1 (F5). */
+	int FindTableRowForRecord(int recordIndex) const;
 	/** @brief Select a visible position (list row + navigator row). */
 	void SelectVisibleIndex(int visibleIndex);
 	/** @brief Selected visible position, or -1 when nothing is selected. */
@@ -170,6 +188,13 @@ private:
 	CButton m_btnSpotClear; /**< Clear spotlight (F4). */
 	CButton m_btnSpotGoto; /**< Go to changed area (F4). */
 	bool m_bSpotlightVisible = false; /**< Spotlight banner shown (F4). */
+	CStatic m_stTableLabel; /**< Diff-table label (F5). */
+	CListCtrl m_wndTable; /**< Structured diff table (F5). */
+	/** @brief Current diff-table rows (F5; list index -> row). */
+	std::vector<Merge20FormTableRow> m_tableRows;
+	/** @brief Expanded diff-table groups per file card (F5). */
+	std::map<std::wstring, std::set<std::wstring>> m_expandedTableGroups;
+	bool m_bSyncingTable = false; /**< Diff-table rebuild/selection guard (F5). */
 	/** @brief Spotlight state per file card, keyed by file name (design section 2.7, F4). */
 	std::map<std::wstring, Merge20FormSpotlightState> m_spotlightByFile;
 	bool m_bNavVisible = true; /**< Navigator shown. */
