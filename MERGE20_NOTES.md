@@ -5618,3 +5618,36 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - F1〜F7：F1・F2 は各 1 サイクル、F3・F4・F5 は並行で各 1〜2 サイクル、F6・F7 は各 1 サイクル。過去のペースは 1 PR あたり約 50〜60 分＋CI 約 20〜30 分。
 - UI 見直しと 8 本の柱：設計スライス化が先行するため、規模が判明するのは優先修正と F1 の進行後。現時点の見込みとして、完全版の完成は **2026-12-02〜12-03 を維持できる見込みだが、UI 見直しと 8 本の柱の追加設計の規模次第で 12-04 まで延びる可能性あり**。優先修正入りの次ビルドは 2026-11-27〜11-28 を目指す。
 - 検証ゲート厳守：CI の緑バッジだけでなく成果物の中身まで確認する。実機未検証は明記する。見た目の確認とワークフロー全体の通し確認も検証対象に含める。
+
+## §52 パネル連携バグ修正（PR #45）— マージ・CI 検証済み（2026-11-27）
+
+### 52.1 原因（コード実読で確定）
+- `CMergeDoc` のコンストラクタは `m_pDirDoc(nullptr)` で初期化する（`Src/MergeDoc.cpp:183`）。
+- `GetMergeDocForDiff`（`Src/MainFrm.cpp`）は `pTemplate->OpenDocumentFile(nullptr, bMakeVisible)` を呼ぶ。MFC はこの中でドキュメントとフレームを生成するため、`CMergeEditFrame::OnCreateClient`／`OnCreate` はすべて `OpenDocumentFile` の内部で同期的に走る。
+- `CMergeDoc::SetDirDoc(pDirDoc)` が呼ばれるのは `OpenDocumentFile` が返った後（同関数内、`MainFrm.cpp` 約 2330 行目）。
+- したがって `OnCreateClient` の `if (CDirDoc* pDirDoc = ...GetDirDoc())`（`Src/MergeEditFrm.cpp:244`）は**常に偽**で、通知コールバックの登録と `m_wndFileListBar.SetDirDoc(pDirDoc)` は一度も実行されなかった。`RefreshFileListPanel()` もバーの DirDoc を設定しなかったため、バーの `m_pDirDoc` はフレームの生存期間ずっと `nullptr` のままで、`CMerge20FileListBar::Refresh()` は常に「フォルダ比較がありません」の分岐を取った。
+- 同じ理由で `OnCreate` の初期表示判定（`GetDirDoc() != nullptr`、約 443 行目）も常に偽で、パネルはトグル ON でも初期非表示になっていた（副次的な不具合として今回同時に修正）。
+- 開く経路は `CDirView::Open` → `DoFileOrFolderOpen` → `ShowTextOrTableMergeDoc` → `GetMergeDocForDiff` で一本化されており、フォルダのドラッグ＆ドロップも同じ経路を通る。**ドラッグ＆ドロップ固有ではない**ことを確認済み。
+
+### 52.2 変更一覧（ブランチ `merge20/panel-linkage-fix`、base master `54b369d1`。2 ファイル 2 コミット）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20FileListBar.h` | `a7b4d6b55f` | `GetDirDoc()` アクセサを 1 件追加（`SetDirDoc` の対） |
+| 2 | `Src/MergeEditFrm.cpp` | `a2df9cd7a0` | `RefreshFileListPanel()` で、初めて `GetDirDoc()` が非 nullptr になったときにバーの DirDoc を設定し、通知コールバック（HWND キー付き Add、従来と同じラムダ）を登録する。初期表示もここで補う（保存トグル ON の場合のみ表示し、ユーザーが隠したパネルは再表示しない。`Refresh()` は非表示時 no-op のため表示を先に行う）。フォルダ比較が外れた場合はバーの参照を `nullptr` に戻す（ダングリング防止）。`OnCreateClient` の実行されない attach ブロックは削除し、理由をコメントに残した。`DestroyWindow()` のコメントも登録場所に合わせて修正 |
+
+- 新規 UI 文字列なし。`.po`・`.rc`・ワークフロー・`MERGE20_NOTES.md` に変更なし。ローカルクローンは未使用（Git Database API のみ）。
+
+### 52.3 検証レポート（コーディネーター検証済み）
+- **PR #45**：open・mergeable=true・mergeable_state=clean、head `a2df9cd7a0`、base master。2 コミット、+60/−20、変更ファイル 2 件。
+- **CI（ブランチ head）**：実行 45928929476、completed／success。全文ログ（3,552,066 バイト、ジョブ `build` 140276770352）で GoogleTest `[ PASSED ] 763 tests.`（F0 時点 763 件と一致。テストファイルに変更なし）、`[ FAILED ]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。全文ログは `~/workspace/.coord/panel45_final_log.txt` に保存。
+- **成果物（実行 45928929476）**：`WinMerge-x64.zip` 26,471,878 バイト（ID 15167836618）、`WinMerge-x64-Setup-x64.exe` 39,931,945 バイト（ID 15168300444）。
+- **マージ**：マージコミット `a77763be`。マージコミット CI：実行 45930481595、completed／success（head_sha=a77763be と一致）。
+- **受け入れ条件の照合**：
+  - (a) フォルダ比較から開いたファイル比較ウィンドウのパネルにフォルダ比較の一覧が出ること — コード上は満たす（初回アクティベーション時の `RefreshFileListPanel` で attach され、以降 `Refresh()` が一覧分岐を取る）。**実機未検証**。
+  - (b) 単独ファイル比較では従来どおり「フォルダ比較がありません」の空表示であること — コード上は満たす（`GetDirDoc()` が null のままなのでバーの DirDoc は設定されず、空表示分岐のまま）。**実機未検証**。
+  - (c) 回帰なし — コード上は満たす（既存の比較経路への変更はなく、attach は `RefreshFileListPanel` 内の追加処理のみ）。**実機未検証**。
+- **未検証（実機でしか確認できないもの）**：上記 (a)〜(c) の実機確認（フォルダ比較からのオープン時のパネル表示・一覧内容・選択行の追従、単独ファイル比較の空表示、表示／非表示トグルの保存・復元）、フォルダ側で確認内容・出力を変えたときのパネルのライブ更新、専用モードとの独立性。実機確認チェックリストは §38.5 と §41.5 を流用すること。
+
+### 52.4 次への移行
+- 専用モード不具合の修正は別ブランチ `merge20/ded-mode-fix` で進行中（実行 45929416749 は completed／success。head `9dd0ac29`。子の完了報告待ち）。F1（`merge20/form-f1`）も進行中。
+- パネル修正入りの次ビルドは、専用モード修正のマージ後に master の最新 CI 成果物から出す（2026-11-27〜11-28 を目指す）。
