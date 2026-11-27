@@ -333,6 +333,17 @@ inline const String OPT_MERGE20_RISK_KEYWORDS {_T("Merge20/RiskKeywords"s)};
 // review-state filter defaults (no filter UI exists yet; the keys are
 // ready for the future filter UI, and their values are recorded in
 // the session file).
+// Merge20 (best-workflow B7, gap analysis section 4.2 B7):
+// per-check ON/OFF switches for the output-time final
+// verification. All default ON; the gate adapter reads them
+// (Merge20VerifyLoadOptions), the engine takes the struct, so
+// a settings-page editor can flip them without touching the
+// engine. There is no settings page yet: until one exists the
+// keys are flipped in the INI/registry directly.
+inline const String OPT_MERGE20_VERIFY_REDIFF {_T("Merge20/VerifyRediff"s)};
+inline const String OPT_MERGE20_VERIFY_LINE_COUNT {_T("Merge20/VerifyLineCount"s)};
+inline const String OPT_MERGE20_VERIFY_SYNTAX {_T("Merge20/VerifySyntax"s)};
+inline const String OPT_MERGE20_VERIFY_CONSISTENCY {_T("Merge20/VerifyConsistency"s)};
 inline const String OPT_MERGE20_SESSION_AUTOSAVE {_T("Merge20/SessionAutoSave"s)};
 inline const String OPT_MERGE20_LEARNING_ENABLED {_T("Merge20/LearningEnabled"s)};
 // Merge20 (Phase 3 L1, design section 4.3): this PC's learning source
