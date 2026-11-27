@@ -747,6 +747,9 @@
     <ClCompile Include="Merge20\Merge20CloseWarn.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20ResumeSummary.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20HighRiskConfirm.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1752,6 +1755,9 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20CloseWarn.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20ResumeSummary.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20HighRiskConfirm.h">
