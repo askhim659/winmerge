@@ -1069,6 +1069,7 @@
     <ClInclude Include="Merge20\Merge20Split.h" />
     <ClInclude Include="Merge20\Merge20Sniper.h" />
     <ClInclude Include="Merge20\Merge20Grep.h" />
+    <ClInclude Include="Merge20\Merge20HighRiskRemain.h" />
     <ClInclude Include="Merge20\Merge20Master.h" />
     <ClInclude Include="Merge20\Merge20MasterDoc.h" />
     <ClInclude Include="Merge20\Merge20MasterDlg.h" />
@@ -1480,6 +1481,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20Summary.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20HighRiskRemain.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
