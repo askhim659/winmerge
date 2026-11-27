@@ -156,6 +156,9 @@
     <ClCompile Include="..\Merge20\Merge20Csv_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20Summary_test.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\Merge20\Merge20Session_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
