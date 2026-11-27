@@ -12,6 +12,7 @@
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCompareDoc.h"
+#include "Merge20/Merge20FormCompareView.h"
 #include "Merge.h"
 #include "MergeApp.h"
 #include "OptionsMgr.h"
@@ -257,6 +258,18 @@ void CFormCompareDoc::SetSortOrder(Merge20FormSort sort)
 void CFormCompareDoc::RefreshVisible()
 {
 	m_visibleIndices = Merge20FormListApplyFilterSort(m_results, m_filter, m_strSearchLower, m_sortOrder);
+}
+
+void CFormCompareDoc::UpdateResources()
+{
+	POSITION pos = GetFirstViewPosition();
+	while (pos != nullptr)
+	{
+		CFormCompareView* pView = static_cast<CFormCompareView*>(GetNextView(pos));
+		if (pView != nullptr)
+			pView->UpdateResources();
+	}
+	SetTitle(_("FORM Compare (view only)"));
 }
 
 void CFormCompareDoc::RefreshKpi()
