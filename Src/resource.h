@@ -1963,6 +1963,11 @@
 // Merge20 (best-workflow B8, gap analysis section 4.2 B8):
 // verification report export (folder compare context menu).
 #define ID_MERGE20_VERIFY_REPORT        38983
+// Merge20 (best-workflow B10, gap analysis section 4.2 B10):
+// judgment undo / redo (folder compare context menu + result
+// pane context menu; Ctrl+Z / Ctrl+Shift+Z in the folder list).
+#define ID_MERGE20_UNDO_JUDGMENT        38984
+#define ID_MERGE20_REDO_JUDGMENT        38985
 #define IDS_SPLASH_GPLTEXT              38977
 #define ID_VIEW_MERGE20_BRAND_HEADER   38978
 #define IDS_MESSAGEBOX_OK               39001
@@ -2775,7 +2780,8 @@
 //   38978 is the U1 brand header toggle; 38979 is the B9 summary
 //   command; 38982 is the B3 risk-order patrol toggle command;
 //   38983 is the B8 verification report command;
-//   _APS_NEXT_COMMAND_VALUE is now 38984), free from 38984
+//   38984-38985 are the B10 judgment undo / redo commands;
+//   _APS_NEXT_COMMAND_VALUE is now 38986), free from 38986
 //   (38977 is IDS_SPLASH_GPLTEXT: not usable as a command ID).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2785,7 +2791,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        306
-#define _APS_NEXT_COMMAND_VALUE         38984
+#define _APS_NEXT_COMMAND_VALUE         38986
 #define _APS_NEXT_CONTROL_VALUE         1905
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
