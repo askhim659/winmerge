@@ -5805,3 +5805,39 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - B1 の完了により、北極星の第 1 波は B9（終わりの一覧確認）→ B2（未判断警告ゲート）へ進む。B2 は S7 未着手のため終了時警告だけ先行実装する選択肢がある（ギャップ分析書 §5）。
 - F2（`merge20/form-f2`）は CI 失敗が続いており、子エージェントに原因（`Merge20FormCompareDoc.cpp:272,289` の `SetTitle` への `String` 渡し。`.c_str()` が要る）を伝えて修正中。
 - U1（`merge20/ui-u1`）は進行中。
+
+## §57 Wave 5 F2 — フォルダ比較からの起動＋一覧（KPI・フィルタ・検索・並び替え・ナビゲータ）— マージ・CI 検証済み（2026-11-27）
+
+### 57.1 内容（設計書 §10 F2）
+- `CFormCompareDoc`／`CFormCompareView` の骨格。フォルダ比較の右クリックメニューとメインメニューからの起動（§3.2）。2フォルダの走査（`.xml` だけを対象）。KPIダッシュボード（7つ）、フィルタタブ（5つ）、検索、並び替え（ファイル名順・数値変動の昇順・降順・変更箇所数の降順・深刻度順）、左ナビゲータ、帳票カードの一覧（ヘッダ部分のみ。キャンバス・差分テーブルは F3・F5）。
+- 純粋モジュール `Merge20FormList.h/.cpp`（KPI・フィルタ・検索・並び替え）と単体テスト 20 件。
+
+### 57.2 変更一覧（ブランチ `merge20/form-f2`、base master `5b48ec8e`。35 コミット：実装 25＋修正 9＋マージ 1。22 ファイル、+2233/−4）
+- 新規 9 ファイル：`Src/Merge20/Merge20FormList.h/.cpp`、`Merge20FormCompareDoc.h/.cpp`、`Merge20FormCompareFrame.h/.cpp`、`Merge20FormCompareView.h/.cpp`、`Testing/GoogleTest/Merge20/Merge20FormList_test.cpp`。
+- 変更 13 ファイル：`Src/Merge.h/.cpp`、`DirView.h/.cpp`、`MainFrm.h/.cpp`、`resource.h`、`Merge.rc`、`Merge.vcxproj[.filters]`、`UnitTests.vcxproj[.filters]`、`Translations/WinMerge/Japanese.po`。
+- 主なコミット：`d04a448f` FormList 純粋モジュール／`2b9fab58` 同実装／`ff3307fa` 単体テスト 20 件／`e73ef688` `c4bab675` CFormCompareDoc 宣言・実装／`95c89a51` `ac6089c3` CFormCompareFrame 宣言・実装／`60022a8e` `41596145` CFormCompareView 宣言・実装／`0e2b5070` `809637f2` テンプレート登録（CMergeApp）／`70eb4117` `7ab794a2` フォルダ比較右クリックメニュー配線／`1541945e` `a14cc361` メインメニュー単独起動＋言語切替更新／`b5fd7557` `bb1413ff` `UpdateResources` 宣言・実装／`fe797fdb` ID 追加／`3d0c6540` メニュー項目 2 か所／`a82733ca` `.po` 42 件追加／`4aa3d31c` 付与の修正／`4c72db6e` `dba91d3c` Merge.vcxproj 登録／`c393b1f3` `c25adcda` UnitTests.vcxproj 登録。
+- **マージコミット `132660f8`**：master `b13b7ab0` をブランチに取り込み、競合 2 件を解消。`ID_MERGE20_FORM_COMPARE` を 38970→**38976** へ移動（B1 が 38970 を取っていたため）、`_APS_NEXT_COMMAND_VALUE` 38976→38978、`_APS_NEXT_CONTROL_VALUE` 1837→1858、台帳コメント更新、`.po` は B1 の 7 件＋F2 の 42 件を両方保持。その他 5 ファイルは自動マージで両方の追加を保持。
+
+### 57.3 CI 失敗の経緯と教訓（3 回失敗→修正→成功）
+1. 実行 45938139030：C1010（MFC の 3 ファイルで `pch.h` が見つからない）＋ C2589（`std::min` が windows.h の `min` マクロと衝突）→ `pch.h` 化と `(std::min)` ガードで修正。
+2. 実行 45939326103：C2504（`CDocument`／`CView` 未定義。`pch.h` には MFC ヘッダが無いことが判明）→ MFC ファイルはプロジェクト既定の PCH（`StdAfx.h`、vcxproj は自己完結エントリ）に戻し、純粋モジュール `FormList.cpp` のみ `pch.h` グループに残す形で修正。
+3. 実行 45940604738：C2664（`SetTitle` に `String` を渡した。2 件のみ）→ 両箇所に `.c_str()` を付けて修正（調整役がログから原因を特定し、子エージェントに送付）。
+- **教訓（今後の実装者へ）**：MFC の Doc／Frame／View はプロジェクト既定の PCH（`StdAfx.h`）を使うこと。`pch.h` グループに登録するのは STL のみの純粋モジュールだけ（`pch.h` には MFC ヘッダが無い）。`String` を MFC の `LPCTSTR` 引数に渡すときは `.c_str()` が必須（`SetTitle`、`SetWindowText` 等）。resource.h の ID 割り当て時は台帳コメントの通りに全 define を値順で確認し、`_APS_NEXT_*` も一緒に進めること（S3 の CVT1100 教訓）。B1 と F2 が同じ 38970 を取ったのは、両ブランチが同じベースから同じ「次の空き」を使ったため。並行ブランチでは ID の割り当てを調整役が事前に調整すること。
+
+### 57.4 検証レポート（コーディネーター検証済み）
+- **PR #49**：open・mergeable=true・mergeable_state=clean、head `132660f8`、base master。35 コミット、+2233/−4、変更ファイル 22 件。
+- **CI（ブランチ head）**：実行 45942948552、completed／success。全文ログ（3,568,846 バイト、ジョブ `build` 140321139203）で GoogleTest `[ PASSED] 814 tests.`（F0 時点 763 ＋ F2 の 20 ＋ その間に master へ入った B1／B1b の 31）、`[ FAILED]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。全文ログは `~/workspace/.coord/f2_final_log.txt` に保存。
+- **成果物（実行 45942948552）**：`WinMerge-x64.zip` 26,562,769 バイト（ID 15174500188。内側 `wizmerge-2.16.60-7fb950a-x64-exe.zip`、SHA256 `10766ea719126a89c5f06abddd50ce41f678d4d8c152260609b4d474fe528f13` は子の確認値）、`WinMerge-x64-Setup-x64.exe` 40,020,579 バイト（ID 15174425338）。いずれも未失効。
+- **成果物の `.po` 監査（子の確認値）**：バンドルされた `WizMerge/Languages/Japanese.po`（2,243 msgids）に F2 の 42 件がすべて残っていることを確認（サンプル 10 件＋2 件を個別確認。ブランチ側にあって成果物に無い msgid は 0 件）。番兵「Merge20 strings present in the bundled Japanese.po.」も通過。
+- **マージ**：マージコミット `df925a7c`。マージコミット CI：実行 45944878092、completed／success（head_sha=df925a7c と一致）。
+- **受け入れ条件の照合（設計書 §10 F2）**：
+- (a) フォルダ比較画面から「FORM比較（見るだけ）…」を選ぶと、左右フォルダが引き継がれて FORM比較画面が開き、解析が実行される — コード上は実装済み（右クリックメニュー＋ハンドラ＋ドキュメントテンプレート＋2 フォルダ走査）。**実機未検証**。
+- (b) KPI の7つの数値が HTML版の `updateKpiBadges` と同じ定義 — 合格（単体テストで定義を固定し、CI で 20 件すべてパス）。実機での表示確認は未検証。
+- (c) フィルタタブ（5つ）・検索・並び替えが正しく動くこと。完全一致のファイルが一覧に出ないこと — 合格（単体テストで固定し、CI でパス。完全一致はドキュメントが結果から除外し、KPI の「完全一致」で数える）。実機での操作確認は未検証。
+- (d) 既存のフォルダ比較・ファイル比較の回帰がないこと — 合格（変更はメニュー項目の追加と新規ドキュメントテンプレートのみ。CI の全 814 テストがパス）。実機での操作確認は未検証。
+- **未検証（実機でしか確認できないもの）**：実機での起動（フォルダ比較→右クリック、メインメニュー→ツール、フォルダピッカー 2 回）、KPI／フィルタ／検索／並び替えの操作、日本語表示。
+- **既知の制限**：大規模フォルダでの解析は UI スレッドで同期実行するため解析中は UI がブロックされる（プログレスバーは今後の課題）。カード一覧は F2 ではレポート形式のヘッダのみ。キャンバス描画は F3、差分テーブルは F5。帳票名は F6 の名称マスタまで「（名称未登録）」。3 フォルダ比較からは外側 2 フォルダのみ引き継ぐ（中間フォルダは使わない）。
+
+### 57.5 次への移行
+- F3（ビジュアルプレビュー）はブランチ `merge20/form-f3`（base `df925a7c`）で進行中。F4・F5 は F3 のキャンバスの上に載せるため、F3 のマージ後に起動する。
+- U1（`merge20/ui-u1`）は進行中（CI 実行中）。B9（`merge20/wf-b9`）は進行中。
