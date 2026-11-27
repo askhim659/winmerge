@@ -546,6 +546,13 @@ private:
 	// Merge20 (Phase 4 D3): patrol targets over the displayed rows
 	// (true = file in the patrol set), and the Up/Down-key patrol move.
 	std::vector<bool> Merge20BuildPatrolTargets(bool bTodoOnly) const;
+	// Merge20 (best-workflow B3): patrol order of the displayed
+	// rows: the target row indices in patrol order. List order
+	// when risk-order patrol is off (the D3 order), risk order
+	// (High, Medium, None, unclassified last) when it is on.
+	// The same order drives OpenNextFile/OpenPrevFile, the
+	// Up/Down-key patrol and the dedicated bar's (n/m) display.
+	std::vector<int> Merge20BuildPatrolOrder(bool bTodoOnly) const;
 	bool Merge20MoveFocusToTodo(int direction);
 	void Merge20SetOutputForDirectory(const DIFFITEM& dir, bool include);
 	void Merge20SetOutputForAllFiles(bool include);
