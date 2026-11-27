@@ -49,6 +49,7 @@
 #include "StdAfx.h"
 #include "Merge20/Merge20FileListBar.h"
 #include "Merge20/Merge20Theme.h"
+#include "Merge20/Merge20AuditDoc.h"
 #include "Merge20/Merge20BatchCheckDlg.h"
 #include "Merge20/Merge20CloseWarn.h"
 #include "Merge20/Merge20HighRiskRemain.h"
@@ -1149,7 +1150,15 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 				continue;
 			const std::map<String, const DIFFITEM*>::const_iterator it = byRelPath.find(pRow->relPath);
 			if (it != byRelPath.end())
+			{
+				// Merge20 (best-workflow B11): one BatchCheck entry
+				// per file whose output flag actually changed (as in
+				// the folder-list batch check).
+				const bool bOldInclude = m_pDirDoc->GetMerge20IncludeInOutput(*it->second);
 				m_pDirDoc->SetMerge20IncludeInOutput(*it->second, true, false);
+				Merge20AuditLogIncludeChange(ctxt, it->second->getItemRelativePath(),
+					bOldInclude, true, Merge20AuditKind::BatchCheck);
+			}
 		}
 		break;
 	}
@@ -1162,7 +1171,14 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 				continue;
 			const std::map<String, const DIFFITEM*>::const_iterator it = byRelPath.find(pRow->relPath);
 			if (it != byRelPath.end())
+			{
+				// Merge20 (best-workflow B11): see the Selected case
+				// above (one BatchCheck entry per changed file).
+				const bool bOldInclude = m_pDirDoc->GetMerge20IncludeInOutput(*it->second);
 				m_pDirDoc->SetMerge20IncludeInOutput(*it->second, true, false);
+				Merge20AuditLogIncludeChange(ctxt, it->second->getItemRelativePath(),
+					bOldInclude, true, Merge20AuditKind::BatchCheck);
+			}
 		}
 		break;
 	}
@@ -1171,7 +1187,14 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 		{
 			const DIFFITEM& di = ctxt.GetNextDiffPosition(p);
 			if (!di.diffcode.isDirectory())
+			{
+				// Merge20 (best-workflow B11): one BatchCheck entry
+				// per changed file (as in the batch-check dialog).
+				const bool bOldInclude = m_pDirDoc->GetMerge20IncludeInOutput(di);
 				m_pDirDoc->SetMerge20IncludeInOutput(di, false, false);
+				Merge20AuditLogIncludeChange(ctxt, di.getItemRelativePath(),
+					bOldInclude, false, Merge20AuditKind::BatchCheck);
+			}
 		}
 		break;
 	case Merge20BatchCheckDlg::Action::None:
@@ -1583,6 +1606,13 @@ void CMerge20FileListBar::SetOutputForDirectory(const DIFFITEM& dir, bool includ
 		if (pChild->diffcode.isDirectory())
 			SetOutputForDirectory(*pChild, include);
 		else
+		{
+			// Merge20 (best-workflow B11): one BatchCheck entry per
+			// changed file (as in the batch-check dialog).
+			const bool bOldInclude = m_pDirDoc->GetMerge20IncludeInOutput(*pChild);
 			m_pDirDoc->SetMerge20IncludeInOutput(*pChild, include, false);
+			Merge20AuditLogIncludeChange(m_pDirDoc->GetDiffContext(),
+				pChild->getItemRelativePath(), bOldInclude, include, Merge20AuditKind::BatchCheck);
+		}
 	}
 }
