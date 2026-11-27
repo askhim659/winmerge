@@ -101,8 +101,9 @@ std::pair<double, double> Merge20FormCanvasContentSize(double nativeW, double na
 
 /**
  * @brief True when the grid line at this XML coordinate is a major
- * (500-unit) line: the line sits at `32 + k * 100` and
- * `(coord - 32) % 500 == 0` (HTML grid rule).
+ * (500-unit) line: grid lines sit at every 100 XML units from the
+ * origin (HTML: canvas positions 32, 132, ...), and every fifth
+ * line is major (HTML: `(gx - 32) % 500 == 0`).
  * @param [in] xmlCoord XML coordinate of the grid line.
  */
 bool Merge20FormCanvasGridLineIsMajor(double xmlCoord);
