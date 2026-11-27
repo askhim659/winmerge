@@ -167,3 +167,31 @@ bool Merge20SplitGroupMatchesFirstRow(const Merge20SplitGroup& group,
 	}
 	return true;
 }
+
+bool Merge20SplitGroupMatchesParentRange(const Merge20SplitGroup& group,
+	const DIFFRANGE& range)
+{
+	if (group.rows < 2 || static_cast<int>(range.op) != group.op ||
+		range.dbegin != group.dbegin || range.dend != group.dend)
+		return false;
+	for (int pane = 0; pane < 3; ++pane)
+	{
+		if (range.begin[pane] != group.begin[pane] || range.end[pane] != group.end[pane])
+			return false;
+	}
+	return true;
+}
+
+bool Merge20SplitGroupEquals(const Merge20SplitGroup& a,
+	const Merge20SplitGroup& b)
+{
+	if (a.op != b.op || a.dbegin != b.dbegin || a.dend != b.dend || a.rows != b.rows)
+		return false;
+	for (int pane = 0; pane < 3; ++pane)
+	{
+		if (a.begin[pane] != b.begin[pane] || a.end[pane] != b.end[pane] ||
+			a.blank[pane] != b.blank[pane])
+			return false;
+	}
+	return true;
+}

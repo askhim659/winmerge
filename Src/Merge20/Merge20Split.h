@@ -110,3 +110,33 @@ DIFFRANGE Merge20SplitGroupToRange(const Merge20SplitGroup& group);
  */
 bool Merge20SplitGroupMatchesFirstRow(const Merge20SplitGroup& group,
 	const DIFFRANGE& range);
+
+/**
+ * @brief Whether a diff range is the parent a split group was split
+ * from (best-workflow B10 PR2: the lookup an undo of a regroup, or
+ * a redo of a split, uses to find the parent again without an
+ * index). The same identity the session restore uses
+ * (CMergeDoc::Merge20ReapplySplitGroups): op, real ranges and
+ * apparent range. Ghost starts (blank) are not compared: they
+ * follow from the real ranges once the buffers are primed.
+ * @param [in] group Split-group record.
+ * @param [in] range Candidate parent range.
+ * @return True when range is the group's parent.
+ */
+bool Merge20SplitGroupMatchesParentRange(const Merge20SplitGroup& group,
+	const DIFFRANGE& range);
+
+/**
+ * @brief Whether two split-group records describe the same split
+ * (best-workflow B10 PR2: the lookup an undo of a split, or a redo
+ * of a regroup, uses to find the stored group again without an
+ * index). All fields are compared, including the ghost starts and
+ * the row count: two splits of different diffs never compare
+ * equal, and neither do two splits of the same parent with
+ * different row counts.
+ * @param [in] a First group record.
+ * @param [in] b Second group record.
+ * @return True when every field matches.
+ */
+bool Merge20SplitGroupEquals(const Merge20SplitGroup& a,
+	const Merge20SplitGroup& b);

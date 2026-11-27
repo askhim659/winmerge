@@ -1625,9 +1625,9 @@ bool CMergeDoc::Merge20SetDiffConclusion(int nDiff, Merge20DiffConclusion conclu
 	// Merge20 (best-workflow B10): snapshot the file state before
 	// the linkage below rewrites it, so the undo entry can rewind
 	// the conclusion and the file state together. Only a changed
-	// conclusion is recorded; learning acceptance and the session
-	// restore use Merge20SetDiffConclusionRestored instead and are
-	// never recorded (their undo is PR2).
+	// conclusion is recorded here; the learning acceptance records
+	// its own entry in OnMerge20LearnApply (B10 PR2) and the
+	// session restore records nothing (its history is cleared).
 	CDirDoc* pUndoFolderDoc = nullptr;
 	DIFFITEM* pUndoFolderItem = nullptr;
 	ReviewState undoOldReview = ReviewState::TODO;
@@ -1799,6 +1799,197 @@ Merge20UndoApplyResult CMergeDoc::Merge20ApplyConclusionUndo(const Merge20UndoEn
 		ResultChooseSources(entry.diffIndex,
 			Merge20ConclusionSrcPanes(target, m_nBuffers, static_cast<int>(pRange->op)));
 	Merge20SetDiffConclusionRestored(entry.diffIndex, target);
+	// Merge20 (best-workflow B10 PR2): undoing a conclusion back to
+	// Undecided leaves the diff undecided, so its candidate (when
+	// the store still matches the diff) shows again at once instead
+	// of waiting for the next rescan. PR1 left this as a known
+	// limitation; the recompute is the same refresh a split /
+	// regroup already runs, and it changes no other diff's
+	// candidate (the store is untouched by the undo).
+	if (target == Merge20DiffConclusion::Undecided)
+		Merge20LearnRefreshCandidates(*this);
+	ctxt.SetMerge20ReviewState(entry.relPath, bUndo ? entry.oldReview : entry.newReview);
+	ctxt.SetMerge20IncludeInOutput(entry.relPath, bUndo ? entry.oldInclude : entry.newInclude);
+	pFolderDoc->Merge20UpdateDirViewItem(*pItem);
+	if (m_pMerge20FocusDock != nullptr)
+		m_pMerge20FocusDock->ShowDiff(GetCurrentDiff());
+	if (m_pMergeResultView != nullptr && m_pMergeResultView->GetSafeHwnd() != nullptr)
+		m_pMergeResultView->Invalidate();
+	return Merge20UndoApplyResult::Applied;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Merge20 (best-workflow B10 PR2): apply one split / regroup undo /
+// redo step, and one learning accept / dismiss undo / redo step.
+//
+// A split / regroup entry is applied by calling the same
+// Merge20SplitDiff / Merge20RegroupDiff the menus call, with
+// recording suppressed, so the result pane is rebuilt exactly as
+// the manual operation rebuilds it and the next session save
+// stashes the restored groups. The group is found again by its
+// identity, never by the stored index (indices shift when another
+// group is split or regrouped). Before regrouping, every row must
+// still carry the judgment the split carried: a row re-judged
+// since the split makes the entry stale, because a regroup keeps
+// only the first row's judgment and would silently discard the
+// re-judged row's. Before splitting again, the parent must still
+// carry the same judgment. A result with hand-edited lines also
+// makes the entry stale (a rebuild would discard those edits).
+// A learning entry is applied without any learning record, like
+// the conclusion undo: the acceptance's +1 stays in the store.
+
+Merge20UndoApplyResult CMergeDoc::Merge20ApplySplitUndo(const Merge20UndoEntry& entry, bool bUndo)
+{
+	if (!m_bResultBuilt)
+		return Merge20UndoApplyResult::Stale;
+	// Undoing a split regroups it (and redoing one splits it
+	// again); undoing a regroup splits it again (and redoing one
+	// regroups it again).
+	const bool bSplitDirection = (entry.kind == Merge20UndoKind::SplitDiff) ? !bUndo : bUndo;
+	// Refuse silently (no message box here: the caller reports the
+	// stale entry) when a rebuild would discard hand edits.
+	if (HasEditedResultSegment())
+		return Merge20UndoApplyResult::Stale;
+	if (bSplitDirection)
+	{
+		// Find the parent by its range identity.
+		int nFound = -1;
+		for (int i = 0; i < m_diffList.GetSize(); ++i)
+		{
+			const DIFFRANGE* pRange = m_diffList.DiffRangeAt(i);
+			if (pRange != nullptr && Merge20SplitGroupMatchesParentRange(entry.splitGroup, *pRange))
+			{
+				nFound = i;
+				break;
+			}
+		}
+		if (nFound < 0)
+			return Merge20UndoApplyResult::Stale;
+		// The parent must still carry the stored judgment.
+		if (Merge20GetDiffConclusion(nFound) != entry.oldConclusion)
+			return Merge20UndoApplyResult::Stale;
+		const MergeResultSegment* pSegment = GetResultSegmentByDiff(nFound);
+		if (pSegment == nullptr ||
+			static_cast<int>(pSegment->state) != entry.splitSegmentState ||
+			pSegment->srcPanes != entry.splitSrcPanes)
+			return Merge20UndoApplyResult::Stale;
+		return Merge20SplitDiff(nFound, false) ?
+			Merge20UndoApplyResult::Applied : Merge20UndoApplyResult::Stale;
+	}
+	// Regroup direction: find the stored group, then its first row.
+	size_t nGroup = 0;
+	bool bFoundGroup = false;
+	for (size_t g = 0; g < m_merge20SplitGroups.size(); ++g)
+	{
+		if (Merge20SplitGroupEquals(m_merge20SplitGroups[g], entry.splitGroup))
+		{
+			nGroup = g;
+			bFoundGroup = true;
+			break;
+		}
+	}
+	if (!bFoundGroup)
+		return Merge20UndoApplyResult::Stale;
+	const Merge20SplitGroup& group = m_merge20SplitGroups[nGroup];
+	int nFirst = -1;
+	for (int i = 0; i + group.rows <= m_diffList.GetSize(); ++i)
+	{
+		const DIFFRANGE* pFirst = m_diffList.DiffRangeAt(i);
+		if (pFirst != nullptr && Merge20SplitGroupMatchesFirstRow(group, *pFirst))
+		{
+			nFirst = i;
+			break;
+		}
+	}
+	if (nFirst < 0)
+		return Merge20UndoApplyResult::Stale;
+	// Every row must still carry the stored judgment, or the
+	// regroup would silently discard a re-judged row's.
+	for (int i = 0; i < group.rows; ++i)
+	{
+		const int nRow = nFirst + i;
+		if (Merge20GetDiffConclusion(nRow) != entry.oldConclusion)
+			return Merge20UndoApplyResult::Stale;
+		const MergeResultSegment* pSegment = GetResultSegmentByDiff(nRow);
+		if (pSegment == nullptr ||
+			static_cast<int>(pSegment->state) != entry.splitSegmentState ||
+			pSegment->srcPanes != entry.splitSrcPanes)
+			return Merge20UndoApplyResult::Stale;
+	}
+	return Merge20RegroupDiff(nFirst, false) ?
+		Merge20UndoApplyResult::Applied : Merge20UndoApplyResult::Stale;
+}
+
+Merge20UndoApplyResult CMergeDoc::Merge20ApplyLearnUndo(const Merge20UndoEntry& entry, bool bUndo)
+{
+	if (!m_bResultBuilt || entry.diffIndex < 0 || entry.diffIndex >= m_diffList.GetSize() ||
+		!m_diffList.IsDiffSignificant(entry.diffIndex))
+		return Merge20UndoApplyResult::Stale;
+	const DIFFRANGE* pRange = m_diffList.DiffRangeAt(entry.diffIndex);
+	if (pRange == nullptr ||
+		!Merge20UndoEntryMatchesDiff(entry, static_cast<int>(pRange->op), pRange->begin, pRange->end))
+		return Merge20UndoApplyResult::Stale;
+	if (entry.kind == Merge20UndoKind::LearnDismiss)
+	{
+		if (bUndo)
+		{
+			// Un-dismiss: drop the identity from the dismissed
+			// set and recompute the candidates, so the candidate
+			// shows again when the diff is still waiting for a
+			// decision. No learning record: a dismissal never
+			// recorded one.
+			if (!Merge20LearnUndismissCandidate(*this, entry.diffIndex))
+				return Merge20UndoApplyResult::Stale;
+			Merge20LearnRefreshCandidates(*this);
+			return Merge20UndoApplyResult::Applied;
+		}
+		if (!Merge20LearnDismissCandidate(*this, entry.diffIndex))
+			return Merge20UndoApplyResult::Stale;
+		if (m_pMergeResultView != nullptr && m_pMergeResultView->GetSafeHwnd() != nullptr)
+			m_pMergeResultView->Invalidate();
+		return Merge20UndoApplyResult::Applied;
+	}
+	// LearnAccept: the folder state is part of the entry (the B1
+	// linkage moved it), so the folder doc must be there.
+	CDirDoc* pFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	if (pFolderDoc == nullptr || !pFolderDoc->HasDiffs())
+		return Merge20UndoApplyResult::Stale;
+	DIFFITEM* pItem = Merge20FindItemForMergeDoc(*pFolderDoc, *this);
+	if (pItem == nullptr)
+		return Merge20UndoApplyResult::Stale;
+	CDiffContext& ctxt = pFolderDoc->GetDiffContext();
+	const Merge20DiffConclusion expected = bUndo ? entry.newConclusion : entry.oldConclusion;
+	if (Merge20GetDiffConclusion(entry.diffIndex) != expected)
+		return Merge20UndoApplyResult::Stale;
+	const ReviewState expectedReview = bUndo ? entry.newReview : entry.oldReview;
+	const bool bExpectedInclude = bUndo ? entry.newInclude : entry.oldInclude;
+	if (ctxt.GetMerge20ReviewState(entry.relPath) != expectedReview ||
+		ctxt.GetMerge20IncludeInOutput(*pItem) != bExpectedInclude)
+		return Merge20UndoApplyResult::Stale;
+	// No learning record in either direction: the acceptance's +1
+	// stays in the store as a past judgment, and the redo does not
+	// record it a second time.
+	if (bUndo)
+	{
+		// Back to the undecided display (an empty selection
+		// restores the Unresolved / Conflict display, which is
+		// what the diff showed before the acceptance: candidates
+		// only exist for undecided diffs), the stored conclusion,
+		// and the file state before the acceptance. The candidate
+		// is recomputed from the store, so it shows again with the
+		// store's current counts.
+		ResultChooseSources(entry.diffIndex, {});
+		Merge20SetDiffConclusionRestored(entry.diffIndex, entry.oldConclusion);
+		Merge20LearnRefreshCandidates(*this);
+	}
+	else
+	{
+		// Re-apply the acceptance with the stored source panes
+		// (the candidate map may have moved on since the undo);
+		// ResultChooseSources erases the candidate again.
+		ResultChooseSources(entry.diffIndex, entry.learnSrcPanes);
+		Merge20SetDiffConclusionRestored(entry.diffIndex, entry.newConclusion);
+	}
 	ctxt.SetMerge20ReviewState(entry.relPath, bUndo ? entry.oldReview : entry.newReview);
 	ctxt.SetMerge20IncludeInOutput(entry.relPath, bUndo ? entry.oldInclude : entry.newInclude);
 	pFolderDoc->Merge20UpdateDirViewItem(*pItem);
@@ -1934,7 +2125,7 @@ bool CMergeDoc::Merge20CanRegroupDiff(int nDiff) const
 	return FindSplitGroupFirstIndex(nDiff, nFirst, nGroup);
 }
 
-bool CMergeDoc::Merge20SplitDiff(int nDiff)
+bool CMergeDoc::Merge20SplitDiff(int nDiff, bool bRecordUndo /*= false*/)
 {
 	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize())
 		return false;
@@ -1997,10 +2188,38 @@ bool CMergeDoc::Merge20SplitDiff(int nDiff)
 	Merge20LearnRefreshCandidates(*this);
 	SetCurrentDiff(nDiff);
 	UpdateAllViews(nullptr);
+	// Merge20 (best-workflow B10 PR2): record the split as an undo
+	// step (menu commands only; the session restore passes false).
+	// The entry carries the group and the judgment the split
+	// carried, so the undo can check every row still holds it
+	// before regrouping. A split is not a judgment, so nothing is
+	// recorded for learning.
+	if (bRecordUndo)
+	{
+		CDirDoc* pUndoFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+		if (pUndoFolderDoc != nullptr && pUndoFolderDoc->HasDiffs())
+		{
+			DIFFITEM* pUndoFolderItem = Merge20FindItemForMergeDoc(*pUndoFolderDoc, *this);
+			if (pUndoFolderItem != nullptr)
+			{
+				Merge20UndoEntry entry;
+				entry.kind = Merge20UndoKind::SplitDiff;
+				entry.relPath = pUndoFolderItem->getItemRelativePath();
+				entry.diffIndex = nDiff;
+				entry.splitGroup = Merge20SplitGroupFromRange(parentRange,
+					static_cast<int>(rows.size()));
+				entry.oldConclusion = parentConclusion;
+				entry.newConclusion = parentConclusion;
+				entry.splitSegmentState = static_cast<int>(parentState);
+				entry.splitSrcPanes = parentSrcPanes;
+				pUndoFolderDoc->GetDiffContext().Merge20RecordUndo(entry);
+			}
+		}
+	}
 	return true;
 }
 
-bool CMergeDoc::Merge20RegroupDiff(int nDiff)
+bool CMergeDoc::Merge20RegroupDiff(int nDiff, bool bRecordUndo /*= false*/)
 {
 	if (!m_bResultBuilt || nDiff < 0 || nDiff >= m_diffList.GetSize())
 		return false;
@@ -2050,6 +2269,31 @@ bool CMergeDoc::Merge20RegroupDiff(int nDiff)
 	Merge20LearnRefreshCandidates(*this);
 	SetCurrentDiff(nFirst);
 	UpdateAllViews(nullptr);
+	// Merge20 (best-workflow B10 PR2): record the regroup as an
+	// undo step (menu commands only). The entry carries the group
+	// and the first row's judgment, so the undo can check the
+	// regrouped diff still holds it before splitting it again.
+	if (bRecordUndo)
+	{
+		CDirDoc* pUndoFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+		if (pUndoFolderDoc != nullptr && pUndoFolderDoc->HasDiffs())
+		{
+			DIFFITEM* pUndoFolderItem = Merge20FindItemForMergeDoc(*pUndoFolderDoc, *this);
+			if (pUndoFolderItem != nullptr)
+			{
+				Merge20UndoEntry entry;
+				entry.kind = Merge20UndoKind::RegroupDiff;
+				entry.relPath = pUndoFolderItem->getItemRelativePath();
+				entry.diffIndex = nFirst;
+				entry.splitGroup = group;
+				entry.oldConclusion = firstConclusion;
+				entry.newConclusion = firstConclusion;
+				entry.splitSegmentState = static_cast<int>(firstState);
+				entry.splitSrcPanes = firstSrcPanes;
+				pUndoFolderDoc->GetDiffContext().Merge20RecordUndo(entry);
+			}
+		}
+	}
 	return true;
 }
 
@@ -2066,16 +2310,7 @@ int CMergeDoc::Merge20ReapplySplitGroups(const std::vector<Merge20SplitGroup>& g
 		for (int i = 0; i < m_diffList.GetSize(); ++i)
 		{
 			const DIFFRANGE* pRange = m_diffList.DiffRangeAt(i);
-			if (pRange == nullptr || static_cast<int>(pRange->op) != group.op ||
-				pRange->dbegin != group.dbegin || pRange->dend != group.dend)
-				continue;
-			bool same = true;
-			for (int pane = 0; pane < 3; ++pane)
-			{
-				if (pRange->begin[pane] != group.begin[pane] || pRange->end[pane] != group.end[pane])
-					same = false;
-			}
-			if (same)
+			if (pRange != nullptr && Merge20SplitGroupMatchesParentRange(group, *pRange))
 			{
 				nFound = i;
 				break;
@@ -2099,7 +2334,7 @@ void CMergeDoc::OnMerge20SplitDiff()
 	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
 		return;
 	for (int nDiff = lastDiff; nDiff >= firstDiff; --nDiff)
-		Merge20SplitDiff(nDiff);
+		Merge20SplitDiff(nDiff, true);
 }
 
 void CMergeDoc::OnUpdateMerge20SplitDiff(CCmdUI* pCmdUI)
@@ -2128,7 +2363,7 @@ void CMergeDoc::OnMerge20RegroupDiff()
 	if (!GetMerge20LearnTargetDiffs(firstDiff, lastDiff))
 		return;
 	for (int nDiff = lastDiff; nDiff >= firstDiff; --nDiff)
-		Merge20RegroupDiff(nDiff);
+		Merge20RegroupDiff(nDiff, true);
 }
 
 void CMergeDoc::OnUpdateMerge20RegroupDiff(CCmdUI* pCmdUI)
@@ -2676,6 +2911,13 @@ void CMergeDoc::OnMerge20LearnApply()
 		m_pMergeResultView->HideCursor();
 	std::vector<int> appliedDiffs;
 	bool bGroupWithPrevious = false;
+	// Merge20 (best-workflow B10 PR2): the folder item for the undo
+	// entries below (one per accepted diff). A standalone file
+	// compare has no folder doc, so its acceptances are not recorded.
+	CDirDoc* pUndoFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	DIFFITEM* pUndoFolderItem = nullptr;
+	if (pUndoFolderDoc != nullptr && pUndoFolderDoc->HasDiffs())
+		pUndoFolderItem = Merge20FindItemForMergeDoc(*pUndoFolderDoc, *this);
 	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
 	{
 		if (!m_diffList.IsDiffSignificant(nDiff))
@@ -2697,10 +2939,51 @@ void CMergeDoc::OnMerge20LearnApply()
 		const Merge20DiffConclusion conclusion = pRange != nullptr ?
 			Merge20ConclusionFromLearnStrategy(it->second.strategy, static_cast<int>(pRange->op)) :
 			Merge20DiffConclusion::Undecided;
+		// Merge20 (best-workflow B10 PR2): snapshot the state
+		// before the acceptance, for the undo entry below.
+		const Merge20DiffConclusion prevConclusion = Merge20GetDiffConclusion(nDiff);
+		ReviewState undoOldReview = ReviewState::TODO;
+		bool bUndoOldInclude = true;
+		if (pUndoFolderItem != nullptr)
+		{
+			CDiffContext& ctxt = pUndoFolderDoc->GetDiffContext();
+			undoOldReview = ctxt.GetMerge20ReviewState(pUndoFolderItem->getItemRelativePath());
+			bUndoOldInclude = ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem);
+		}
 		Merge20SetDiffConclusionRestored(nDiff, conclusion);
 		ResultChooseSources(nDiff, srcPanes, bGroupWithPrevious);
 		ApplyMerge20ConclusionLinkage(*this, conclusion);
 		appliedDiffs.push_back(nDiff);
+		// Merge20 (best-workflow B10 PR2): record the acceptance
+		// as an undo step (one entry per diff, like the
+		// conclusions). The entry carries the accepted source
+		// panes, so a redo can re-apply them without the
+		// candidate map. The learning record below is untouched:
+		// the undo only rewinds the display and the file state,
+		// never the store.
+		if (pUndoFolderItem != nullptr && pRange != nullptr)
+		{
+			CDiffContext& ctxt = pUndoFolderDoc->GetDiffContext();
+			Merge20UndoEntry entry;
+			entry.kind = Merge20UndoKind::LearnAccept;
+			entry.relPath = pUndoFolderItem->getItemRelativePath();
+			entry.diffIndex = nDiff;
+			entry.diffOp = static_cast<int>(pRange->op);
+			for (int i = 0; i < 3; ++i)
+			{
+				entry.diffBegin[i] = pRange->begin[i];
+				entry.diffEnd[i] = pRange->end[i];
+			}
+			entry.oldConclusion = prevConclusion;
+			entry.newConclusion = conclusion;
+			entry.oldReview = undoOldReview;
+			entry.newReview = ctxt.GetMerge20ReviewState(entry.relPath);
+			entry.oldInclude = bUndoOldInclude;
+			entry.newInclude = ctxt.GetMerge20IncludeInOutput(*pUndoFolderItem);
+			entry.learnSrcPanes = srcPanes;
+			entry.hadCandidate = true;
+			ctxt.Merge20RecordUndo(entry);
+		}
 		bGroupWithPrevious = true;
 	}
 	if (m_pMergeResultView != nullptr)
@@ -2746,13 +3029,44 @@ void CMergeDoc::OnMerge20LearnDismiss()
 	// again) and the candidate leaves the map. Nothing is recorded in
 	// the learning data (a dismissal is not a judgment) and the review
 	// state is untouched. The diff stays Unresolved.
+	// Merge20 (best-workflow B10 PR2): the folder item for the undo
+	// entries below (one per dismissed diff).
+	CDirDoc* pUndoFolderDoc = dynamic_cast<CDirDoc*>(GetDirDoc());
+	DIFFITEM* pUndoFolderItem = nullptr;
+	if (pUndoFolderDoc != nullptr && pUndoFolderDoc->HasDiffs())
+		pUndoFolderItem = Merge20FindItemForMergeDoc(*pUndoFolderDoc, *this);
 	bool bChanged = false;
 	for (int nDiff = firstDiff; nDiff <= lastDiff; ++nDiff)
 	{
 		if (!m_diffList.IsDiffSignificant(nDiff))
 			continue;
+		const DIFFRANGE* pRange = m_diffList.DiffRangeAt(nDiff);
+		if (pRange == nullptr)
+			continue;
 		if (Merge20LearnDismissCandidate(*this, nDiff))
+		{
 			bChanged = true;
+			// Record the dismissal as an undo step. A dismissal
+			// changes no conclusion and no file state, so the
+			// entry carries only the diff identity: its undo
+			// drops the identity from the dismissed set and the
+			// candidate shows again.
+			if (pUndoFolderItem != nullptr)
+			{
+				Merge20UndoEntry entry;
+				entry.kind = Merge20UndoKind::LearnDismiss;
+				entry.relPath = pUndoFolderItem->getItemRelativePath();
+				entry.diffIndex = nDiff;
+				entry.diffOp = static_cast<int>(pRange->op);
+				for (int i = 0; i < 3; ++i)
+				{
+					entry.diffBegin[i] = pRange->begin[i];
+					entry.diffEnd[i] = pRange->end[i];
+				}
+				entry.hadCandidate = true;
+				pUndoFolderDoc->GetDiffContext().Merge20RecordUndo(entry);
+			}
+		}
 	}
 	if (bChanged && m_pMergeResultView != nullptr &&
 		m_pMergeResultView->GetSafeHwnd() != nullptr)
