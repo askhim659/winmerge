@@ -5686,3 +5686,44 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 53.4 次への移行
 - 優先修正 2 件（パネル連携 PR #45、専用モード PR #46）は両方とも master に入った。次ビルドはこの master の最新 CI 成果物から出す（2026-11-27〜11-28 を目指す）。
 - F1（`merge20/form-f1`）は進行中（CI 実行 45931838629 が in_progress。head `1ba719f2`）。
+
+## §54 Wave 5 F1 — 照合・分類（安定キー、移動／改名、ノイズ除去、グルーピング、深刻度）— マージ・CI 検証済み（2026-11-27）
+
+### 54.1 内容（設計書 §10 F1）
+- 新規純粋モジュール `Merge20FormDiff.h/.cpp`（MFC 非依存・`_()` なし）と GoogleTest 19 件を追加。既存コードの変更は `.vcxproj`／`.filters` の登録のみ。
+- 安定キー（§5.1）：`structPath + tag + name`（無名要素は属性署名）。重複名の順序問題を解消。
+- 移動／改名（§5.1）：`Moved`／`Renamed` を 1 件に集約。改名は「同じ位置」条件付き（新旧の矩形が重なること。重ならなければ削除＋追加のまま＝§5.1 テスト4）。同親内の順序入替えのみは無視（T-F-2）。挿入による兄弟インデックスのずれは stage 1.5 で吸収。
+- ノイズ除去（§5.2）：0.5 未満の座標ずれは無視（件数を `ignoredNoiseCount` に記録）。0.5 以上 1.0 未満は `minor` グループに分離。`diffVal` は小数第1位まで保持（100 → 112.5 は 12.5。HTML版は 13 に丸める）。
+- グルーピング（§5.3）：同一親・同一方向・同一量の座標変更を `G1`… にまとめ、要約文を自動生成（例：「field 5項目が下に12単位移動」）。
+- 深刻度（§5.4）・大幅変動（§4.4）：`Merge20ClassifyFormSeverity`／`Merge20ApplyLargeChangeFlag`（HTML版と同じ規則：平均×1.5 かつ >20）。
+- `getDetailInterpretation` の移植：座標系・フォント・バージョン・汎用の文言を日本語で生成。HTML版との意図的な差異：要素テキストの変更を `Mod` として検出、無名要素の属性変更は構造パス＋タグで対応付け、傾向に `移動(N)`／`改名(N)` を追加。
+
+### 54.2 変更一覧（ブランチ `merge20/form-f1`、base master `54b369d1`。7 ファイル 7 コミット）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20FormDiff.h` | `ad21b152` | 新規（9,938 バイト） |
+| 2 | `Src/Merge20/Merge20FormDiff.cpp` | `f24aa767` | 新規（49,768 バイト） |
+| 3 | `Testing/GoogleTest/Merge20/Merge20FormDiff_test.cpp` | `2e5b23d7` | 新規。単体テスト 19 件 |
+| 4 | `Src/Merge.vcxproj` | `c1c72ec7` | 新規ファイルの登録 |
+| 5 | `Src/Merge.vcxproj.filters` | `3568b69a` | 同上 |
+| 6 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `3aad417e` | 新規ファイルとテストの登録 |
+| 7 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `1ba719f2` | 同上（ブランチ head） |
+
+- 全ファイル ASCII のみ（日本語リテラルは `\u` エスケープ）。`Merge.vcxproj` は CRLF、`UnitTests.vcxproj` は LF の原本どおり保持し、4 ファイルとも XML として有効、diff は追加行のみであることを確認済み。
+
+### 54.3 検証レポート（コーディネーター検証済み）
+- **PR #47**：open・mergeable=true・mergeable_state=clean、head `1ba719f2`、base master。7 コミット、+2059/−0、変更ファイル 7 件。
+- **CI（ブランチ head）**：実行 45931838629、completed／success。全文ログ（3,557,181 バイト、ジョブ `build` 140286000849）で GoogleTest `[ PASSED ] 782 tests.`（F0 時点 763 件 → +19 件＝F1 のテスト）、`[ FAILED ]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。全文ログは `~/workspace/.coord/f1_final_log.txt` に保存。
+- **成果物（実行 45931838629）**：`WinMerge-x64.zip` 26,472,146 バイト（ID 15168459403）、`WinMerge-x64-Setup-x64.exe` 39,921,437 バイト。有効期限 2027-02-25。
+- **マージ**：マージコミット `5b48ec8e`。マージコミット CI：実行 45933389139、completed／success（head_sha=5b48ec8e と一致）。
+- **受け入れ条件の照合（設計書 §10 F1）**：
+  - (a) §5.1 テスト1〜4、§5.2 テスト1〜3、§5.3 テスト1〜3 がすべて単体テストで合格 — 合格。GoogleTest 19 件に含まれ、CI で全合格。ローカル g++ ハーネスでも 145 チェック全合格。
+  - (b) HTML版 `executeDiff` の ground truth との突き合わせ — 合格。HTML版の関数そのものを Node＋jsdom で verbatim 実行した結果とフォークの出力を 20 の XML 対で比較し、142 チェック、失敗 0 件（移動・改名・ノイズ除去・グルーピング・テキスト検出・無名要素の改善分を除く）。
+  - (c) 影響分析の文言（`desc`／`impact`）が日本語で、HTML版の `getDetailInterpretation` と同等 — 合格。上記の突き合わせで確認（数値の丸め差 ±0.5 以内）。
+  - (d) 回帰なし — 合格。新規モジュールの追加のみ。GoogleTest 全体が 782 件合格し、既存テストの失敗は 0 件。
+- **検証の証拠**：`~/workspace/goals/muse-merge-rebuild-competing-with-gemini-neon/hidden_files/f1-work/` に保存（`f1_ci_log.txt`＝CI 全文ログ、`fork_out.json`／`html_gt.json`＝突き合わせ入出力、`compare_gt.py`、`pairs.json` など）。
+- **未検証（実機でしか確認できないもの）**：F1 は純粋モジュールで UI・永続化がないため、実機で確認できる動作はない。実機確認は「CI 成果物の `WinMergeU.exe` が従来どおり起動すること（回帰確認）」のみ。`wchar_t` 2 バイト時のサロゲートペア処理は F0 からの継承で未検証。
+
+### 54.4 次への移行
+- F2（フォルダ比較からの起動＋一覧）はブランチ `merge20/form-f2`（base `5b48ec8e`）で進行中。
+- UI 見直しの設計と 8 本の柱のギャップ分析も並行で進行中（いずれもコードを書かない設計・分析タスク）。
