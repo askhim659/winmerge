@@ -4045,7 +4045,7 @@ void CDirView::OnMerge20VerifyReport()
 	const String leftRoot = ctxt.GetLeftPath();
 	const String rightRoot = ctxt.GetRightPath();
 	CMainFrame* pMainFrame = dynamic_cast<CMainFrame*>(AfxGetMainWnd());
-	std::vector<Merge20VerifyFileResult> files;
+	std::vector<Merge20VerifyFileResult> verifyFiles;
 	if (pMainFrame != nullptr)
 	{
 		int fileIndex = 0;
@@ -4061,10 +4061,10 @@ void CDirView::OnMerge20VerifyReport()
 				continue;
 			if (!Merge20PathIsUnderRoot(pMergeDoc->GetPath(newPane), rightRoot))
 				continue;
-			files.push_back(Merge20VerifyCheckMergeDocFile(*pMergeDoc, fileIndex++));
+			verifyFiles.push_back(Merge20VerifyCheckMergeDocFile(*pMergeDoc, fileIndex++));
 		}
 	}
-	if (files.empty())
+	if (verifyFiles.empty())
 	{
 		AfxMessageBox(_("There are no open file comparisons in this folder compare to verify. Open a file by double-clicking it first.").c_str(), MB_ICONINFORMATION);
 		return;
@@ -4077,14 +4077,14 @@ void CDirView::OnMerge20VerifyReport()
 		return;
 	const String verifiedAt =
 		String(CTime::GetCurrentTime().Format(_T("%Y-%m-%d %H:%M:%S")).GetString());
-	const Merge20VerifyReport report = Merge20VerifyReportFromFileResults(files, verifiedAt);
+	const Merge20VerifyReport report = Merge20VerifyReportFromFileResults(verifyFiles, verifiedAt);
 	String errStr;
 	if (!Merge20VerifyReportWriteFile(report, Merge20VerifyReportMakeLabels(), filePath, errStr))
 	{
 		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
 		return;
 	}
-	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(static_cast<int>(files.size())), filePath).c_str(), MB_ICONINFORMATION);
+	AfxMessageBox(strutils::format_string2(_("%1 files exported to %2"), strutils::to_str(static_cast<int>(verifyFiles.size())), filePath).c_str(), MB_ICONINFORMATION);
 }
 
 /**
