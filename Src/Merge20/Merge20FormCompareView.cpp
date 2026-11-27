@@ -9,10 +9,16 @@
  * F5 adds the structured diff table under the preview pane
  * (Merge20FormTable rows; group rows expand/collapse on click,
  * record rows spotlight through FocusDiffRecord).
+ * F6 adds the name-master edit button to the top bar
+ * (design sections 7.1 and 8): the button text carries the
+ * count badge, and after a save the document re-resolves every
+ * form name.
  */
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCompareView.h"
+#include "Merge20/Merge20FormMasterDlg.h"
 #include "resource.h"
+#include "UnicodeString.h"
 #include <cmath>
 
 #ifdef _DEBUG
@@ -79,6 +85,7 @@ BEGIN_MESSAGE_MAP(CFormCompareView, CView)
 	ON_EN_CHANGE(IDC_MERGE20_FORM_SEARCH, OnSearchChanged)
 	ON_CBN_SELCHANGE(IDC_MERGE20_FORM_SORT, OnSortChanged)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_RERUN, OnRerun)
+	ON_BN_CLICKED(IDC_MERGE20_FORM_MASTER, OnMasterEdit)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_PREV, OnPrevForm)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_NEXT, OnNextForm)
 	ON_BN_CLICKED(IDC_MERGE20_FORM_NAV_TOGGLE, OnNavToggle)
@@ -184,6 +191,16 @@ int CFormCompareView::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_btnRerun.SetFont(pFont);
+	// Name-master edit button (F6, design section 7.1): the top
+	// bar holds the folder display, the re-run button and this
+	// button (no CSV/caching buttons yet; F7 adds the export).
+	if (!m_btnMaster.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+		rc, this, IDC_MERGE20_FORM_MASTER))
+	{
+		TRACE0("Failed to create Merge20FormCompareView name-master button\n");
+		return -1;
+	}
+	m_btnMaster.SetFont(pFont);
 	if (!m_btnPrev.Create(_T(""), WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
 		rc, this, IDC_MERGE20_FORM_PREV))
 	{
@@ -441,6 +458,12 @@ void CFormCompareView::LayoutControls()
 	m_wndSort.MoveWindow(x, y, 220, kFormControlHeight);
 	x += 220 + kFormRowGap;
 	m_btnRerun.MoveWindow(x, y, 90, kFormControlHeight);
+	x += 90 + kFormRowGap;
+	// Name-master edit button (F6): the text carries the count
+	// badge (HTML `masterCountBadge`), so it is wider than the
+	// other buttons in this row.
+	const int masterBtnWidth = 210;
+	m_btnMaster.MoveWindow(x, y, masterBtnWidth, kFormControlHeight);
 	y += kFormControlHeight + kFormMargin;
 	// Bottom area: navigator (left) + card list (top) + preview pane (bottom, F3).
 	const int navWidth = m_bNavVisible ? kFormNavWidth : 0;
@@ -605,6 +628,7 @@ void CFormCompareView::UpdateResources()
 	m_stSearchLabel.SetWindowText(_("Search").c_str());
 	m_stSortLabel.SetWindowText(_("Sort by").c_str());
 	m_btnRerun.SetWindowText(_("Re-run analysis").c_str());
+	RefreshMasterButton();
 	m_btnPrev.SetWindowText(_("Previous form").c_str());
 	m_btnNext.SetWindowText(_("Next form").c_str());
 	m_btnNavToggle.SetWindowText((m_bNavVisible ? _("Hide navigator") : _("Show navigator")).c_str());
@@ -863,6 +887,41 @@ void CFormCompareView::OnRerun()
 	HideSpotlightBanner();
 	CWaitCursor wait;
 	pDoc->RunAnalysis();
+}
+
+void CFormCompareView::OnMasterEdit()
+{
+	CMerge20FormMasterDlg dlg(this);
+	if (dlg.DoModal() != IDOK)
+		return;
+	// The dialog saved (and validated) the master: re-resolve
+	// every form name from the file and refresh the list.
+	CFormCompareDoc* pDoc = GetDocument();
+	if (pDoc != nullptr)
+		pDoc->RefreshFormNames();
+	RefreshMasterButton();
+}
+
+void CFormCompareView::RefreshMasterButton()
+{
+	if (m_btnMaster.GetSafeHwnd() == nullptr)
+		return;
+	// The count badge (HTML `masterCountBadge`): unique ids in
+	// the master file, or the default list when the file is
+	// missing or unparsable.
+	Merge20FormMaster master;
+	String text;
+	if (Merge20FormMasterLoadText(text))
+	{
+		int badLine = 0;
+		if (!Merge20FormMasterParseText(text, master, badLine))
+			master = Merge20FormMasterGetDefault();
+	}
+	else
+		master = Merge20FormMasterGetDefault();
+	const String kinds = strutils::to_str(Merge20FormMasterCountUniqueIds(master));
+	m_btnMaster.SetWindowText(
+		strutils::format_string1(_("Name master (%1 types)"), kinds).c_str());
 }
 
 void CFormCompareView::OnPrevForm()
