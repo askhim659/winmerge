@@ -5550,7 +5550,7 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 
 - F0（基盤：XMLパーサ＋データモデル＋単体テスト、ブランチ `merge20/form-f0`、7コミット・7ファイル・追加のみ +1347/-0、base master `94956238`）をコーディネーター検証後にマージ。マージコミット **15173552**。
 - コーディネーター検証済み（マージ前）：PR #44 は open・mergeable=true・mergeable_state=clean、head `6e780da8910008fba1f8ab627c475c2c8ff62c64`、base `94956238313b95f233f3eba76bd5c2bfc9333416`。最終 head の CI 実行 45924163470 は completed／success（head_sha=6e780da8 と一致）。全文ログで GoogleTest `[ PASSED ] 763 tests.`（H-DOC 時点 754＋新規 9。`[ FAILED ]` は翻訳文字列 ID（IDS_FILESAVE_FAILED 等）のみでテスト失敗ではない）、コンパイルエラー 0 件（`error C[0-9]`・`error LNK` 0 件、`Build succeeded` 1 件）。成果物（実行 45924163470）：`WinMerge-x64.zip` 26,472,199 バイト（ID 15166555717）、`WinMerge-x64-Setup-x64.exe` 39,928,899 バイト（ID 15166096676）、失効 2027-02-25。全文ログは `~/workspace/.coord/f0_final_log.txt` に保存（47,767 行）。
-- マージコミット CI は実行 45925523753 でポーリング中（本節記録時点 in_progress）。完了後に API で成果物を確認し、本節へ追記すること。
+- マージコミット CI：実行 45925523753 は completed／success（head_sha=15173552 と一致）。成果物：`WinMerge-x64.zip` 26,472,231 バイト、`WinMerge-x64-Setup-x64.exe` 39,927,179 バイト。F0 のマージはこれで完全検証済み。
 
 ### 49.2 受け入れ条件の照合（設計書 §10 F0）
 
