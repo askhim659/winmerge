@@ -963,14 +963,14 @@ void CMerge20FormCanvas::DrawSpotlightCallout(CDC& dc, const CRect& rcWindow)
 	for (const std::wstring& line : lines)
 	{
 		maxTextW = (std::max)(maxTextW,
-			dc.GetTextExtent(line.c_str(), static_cast<int>(line.size())).cx);
+			static_cast<int>(dc.GetTextExtent(line.c_str(), static_cast<int>(line.size())).cx));
 	}
 	const int boxW = maxTextW + 24;
 	const int boxH = 30 + static_cast<int>(lines.size()) * 20;
 	// Below the window when it fits, otherwise above it (HTML rule).
-	int boxX = (std::min)(rcClient.right - boxW - 12, (std::max)(8, rcWindow.left));
+	int boxX = (std::min)(static_cast<int>(rcClient.right) - boxW - 12, (std::max)(8, static_cast<int>(rcWindow.left)));
 	int boxY = (rcWindow.bottom + boxH + 12 < rcClient.bottom) ?
-		rcWindow.bottom + 10 : (std::max)(8, rcWindow.top - boxH - 10);
+		rcWindow.bottom + 10 : (std::max)(8, static_cast<int>(rcWindow.top) - boxH - 10);
 	if (boxX < 4)
 		boxX = 4;
 	if (boxY < 4)
