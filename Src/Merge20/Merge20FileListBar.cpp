@@ -52,6 +52,7 @@
 #include "Merge20/Merge20BatchCheckDlg.h"
 #include "Merge20/Merge20CloseWarn.h"
 #include "Merge20/Merge20HighRiskRemain.h"
+#include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "DiffContext.h"
 #include "DirDoc.h"
 #include "Logger.h"
@@ -1544,6 +1545,22 @@ bool CMerge20FileListBar::HandleListKey(UINT nVKey)
 	}
 	if (nVKey == VK_SPACE)
 	{
+		// Merge20 (best-workflow B14): Space cycles blindly, so
+		// the step that declares a high-risk file done (TODO ->
+		// DONE) needs one confirmation; a cancel changes nothing.
+		// Directory rows hold no file judgment, so they are not
+		// guarded. Keys 1-5 stay unguarded (see DirView.cpp).
+		const CMerge20FileListCtrl::Row* pRow = m_wndList.GetDisplayedRow(row);
+		if (pRow != nullptr && !pRow->isDirectory && m_pDirDoc != nullptr)
+		{
+			const ReviewState nextState = static_cast<ReviewState>((static_cast<int>(pRow->reviewState) + 1) % 5);
+			if (!Merge20ConfirmHighRiskFileReview(this, pRow->relPath,
+				m_pDirDoc->GetDiffContext().GetMerge20FileStates().GetState(pRow->relPath),
+				pRow->reviewState, nextState))
+			{
+				return true;
+			}
+		}
 		CycleRowReview(row);
 		return true;
 	}

@@ -299,13 +299,16 @@ Merge20FileState Merge20ClassifyFromRanges(const std::vector<Merge20BulkRange>& 
 	return ClassifyBuiltLines(BuildDiffLines(ranges, getLine), riskKeywords);
 }
 
-RiskLevel Merge20ClassifyOneDiffRange(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords)
+// Build the classifier input for one diff range of an open (2-way)
+// merge doc (B3/B14 shared core): false for a non-2-way doc, an
+// out-of-range index or a non-diff range.
+static bool BuildOneDiffRangeLines(const CMergeDoc& doc, int nDiff, std::vector<Merge20DiffLine>& lines)
 {
 	if (doc.m_nBuffers != 2 || nDiff < 0 || nDiff >= doc.m_diffList.GetSize())
-		return RiskLevel::NONE;
+		return false;
 	const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff);
 	if (pRange == nullptr || pRange->op == OP_NONE)
-		return RiskLevel::NONE;
+		return false;
 	Merge20BulkRange range;
 	range.op = pRange->op;
 	range.beginOld = pRange->begin[0];
@@ -317,7 +320,24 @@ RiskLevel Merge20ClassifyOneDiffRange(const CMergeDoc& doc, int nDiff, const std
 	const LineAccessor getLine = [&](int pane, int realLine, String& text) {
 		return pane == 0 ? GetBufferLine(oldBuf, realLine, text) : GetBufferLine(newBuf, realLine, text);
 	};
-	return Merge20ClassifyDiffRisk(BuildDiffLines({ range }, getLine), riskKeywords);
+	lines = BuildDiffLines({ range }, getLine);
+	return true;
+}
+
+RiskLevel Merge20ClassifyOneDiffRange(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords)
+{
+	std::vector<Merge20DiffLine> lines;
+	if (!BuildOneDiffRangeLines(doc, nDiff, lines))
+		return RiskLevel::NONE;
+	return Merge20ClassifyDiffRisk(lines, riskKeywords);
+}
+
+String Merge20ClassifyOneDiffSummary(const CMergeDoc& doc, int nDiff, const std::vector<String>& riskKeywords)
+{
+	std::vector<Merge20DiffLine> lines;
+	if (!BuildOneDiffRangeLines(doc, nDiff, lines))
+		return String();
+	return Merge20FormatSummary(Merge20ClassifyDiffLines(lines, riskKeywords));
 }
 
 String Merge20FormatSummary(const Merge20ClassifyResult& result)

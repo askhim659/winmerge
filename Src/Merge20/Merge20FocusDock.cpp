@@ -355,6 +355,11 @@ void CMerge20FocusDock::OnButtonClicked(UINT nID)
 	default:
 		return; // Split/Regroup are handled above; unknown actions do nothing.
 	}
+	// Merge20 (best-workflow B14): a destructive judgment on a
+	// high-risk diff needs one confirmation; a cancel applies
+	// nothing.
+	if (!m_pDoc->Merge20ConfirmHighRiskDiffs({{m_nCurrentDiff, conclusion}}))
+		return;
 	m_pDoc->Merge20SetDiffConclusion(m_nCurrentDiff, conclusion);
 }
 
