@@ -11,6 +11,7 @@
 #include "Merge20/Merge20FocusDock.h"
 #include "Merge20/Merge20Grep.h"
 #include "Merge20/Merge20AuditDoc.h"
+#include "Merge20/Merge20ResumeSummary.h"
 #include "Merge.h"
 #include "DirDoc.h"
 #include "MergeDoc.h"
@@ -680,19 +681,34 @@ void Merge20SessionOfferRestore(CDirDoc& doc)
 		AfxMessageBox(errStr.c_str(), MB_ICONSTOP);
 		return;
 	}
-	String msg = strutils::format_string2(
-		_("A session saved on %1 was found for these folders (%2 files recorded).\n\nRestore the review states, output checks, memos and merge judgments?"),
-		session.savedAt, strutils::to_str(static_cast<int>(session.files.size())));
+	// Merge20 (best-workflow B13): show where the work left off
+	// before asking, so the summary alone lets the user tell
+	// "resume" from "start over". The counts come from the loaded
+	// session through the same B2 counting function as the close
+	// warning, so they cannot disagree with the session contents;
+	// the resume line carries the B12 position (diff and top line,
+	// shown 1-based). The offer stays a plain message box with no
+	// separate checkbox: reopening at the saved position is the
+	// point of the restore (a changed target is simply not
+	// reopened; see ApplySessionStates). Declining (IDNO) returns
+	// here, before anything is applied, so nothing changes
+	// (acceptance (c)).
+	const Merge20ResumeSummary summary = Merge20ResumeSummaryFromSession(session);
+	Merge20ResumeSummaryTemplates templates;
+	templates.savedAt = _("Saved at: %1");
+	templates.counts = _("Unreviewed: %1 files, undecided diffs: %2, output targets: %3 (of %4 files)");
+	templates.resumeWithPosition = _("The file compare \"%1\" that was open last time will also be opened (diff %2, line %3).");
+	templates.resumeNoPosition = _("The file compare \"%1\" that was open last time will also be opened.");
+	templates.noResume = _("No file compare was open last time.");
+	const std::vector<String> summaryLines = Merge20ResumeSummaryFormatLines(
+		summary, session.savedAt, session.display.resumeRelPath, session.display.resumeDiff, session.display.resumeTopLine, templates);
+	String msg = _("A saved session was found for these folders.");
+	for (const String& line : summaryLines)
+		msg += _T("\n") + line;
 	if (skippedFiles > 0)
 		msg += _T("\n") + strutils::format_string1(_("%1 saved entries could not be read and will be ignored."), strutils::to_str(skippedFiles));
-	// Merge20 (best-workflow B12): say that the last open file
-	// compare will be opened too, so the user can decline the whole
-	// restore when that is not wanted. There is no separate
-	// checkbox: the offer is a plain message box, and reopening at
-	// the saved position is the point of the restore (a changed
-	// target is simply not reopened; see ApplySessionStates).
-	if (!session.display.resumeRelPath.empty())
-		msg += _T("\n") + strutils::format_string1(_("The file compare \"%1\" that was open last time will also be opened."), session.display.resumeRelPath);
+	msg += _T("\n\n");
+	msg += _("Restore the review states, output checks, memos and merge judgments?");
 	if (AfxMessageBox(msg.c_str(), MB_YESNO | MB_ICONQUESTION) != IDYES)
 		return;
 	Merge20SessionRestoreResult result = Merge20SessionApplyToDoc(doc, session, skippedFiles);
