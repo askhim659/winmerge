@@ -7,12 +7,13 @@
  *
  * Merge20 (Panel P2, design sections 12.3 P-R4/P-R5/P-R10 and
  * 12.7): the panel shows the folder compare's files as a flat
- * depth-first list. Search, the action-category filter tabs and
- * the per-directory expand/collapse state all decide which rows
- * are shown; this pure module owns that decision so it can be
- * unit-tested without MFC. The control (CMerge20FileListCtrl)
- * enumerates all rows, calls Merge20ComputeFileListVisibility()
- * once, and keeps the rows it returns.
+ * depth-first list. Search, the action-category filter tabs, the
+ * risk filter (B3) and the per-directory expand/collapse state all
+ * decide which rows are shown; this pure module owns that decision
+ * so it can be unit-tested without MFC. The control
+ * (CMerge20FileListCtrl) enumerates all rows, calls
+ * Merge20ComputeFileListVisibility() once, and keeps the rows it
+ * returns.
  *
  * Rules (design section 12.3, HTML tool renderTree):
  * - Search: trim surrounding whitespace, case-insensitive
@@ -24,6 +25,12 @@
  *   files (never opened) match no category tab, only "all".
  *   Directory rows have no category and never match a tab by
  *   themselves.
+ * - Risk filter (B3): -1 shows every risk level; otherwise only
+ *   files whose S4 risk matches that RiskLevel. Unclassified files
+ *   match no risk level, only -1 (same rule as the action tabs).
+ *   Directory rows have no risk and never match a risk level by
+ *   themselves; they stay visible when they have a visible file
+ *   descendant, exactly as with the action filter.
  * - Collapse: a collapsed directory hides its descendant rows.
  *   While a search string is active the collapse state is
  *   ignored, so a matching file inside a collapsed folder is
@@ -53,6 +60,7 @@ struct Merge20FileListFilterRow
 	int depth = 0; /**< DIFFITEM::GetDepth(): files directly under the root are 0 */
 	bool classified = false; /**< True once S4 classification ran for this file */
 	ActionCategory action = ActionCategory::NO_ACTION_IDENTICAL; /**< Meaningful only when classified */
+	RiskLevel risk = RiskLevel::NONE; /**< B3: S4 risk level, meaningful only when classified */
 	bool collapsed = false; /**< This directory row is folded; meaningful for directories with children */
 };
 
@@ -64,12 +72,16 @@ struct Merge20FileListFilterRow
  *             whitespace or mixed case; trimmed and lower-cased here).
  * @param [in] actionFilter -1 = all action categories, otherwise
  *             static_cast<int>(ActionCategory) of the selected tab.
+ * @param [in] riskFilter -1 = all risk levels (B3), otherwise
+ *             static_cast<int>(RiskLevel) of the selected risk
+ *             filter. Unclassified files match only -1.
  * @return One bool per input row, in the same order.
  */
 std::vector<bool> Merge20ComputeFileListVisibility(
 	const std::vector<Merge20FileListFilterRow>& rows,
 	const String& searchText,
-	int actionFilter);
+	int actionFilter,
+	int riskFilter);
 
 /**
  * @brief Join the folded directories' relative paths into the one
