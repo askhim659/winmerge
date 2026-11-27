@@ -215,6 +215,7 @@ struct Merge20AuditCsvRow
 	String oldValue;   /**< Old value (display text) */
 	String newValue;   /**< New value (display text) */
 	String operatorId; /**< Operator id */
+	String note;       /**< Secondary codes, as display text (may be empty) */
 };
 
 /**
@@ -230,7 +231,7 @@ String Merge20AuditFormatCsvRow(const Merge20AuditCsvRow& row);
  * joined with CRLF, no trailing line ending, no BOM (the BOM is
  * added by Merge20AuditWriteCsvFile).
  * @param [in] rows Rows in chronological order.
- * @param [in] headers Six column headers, in row order.
+ * @param [in] headers Seven column headers, in row order.
  * @return CSV text (UTF-8 when encoded by the caller; this
  *         function works on String and adds no BOM).
  */
@@ -241,7 +242,7 @@ String Merge20AuditBuildCsvText(const std::vector<Merge20AuditCsvRow>& rows, con
  * CRLF line endings (S6 rule), so it opens directly in Excel
  * without garbled Japanese.
  * @param [in] rows Rows in chronological order.
- * @param [in] headers Six column headers, in row order.
+ * @param [in] headers Seven column headers, in row order.
  * @param [in] filePath Destination file.
  * @param [out] errDetail Empty on success, otherwise the reason.
  * @return True on success.
