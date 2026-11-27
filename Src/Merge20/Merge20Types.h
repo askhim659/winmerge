@@ -64,6 +64,7 @@ struct Merge20DiffJudgment
 	int end[3] = { -1, -1, -1 };   /**< Last real line of the range, per pane */
 	int state = 0;    /**< ResultSegmentState ordinal */
 	std::vector<int> srcPanes; /**< Chosen source panes (0/1/2), in order; empty when unresolved */
+	int conclusion = 0; /**< Merge20DiffConclusion ordinal (best-workflow B1): 0 = Undecided, 1 = UseOld, 2 = UseNew, 3 = UseBoth, 4 = Reject, 5 = Keep. Stored separately from state/srcPanes because Keep leaves the segment untouched and Reject on a changed block leaves the conflict display, so the conclusion cannot be derived from the segment alone. */
 };
 
 /**

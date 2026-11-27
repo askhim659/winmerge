@@ -663,6 +663,9 @@
     <ClCompile Include="Merge20\Merge20Focus.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Conclusion.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20FormXml.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -748,6 +751,9 @@
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20SessionDoc.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20Theme.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="MergeDoc.cpp">
@@ -1541,6 +1547,9 @@
     <ClInclude Include="Merge20\Merge20ClassifyDoc.h">
       <Filter>Merge20</Filter>
     </ClInclude>
+    <ClInclude Include="Merge20\Merge20Conclusion.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
     <ClInclude Include="Merge20\Merge20Csv.h">
       <Filter>Merge20</Filter>
     </ClInclude>
@@ -1662,6 +1671,9 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Types.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20Theme.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="MergeDoc.h">

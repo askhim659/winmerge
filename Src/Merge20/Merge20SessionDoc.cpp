@@ -8,6 +8,7 @@
 #include "StdAfx.h"
 #include "Merge20/Merge20SessionDoc.h"
 #include "Merge20/Merge20Session.h"
+#include "Merge20/Merge20FocusDock.h"
 #include "Merge20/Merge20Grep.h"
 #include "Merge.h"
 #include "DirDoc.h"
@@ -144,6 +145,10 @@ namespace
 			}
 			judgment.state = static_cast<int>(pSeg->state);
 			judgment.srcPanes = pSeg->srcPanes;
+			// Merge20 (best-workflow B1b): the explicit conclusion
+			// rides on the judgment (it cannot be derived from the
+			// segment alone: Keep leaves the segment untouched).
+			judgment.conclusion = static_cast<int>(doc.Merge20GetDiffConclusion(i));
 			judgments.push_back(std::move(judgment));
 		}
 		return judgments;
@@ -170,6 +175,17 @@ namespace
 	}
 
 } // namespace
+
+/**
+ * @brief Merge20 (best-workflow B1): public wrapper for the folder
+ * item lookup above, so a merge doc can reach its own folder item
+ * for the conclusion linkage without duplicating the lookup
+ * (including the swapped-paths fallback).
+ */
+DIFFITEM* Merge20FindItemForMergeDoc(CDirDoc& doc, const CMergeDoc& mergeDoc)
+{
+	return FindItemForMergeDoc(doc, mergeDoc);
+}
 
 String Merge20SessionGetDirectory()
 {
@@ -700,5 +716,17 @@ void Merge20SessionRestoreMergeDoc(CMergeDoc& doc)
 		}
 		// Common and Edited are skipped: Common carries no judgment,
 		// and a hand edit cannot be reconstructed from the sources.
+		// Merge20 (best-workflow B1b): put the saved conclusion back.
+		// The result content above already matches the saved
+		// judgment; this only restores the conclusion itself (no
+		// linkage: the saved review state and output checkbox are
+		// restored separately by Merge20SessionApplyToDoc).
+		doc.Merge20SetDiffConclusionRestored(nDiff,
+			static_cast<Merge20DiffConclusion>(judgment.conclusion));
 	}
+	// Merge20 (best-workflow B1b): the restored conclusions change
+	// the header progress, so refresh the dock even when no
+	// judgment rewrote a segment (e.g. every conclusion is Keep).
+	if (CMerge20FocusDock* pDock = doc.GetMerge20FocusDock(); pDock != nullptr)
+		pDock->ShowDiff(doc.GetCurrentDiff());
 }

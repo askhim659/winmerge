@@ -5686,3 +5686,80 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 53.4 次への移行
 - 優先修正 2 件（パネル連携 PR #45、専用モード PR #46）は両方とも master に入った。次ビルドはこの master の最新 CI 成果物から出す（2026-11-27〜11-28 を目指す）。
 - F1（`merge20/form-f1`）は進行中（CI 実行 45931838629 が in_progress。head `1ba719f2`）。
+
+## §54 Wave 5 F1 — 照合・分類（安定キー、移動／改名、ノイズ除去、グルーピング、深刻度）— マージ・CI 検証済み（2026-11-27）
+
+### 54.1 内容（設計書 §10 F1）
+- 新規純粋モジュール `Merge20FormDiff.h/.cpp`（MFC 非依存・`_()` なし）と GoogleTest 19 件を追加。既存コードの変更は `.vcxproj`／`.filters` の登録のみ。
+- 安定キー（§5.1）：`structPath + tag + name`（無名要素は属性署名）。重複名の順序問題を解消。
+- 移動／改名（§5.1）：`Moved`／`Renamed` を 1 件に集約。改名は「同じ位置」条件付き（新旧の矩形が重なること。重ならなければ削除＋追加のまま＝§5.1 テスト4）。同親内の順序入替えのみは無視（T-F-2）。挿入による兄弟インデックスのずれは stage 1.5 で吸収。
+- ノイズ除去（§5.2）：0.5 未満の座標ずれは無視（件数を `ignoredNoiseCount` に記録）。0.5 以上 1.0 未満は `minor` グループに分離。`diffVal` は小数第1位まで保持（100 → 112.5 は 12.5。HTML版は 13 に丸める）。
+- グルーピング（§5.3）：同一親・同一方向・同一量の座標変更を `G1`… にまとめ、要約文を自動生成（例：「field 5項目が下に12単位移動」）。
+- 深刻度（§5.4）・大幅変動（§4.4）：`Merge20ClassifyFormSeverity`／`Merge20ApplyLargeChangeFlag`（HTML版と同じ規則：平均×1.5 かつ >20）。
+- `getDetailInterpretation` の移植：座標系・フォント・バージョン・汎用の文言を日本語で生成。HTML版との意図的な差異：要素テキストの変更を `Mod` として検出、無名要素の属性変更は構造パス＋タグで対応付け、傾向に `移動(N)`／`改名(N)` を追加。
+
+### 54.2 変更一覧（ブランチ `merge20/form-f1`、base master `54b369d1`。7 ファイル 7 コミット）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20FormDiff.h` | `ad21b152` | 新規（9,938 バイト） |
+| 2 | `Src/Merge20/Merge20FormDiff.cpp` | `f24aa767` | 新規（49,768 バイト） |
+| 3 | `Testing/GoogleTest/Merge20/Merge20FormDiff_test.cpp` | `2e5b23d7` | 新規。単体テスト 19 件 |
+| 4 | `Src/Merge.vcxproj` | `c1c72ec7` | 新規ファイルの登録 |
+| 5 | `Src/Merge.vcxproj.filters` | `3568b69a` | 同上 |
+| 6 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `3aad417e` | 新規ファイルとテストの登録 |
+| 7 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `1ba719f2` | 同上（ブランチ head） |
+
+- 全ファイル ASCII のみ（日本語リテラルは `\u` エスケープ）。`Merge.vcxproj` は CRLF、`UnitTests.vcxproj` は LF の原本どおり保持し、4 ファイルとも XML として有効、diff は追加行のみであることを確認済み。
+
+### 54.3 検証レポート（コーディネーター検証済み）
+- **PR #47**：open・mergeable=true・mergeable_state=clean、head `1ba719f2`、base master。7 コミット、+2059/−0、変更ファイル 7 件。
+- **CI（ブランチ head）**：実行 45931838629、completed／success。全文ログ（3,557,181 バイト、ジョブ `build` 140286000849）で GoogleTest `[ PASSED ] 782 tests.`（F0 時点 763 件 → +19 件＝F1 のテスト）、`[ FAILED ]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。全文ログは `~/workspace/.coord/f1_final_log.txt` に保存。
+- **成果物（実行 45931838629）**：`WinMerge-x64.zip` 26,472,146 バイト（ID 15168459403）、`WinMerge-x64-Setup-x64.exe` 39,921,437 バイト。有効期限 2027-02-25。
+- **マージ**：マージコミット `5b48ec8e`。マージコミット CI：実行 45933389139、completed／success（head_sha=5b48ec8e と一致）。
+- **受け入れ条件の照合（設計書 §10 F1）**：
+  - (a) §5.1 テスト1〜4、§5.2 テスト1〜3、§5.3 テスト1〜3 がすべて単体テストで合格 — 合格。GoogleTest 19 件に含まれ、CI で全合格。ローカル g++ ハーネスでも 145 チェック全合格。
+  - (b) HTML版 `executeDiff` の ground truth との突き合わせ — 合格。HTML版の関数そのものを Node＋jsdom で verbatim 実行した結果とフォークの出力を 20 の XML 対で比較し、142 チェック、失敗 0 件（移動・改名・ノイズ除去・グルーピング・テキスト検出・無名要素の改善分を除く）。
+  - (c) 影響分析の文言（`desc`／`impact`）が日本語で、HTML版の `getDetailInterpretation` と同等 — 合格。上記の突き合わせで確認（数値の丸め差 ±0.5 以内）。
+  - (d) 回帰なし — 合格。新規モジュールの追加のみ。GoogleTest 全体が 782 件合格し、既存テストの失敗は 0 件。
+- **検証の証拠**：`~/workspace/goals/muse-merge-rebuild-competing-with-gemini-neon/hidden_files/f1-work/` に保存（`f1_ci_log.txt`＝CI 全文ログ、`fork_out.json`／`html_gt.json`＝突き合わせ入出力、`compare_gt.py`、`pairs.json` など）。
+- **未検証（実機でしか確認できないもの）**：F1 は純粋モジュールで UI・永続化がないため、実機で確認できる動作はない。実機確認は「CI 成果物の `WinMergeU.exe` が従来どおり起動すること（回帰確認）」のみ。`wchar_t` 2 バイト時のサロゲートペア処理は F0 からの継承で未検証。
+
+### 54.4 次への移行
+- F2（フォルダ比較からの起動＋一覧）はブランチ `merge20/form-f2`（base `5b48ec8e`）で進行中。
+- UI 見直しの設計と 8 本の柱のギャップ分析も並行で進行中（いずれもコードを書かない設計・分析タスク）。
+
+## §55 UI 見直し U0 — ビジュアル基盤（テーマ定数・共有ヘルパー）— マージ・CI 検証済み（2026-11-27）
+
+### 55.1 内容（UI 見直し設計書 §4 U0）
+- 新規 `Src/Merge20/Merge20Theme.h/.cpp`（MFC 依存のため `UnitTests.vcxproj` には登録しない。DedBar と同じ扱い）。WizMerge アクセント定数（設計書 §2.1 の RGB 値。ライト／ダーク両対応）、グラデーション描画・角丸描画・太字フォント生成の共有ヘルパー。ダーク判定は既存の `DarkMode::isEnabled()`／`WinMergeDarkMode` を使う。
+- U0 単体では呼び出し元がなく、既存の画面表示に変化はない。
+- 実装した API（`namespace Merge20Theme`）：`IsDarkMode()`、`GetAccentColor(bool)`、`GetAccentGlowColor()`、`GetBrandBarStartColor/EndColor/UnderlineColor(bool)`、`GetReviewStateColor(ReviewState, bool)`、`GetRiskHighColor(bool)`、`FillGradient`、`DrawBrandBar(CDC*, CRect, bool)`、`DrawRoundedRect`、`CreateBoldFont(CFont&)`（所有権が明確な `CFont&` 受け取り型。タスクの `CreateBoldFont()` の趣旨に沿い、署名は U0 の裁量で決定）。
+- ダークのリスク「高」赤文字 `#FB7185` は、設計書どおり U5 で実機確認する候補値としてコメントに明記。
+
+### 55.2 変更一覧（ブランチ `merge20/ui-u0`、base master `951c1b07`。4 ファイル 4 コミット）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20Theme.h` | `9b261bd6` | 新規（4,432 バイト）。テーマ定数・ヘルパーの宣言 |
+| 2 | `Src/Merge20/Merge20Theme.cpp` | `58fa2d2e` | 新規（4,712 バイト）。§2.1 の RGB 値と描画実装 |
+| 3 | `Src/Merge.vcxproj` | `6f0c11b6` | 登録（+2 行。Merge20 グループ末尾） |
+| 4 | `Src/Merge.vcxproj.filters` | `5114315c` | 登録（+6 行。`<Filter>Merge20</Filter>` 付き。ブランチ head） |
+
+- 1 ファイル 1 コミット、連続コミットの間に sleep 3。両新規ファイルは ASCII のみ・LF。`.vcxproj`／`.filters` は CRLF を保持し、差分は追加行のみ（XML として有効であることを確認済み）。`UnitTests.vcxproj` には登録していない（MFC 依存のため）。
+- 新規コマンド ID・オプションキー・UI 文字列なし（`.po`・`.rc` に変更なし）。
+- **調査メモ**：`DarkModeLib.h`／`WinMergeDarkMode` の宣言ファイルはフォークのリポジトリツリー内に存在しない（全 6,997 エントリを確認）。`MainFrm.h` が `#include "DarkModeLib.h"` し、`MainFrm.cpp` が `DarkMode::isEnabled()`／`WinMergeDarkMode::GetDarkModeType` を使う既存の経路と同じ include を `Merge20Theme.cpp` で使っており、CI でコンパイル成功・`Merge20Theme.obj` 生成を確認済みのため、U0 としては問題ない。
+
+### 55.3 検証レポート（コーディネーター検証済み）
+- **PR #48**：open・mergeable=true・mergeable_state=clean、head `5114315c`、base master。4 コミット、+307/−0、変更ファイル 4 件。
+- **CI（ブランチ head）**：実行 45936191008、completed／success。全文ログ（3,558,462 バイト、ジョブ `build` 140299831351）で GoogleTest `[ PASSED ] 782 tests.`（F1 時点の 782 件と同数で変化なし）、`[ FAILED ]` 行なし（ログ中の "FAILED" 4 件は `.po` のコメント行 `#. IDS_FILESAVE_FAILED` 等の誤検出）、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。`Merge20Theme.cpp` が CL.exe のコマンドラインに含まれ、`/Yu"stdafx.h"` でコンパイルされ、`Merge20Theme.obj` が生成されたことをログで確認。警告 `warning C[0-9]` 850 件はすべて既存の googletest／xdiff 等由来で、Merge20 を含むものは 0 件。番兵「Merge20 strings present in the bundled Japanese.po.」も通過。全文ログは `~/workspace/.coord/u0_final_log.txt` に保存（子の保存した `hidden_files/u0-ci-log-45936191008.txt` のコピー）。
+- **成果物（実行 45936191008）**：`WinMerge-x64.zip` 26,471,768 バイト（ID 15170404583）、`WinMerge-x64-Setup-x64.exe` 39,922,791 バイト（ID 15170793375）。いずれも未失効。
+- **マージ**：マージコミット `e2bed6dc`。マージコミット CI：実行 45938370585、completed／success（head_sha=e2bed6dc と一致）。
+- **受け入れ条件の照合（設計書 §4 U0）**：
+  - (a) CI でコンパイルされ、GoogleTest 件数が変わらないこと — 合格（`Merge20Theme.obj` の生成を確認。782 件全パスで件数変化なし）。
+  - (b) 定数の RGB 値が §2.1 の表と一致すること — 合格（ブランチ head のコミット済みファイルから RGB リテラルを全抽出して照合。すべて一致）。
+  - (c) 既存の画面表示に変化がないこと — コード上は合格、**実機未検証**（U0 は描画を呼ぶコードを一切追加していないため、表示が変わる経路が存在しない）。
+- **未検証（実機でしか確認できないもの）**：実機でファイル比較・フォルダ比較を開き、見た目が変わっていないこと。ダークモード切替時の描画（U0 単体では描画を呼ばないため、実機確認は U1・U5 で行う）。`DarkMode::isEnabled()` の実機での true/false。
+- **ツール不具合の記録**：`github_api.py` の `pr` ヘルパーは head が `merge20/phase1` に固定されており、他ブランチの PR 作成には使えない（422 になる）。U0 の子は直接 API 呼び出しで PR を作成した。今後のスライスも同じ手順を使うこと。
+
+### 55.4 次への移行
+- U1（ブランド帯）はブランチ `merge20/ui-u1`（base `e2bed6dc`）で進行中。
+- F2（`merge20/form-f2`）と B1（`merge20/wf-b1`）も進行中（いずれも CI 実行中）。

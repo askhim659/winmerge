@@ -163,6 +163,9 @@ BEGIN_MESSAGE_MAP(CMergeDoc, CDocument)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SPLIT_DIFF, OnUpdateMerge20SplitDiff)
 	ON_COMMAND(ID_MERGE20_REGROUP_DIFF, OnMerge20RegroupDiff)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_REGROUP_DIFF, OnUpdateMerge20RegroupDiff)
+	// Merge20 (best-workflow B1): per-diff conclusion commands (result pane context menu, Diff conclusion submenu)
+	ON_COMMAND_RANGE(ID_MERGE20_CONCLUSION_UNDECIDED, ID_MERGE20_CONCLUSION_KEEP, OnMerge20SetConclusion)
+	ON_UPDATE_COMMAND_UI_RANGE(ID_MERGE20_CONCLUSION_UNDECIDED, ID_MERGE20_CONCLUSION_KEEP, OnUpdateMerge20SetConclusion)
 	ON_COMMAND(ID_MERGE_START_SESSION, OnMergeStartSession)
 	ON_UPDATE_COMMAND_UI(ID_MERGE_START_SESSION, OnUpdateMergeStartSession)
 	ON_COMMAND(ID_MERGE_END_SESSION, OnMergeEndSession)
@@ -585,6 +588,10 @@ int CMergeDoc::Rescan(bool &bBinary, IDENTLEVEL &identical,
 	// otherwise point at ranges that no longer exist. Rescan never
 	// runs while a merge session is active, so no live split is lost.
 	m_merge20SplitGroups.clear();
+	// Merge20 (best-workflow B1): the rebuilt list has no conclusions
+	// yet; the stored conclusions identify diffs by index, which a
+	// rebuild invalidates (same reason as the split groups above).
+	m_merge20DiffConclusions.clear();
 	m_CurWordDiff = { -1, static_cast<size_t>(-1), -1 };
 	// Clear moved lines lists
 	if (m_diffWrapper.GetDetectMovedBlocks())

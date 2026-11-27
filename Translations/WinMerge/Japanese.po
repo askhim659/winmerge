@@ -11738,6 +11738,46 @@ msgstr "変更された行の数。ファイルを開いた後に表示します
 msgid "Number of lines added in the new file. Shown only after the file has been opened; unopened files show Not calculated."
 msgstr "新ファイルで追加された行の数。ファイルを開いた後に表示します。未開封のファイルは「未計算」と表示します."
 
+#. Merge20 (B1): per-diff conclusion submenu (result pane context menu, Diff conclusion)
+#: Src/Merge.rc
+msgid "Diff conclusion"
+msgstr "【Wiz】差分の結論"
+
+#. Merge20 (B1): per-diff conclusion menu items and focus dock header words (CMergeDoc::OnMerge20SetConclusion, CMerge20FocusDock::ConclusionWord)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Undecided"
+msgstr "未判断"
+
+#. Merge20 (B1): per-diff conclusion menu items and focus dock header words (CMergeDoc::OnMerge20SetConclusion, CMerge20FocusDock::ConclusionWord)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Adopt old lines"
+msgstr "旧採用"
+
+#. Merge20 (B1): per-diff conclusion menu items and focus dock header words (CMergeDoc::OnMerge20SetConclusion, CMerge20FocusDock::ConclusionWord)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Adopt new lines"
+msgstr "新採用"
+
+#. Merge20 (B1): per-diff conclusion menu items and focus dock header words (CMergeDoc::OnMerge20SetConclusion, CMerge20FocusDock::ConclusionWord)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Adopt both"
+msgstr "両方採用"
+
+#. Merge20 (B1): per-diff conclusion menu items and focus dock header words (CMergeDoc::OnMerge20SetConclusion, CMerge20FocusDock::ConclusionWord)
+#: Src/Merge.rc
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Reject this diff"
+msgstr "不採用"
+
+#. Merge20 (B1): focus dock header progress (CMerge20FocusDock::UpdateHeader)
+#: Src/Merge20/Merge20FocusDock.cpp
+msgid "Judged %1 of %2 diffs"
+msgstr "判断済み %1／%2 差分"
+
 #. Merge20 (Wave 5 F2): FORM compare menu item (Merge.rc) and folder compare context menu (DirView.cpp, design section 3.2)
 #: Src/Merge.rc
 msgid "FORM Compare (view only)..."
@@ -11947,3 +11987,4 @@ msgstr "旧フォルダ（現地吸い上げ）を選択してください"
 #: Src/MainFrm.cpp
 msgid "Select the new folder (package)"
 msgstr "新フォルダ（パッケージ）を選択してください"
+||||||| base/Translations_WinMerge_Japanese.po
