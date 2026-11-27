@@ -15,6 +15,7 @@
 #include "StdAfx.h"
 #include <set>
 #include "Merge20VerifyDlg.h"
+#include "unicoder.h"
 
 IMPLEMENT_DYNAMIC(Merge20VerifyDlg, CTrDialog)
 
