@@ -741,7 +741,12 @@ CMergeDoc* CDirDoc::Merge20FindOpenMergeDoc(const String& relPath)
  *         Review / output changes use the raw setters (no linkage,
  *         no recording); a conclusion goes through
  *         CMergeDoc::Merge20ApplyConclusionUndo, which rewrites the
- *         result segment without any learning record.
+ *         result segment without any learning record. A split /
+ *         regroup goes through CMergeDoc::Merge20ApplySplitUndo
+ *         (best-workflow B10 PR2), which calls the same split /
+ *         regroup the menus call; a learning acceptance /
+ *         dismissal goes through CMergeDoc::Merge20ApplyLearnUndo,
+ *         which likewise records nothing in the learning data.
  */
 Merge20UndoApplyResult CDirDoc::Merge20ApplyUndoEntry(const Merge20UndoEntry& entry, bool bUndo)
 {
@@ -781,13 +786,30 @@ Merge20UndoApplyResult CDirDoc::Merge20ApplyUndoEntry(const Merge20UndoEntry& en
 		Merge20UpdateDirViewItem(*pItem);
 		return Merge20UndoApplyResult::Applied;
 	case Merge20UndoKind::DiffConclusion:
-	default:
 	{
 		CMergeDoc* pMergeDoc = Merge20FindOpenMergeDoc(entry.relPath);
 		if (pMergeDoc == nullptr)
 			return Merge20UndoApplyResult::TargetNotOpen;
 		return pMergeDoc->Merge20ApplyConclusionUndo(entry, bUndo);
 	}
+	case Merge20UndoKind::SplitDiff:
+	case Merge20UndoKind::RegroupDiff:
+	{
+		CMergeDoc* pMergeDoc = Merge20FindOpenMergeDoc(entry.relPath);
+		if (pMergeDoc == nullptr)
+			return Merge20UndoApplyResult::TargetNotOpen;
+		return pMergeDoc->Merge20ApplySplitUndo(entry, bUndo);
+	}
+	case Merge20UndoKind::LearnAccept:
+	case Merge20UndoKind::LearnDismiss:
+	{
+		CMergeDoc* pMergeDoc = Merge20FindOpenMergeDoc(entry.relPath);
+		if (pMergeDoc == nullptr)
+			return Merge20UndoApplyResult::TargetNotOpen;
+		return pMergeDoc->Merge20ApplyLearnUndo(entry, bUndo);
+	}
+	default:
+		return Merge20UndoApplyResult::Stale;
 	}
 }
 
