@@ -705,6 +705,12 @@
     <ClCompile Include="Merge20\Merge20Slim.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Summary.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20SummaryDlg.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20FocusDock.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
@@ -1623,6 +1629,12 @@
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20Slim.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20Summary.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20SummaryDlg.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20FocusDock.h">
