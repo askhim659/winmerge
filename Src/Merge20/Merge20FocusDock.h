@@ -35,6 +35,7 @@
 
 #include "Merge20/Merge20Conclusion.h"
 #include "Merge20/Merge20Focus.h"
+#include "Merge20/Merge20ImpactList.h"
 
 class CMergeDoc;
 class CMergeEditSplitterView;
@@ -112,6 +113,8 @@ private:
 	CButton m_btnBoth;
 	CButton m_btnSplit;
 	CButton m_btnRegroup;
+
+	CMerge20ImpactList m_wndImpactList; /**< "Uses in other files" list (B5) at the bottom of the dock */
 
 	CMergeDoc* m_pDoc; /**< Owning document, or nullptr */
 	CMergeEditSplitterView* m_pDetailSplitterView; /**< Old/new panes (frame-owned) */
