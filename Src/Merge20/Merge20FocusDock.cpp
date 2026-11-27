@@ -41,10 +41,12 @@ namespace
 	/** @brief Fixed header widths, in order: the info label, then
 	 * the seven buttons in header order. Wide enough for the
 	 * Japanese labels (see Japanese.po); buttons past the right
-	 * edge are clipped, like the dedicated bar's. */
+	 * edge are clipped, like the dedicated bar's. The info label
+	 * is wider since B1: it also shows the conclusion word and the
+	 * judged/total progress. */
 	constexpr int Merge20FocusWidths[] =
 	{
-		200, // Info label (diff position + state)
+		320, // Info label (diff position + conclusion + progress)
 		108, // Insert old
 		108, // Reject
 		84,  // New
@@ -279,10 +281,31 @@ void CMerge20FocusDock::OnButtonClicked(UINT nID)
 	}
 	if (m_nCurrentDiff < 0)
 		return;
-	const std::vector<int> srcPanes = Merge20FocusActionSrcPanes(action, m_nBuffers, m_nCurrentOp);
-	if (srcPanes.empty())
-		return; // The action does not apply to this diff kind.
-	m_pDoc->Merge20FocusApplyJudgment(m_nCurrentDiff, srcPanes);
+	// Merge20 (best-workflow B1): a dock judgement is a per-diff
+	// conclusion, applied through the single entry point (result
+	// rewrite + learning record + file linkage). The buttons are
+	// only shown and enabled for the diff kinds they apply to
+	// (UpdateHeader), so no per-kind guard is needed here.
+	Merge20DiffConclusion conclusion;
+	switch (action)
+	{
+	case Merge20FocusAction::InsertOld:
+	case Merge20FocusAction::ChooseOld:
+		conclusion = Merge20DiffConclusion::UseOld;
+		break;
+	case Merge20FocusAction::Reject:
+		conclusion = Merge20DiffConclusion::Reject;
+		break;
+	case Merge20FocusAction::ChooseNew:
+		conclusion = Merge20DiffConclusion::UseNew;
+		break;
+	case Merge20FocusAction::ChooseBoth:
+		conclusion = Merge20DiffConclusion::UseBoth;
+		break;
+	default:
+		return; // Split/Regroup are handled above; unknown actions do nothing.
+	}
+	m_pDoc->Merge20SetDiffConclusion(m_nCurrentDiff, conclusion);
 }
 
 void CMerge20FocusDock::UpdateResources()
@@ -357,9 +380,19 @@ void CMerge20FocusDock::UpdateHeader()
 	else if (m_nCurrentDiff < 0)
 		sLabel = _("No difference selected");
 	else
+	{
+		// Merge20 (best-workflow B1): the header shows the current
+		// diff's conclusion (or the segment state when undecided)
+		// and the judged/total progress, so the review state is
+		// visible without opening the context menu.
 		sLabel = strutils::format_string3(_("Diff %1 of %2 (%3)"),
 			strutils::to_str(m_nCurrentDiff + 1), strutils::to_str(m_nDiffCount),
-			StateWord(m_nSegmentState));
+			ConclusionWord(m_pDoc->Merge20GetDiffConclusion(m_nCurrentDiff), m_nSegmentState));
+		int nJudged = 0, nTotal = 0;
+		m_pDoc->Merge20GetConclusionProgress(nJudged, nTotal);
+		sLabel += _T("・") + strutils::format_string2(_("Judged %1 of %2 diffs"),
+			strutils::to_str(nJudged), strutils::to_str(nTotal));
+	}
 	m_stInfo.SetWindowText(sLabel.c_str());
 
 	const bool bJudge = m_bResultBuilt && m_nCurrentDiff >= 0;
@@ -383,6 +416,28 @@ void CMerge20FocusDock::UpdateHeader()
 		pButtons[i]->EnableWindow(bEnabled);
 	}
 	LayoutHeader();
+}
+
+String CMerge20FocusDock::ConclusionWord(Merge20DiffConclusion conclusion, int nState) const
+{
+	// The words reuse the Diff conclusion submenu msgids, so the
+	// header and the menu always agree (see Japanese.po).
+	switch (conclusion)
+	{
+	case Merge20DiffConclusion::UseOld:
+		return _("Adopt old lines");
+	case Merge20DiffConclusion::UseNew:
+		return _("Adopt new lines");
+	case Merge20DiffConclusion::UseBoth:
+		return _("Adopt both");
+	case Merge20DiffConclusion::Reject:
+		return _("Reject this diff");
+	case Merge20DiffConclusion::Keep:
+		return _("Keep as is");
+	case Merge20DiffConclusion::Undecided:
+	default:
+		return StateWord(nState);
+	}
 }
 
 String CMerge20FocusDock::StateWord(int nState) const
