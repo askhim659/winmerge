@@ -144,7 +144,7 @@ struct Merge20FormSpotlightArrowHead
  * points are closer than 2 units (the HTML rule for skipping
  * the arrow) the base corners equal the tip.
  */
-Merge20FormSpotlightArrowHead Merge20FormSpotlightArrowHead(
+Merge20FormSpotlightArrowHead Merge20FormSpotlightMakeArrowHead(
 	double x1, double y1, double x2, double y2);
 
 /**
