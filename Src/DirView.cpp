@@ -3580,6 +3580,10 @@ LRESULT CDirView::OnUpdateUIMessage(WPARAM wParam, LPARAM lParam)
 			{
 				AfxMessageBox(Merge20SessionFormatRestoreReport(pendingResult, pendingSkipped).c_str(), MB_ICONINFORMATION);
 				UpdateMerge20StatusCount();
+				// Merge20 (best-workflow B12): reopen the file
+				// compare that was open at save time, at its saved
+				// diff and scroll position.
+				Merge20SessionResumeLastFileCompare(*pDoc, pendingResult);
 			}
 			else
 			{
@@ -4848,25 +4852,34 @@ void CDirView::Merge20OpenFileAtLine(const Merge20GrepHit& hit)
  * @brief Merge20 (Panel P3, design section 12.7): open one folder item
  * in a file compare (P-R7). The panel's row click goes through
  * CDirDoc::Merge20MoveToFile, which closes the current file compare
- * first; this is the selection step, mirroring Merge20OpenFileAtLine
- * (Grep jump): select the item's row (clearing any other selection,
- * so only this file opens) and open the selection. GetItemIndex
- * returns 0 on a miss (upstream behaviour, not -1), so the row is
- * verified through GetItemKey: an item hidden by the current folder
- * filter cannot be opened, and the same message as the Grep jump
- * explains why instead of opening row 0.
+ * first. The open itself is Merge20OpenFileQuiet; an item hidden by
+ * the current folder filter cannot be opened, and the same message
+ * as the Grep jump explains why instead of opening row 0.
  */
 void CDirView::Merge20OpenFile(const DIFFITEM& di)
+{
+	if (!Merge20OpenFileQuiet(di))
+	{
+		AfxMessageBox(_("Cannot open the file because it is hidden by the current filter.").c_str(), MB_ICONINFORMATION);
+	}
+}
+
+/**
+ * @brief Merge20 (best-workflow B12): quiet form of Merge20OpenFile.
+ * Selects the item's row (clearing any other selection, so only
+ * this file opens) and opens the selection. Returns false when the
+ * item is hidden by the current filter (GetItemIndex returns 0 on a
+ * miss, upstream behaviour, so the row is verified through
+ * GetItemKey), with no message box.
+ */
+bool CDirView::Merge20OpenFileQuiet(const DIFFITEM& di)
 {
 	// GetItemIndex takes a non-const pointer but only compares it
 	// against the list keys (see its implementation); the item is
 	// not modified.
 	const int nIdx = GetItemIndex(const_cast<DIFFITEM*>(&di));
 	if (nIdx < 0 || nIdx >= m_pList->GetItemCount() || GetItemKey(nIdx) != &di)
-	{
-		AfxMessageBox(_("Cannot open the file because it is hidden by the current filter.").c_str(), MB_ICONINFORMATION);
-		return;
-	}
+		return false;
 	// OpenSelection opens the selected rows: clear any other
 	// selection first, or several files would open at once.
 	const int nCount = m_pList->GetItemCount();
@@ -4875,6 +4888,7 @@ void CDirView::Merge20OpenFile(const DIFFITEM& di)
 	m_pList->SetItemState(nIdx, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
 	m_pList->EnsureVisible(nIdx, FALSE);
 	OpenSelection();
+	return true;
 }
 
 /**
@@ -4930,6 +4944,9 @@ void CDirView::OnMerge20SessionRestore()
 	}
 	AfxMessageBox(Merge20SessionFormatRestoreReport(result, skippedFiles).c_str(), MB_ICONINFORMATION);
 	UpdateMerge20StatusCount();
+	// Merge20 (best-workflow B12): reopen the file compare that was
+	// open at save time, at its saved diff and scroll position.
+	Merge20SessionResumeLastFileCompare(*pDoc, result);
 }
 
 /**
