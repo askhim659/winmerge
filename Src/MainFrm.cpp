@@ -322,6 +322,12 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWnd)
 	ON_UPDATE_COMMAND_UI_RANGE(ID_TOOLBAR_NONE, ID_TOOLBAR_HUGE, OnUpdateToolbarSize)
 	ON_COMMAND(ID_VIEW_OUTPUT_BAR, OnViewOutputBar)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_OUTPUT_BAR, OnUpdateViewOutputBar)
+	// Merge20 (UI U1, design section 4/U1): the brand header toggle.
+	// A plain control-bar toggle (OnBarCheck), like the file-list panel
+	// toggle in CMergeEditFrame (P0); the visibility is saved in its
+	// own key by the OnBarCheck override below.
+	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_BRAND_HEADER, OnUpdateControlBarMenu)
+	ON_COMMAND_EX(ID_VIEW_MERGE20_BRAND_HEADER, OnBarCheck)
 	// [Plugins] menu
 	ON_COMMAND(ID_PLUGINS_LIST, OnPluginsList)
 	ON_COMMAND_RANGE(ID_UNPACK_MANUAL, ID_UNPACK_AUTO, OnPluginUnpackMode)
@@ -512,6 +518,27 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create tab bar\n");
 		return -1;      // fail to create
 	}
+
+	// Merge20 (UI U1, design section 4/U1): the WizMerge brand
+	// header (app-internal header bar) at the very top, created
+	// before the ReBar so it docks above the menu/toolbar. The
+	// tab-bar creation above is untouched (its order is unchanged).
+	EnableDocking(CBRS_ALIGN_TOP | CBRS_ALIGN_BOTTOM | CBRS_ALIGN_LEFT | CBRS_ALIGN_RIGHT);
+	FrameWndHelper::RemoveBarBorder(this);
+	if (!m_wndBrandBar.Create(this, _("Brand Header").c_str(), WS_CHILD | WS_VISIBLE, ID_VIEW_MERGE20_BRAND_HEADER))
+	{
+		TRACE0("Failed to create brand header bar\n");
+		return -1;      // fail to create
+	}
+	m_wndBrandBar.SetBarStyle(m_wndBrandBar.GetBarStyle() |
+		CBRS_SIZE_DYNAMIC | CBRS_ALIGN_TOP);
+	m_wndBrandBar.EnableDocking(CBRS_ALIGN_TOP | CBRS_ALIGN_BOTTOM);
+	CRect rcBrandBar{ 0, 0, 0, 0 };
+	DockControlBar(&m_wndBrandBar, AFX_IDW_DOCKBAR_TOP, &rcBrandBar);
+	// The dock state ("Settings-MainFrame") is restored lazily in
+	// ShowOutputPane; the option key rules over it, here and there.
+	m_wndBrandBar.LoadState(_T("Settings-MainFrame"));
+	__super::ShowControlBar(&m_wndBrandBar, GetOptionsMgr()->GetBool(OPT_MERGE20_BRAND_HEADER), FALSE);
 
 	if (!CreateToolbar())
 	{
@@ -2003,6 +2030,8 @@ void CMainFrame::UpdateTitleBarAndTabBar()
 void CMainFrame::UpdateResources()
 {
 	m_wndStatusBar.SetPaneText(0, I18n::LoadString(AFX_IDS_IDLEMESSAGE).c_str());
+	if (m_wndBrandBar.m_hWnd != nullptr)
+		m_wndBrandBar.UpdateResources();
 
 	for (auto pDoc : GetAllDirDocs())
 		pDoc->UpdateResources();
@@ -2770,6 +2799,24 @@ void CMainFrame::OnViewMenuBar()
 void CMainFrame::OnUpdateViewMenuBar(CCmdUI* pCmdUI)
 {
 	pCmdUI->SetCheck(GetOptionsMgr()->GetBool(OPT_SHOW_MENUBAR));
+}
+
+/**
+ * @brief Toggle a control bar, persisting the brand header toggle.
+ *
+ * The base toggles the bar's visibility; the brand header's state is
+ * saved in its own key (Merge20 UI U1), like the file-list panel
+ * toggle in CMergeEditFrame::OnBarCheck (P0). The dock state
+ * ("Settings-MainFrame") is never the source of the toggle: OnCreate
+ * and ShowOutputPane re-apply the key after any dock-state restore,
+ * so hiding the bar never leaks into the other bars' saved layout.
+ */
+BOOL CMainFrame::OnBarCheck(UINT nID)
+{
+	BOOL result = __super::OnBarCheck(nID);
+	if (nID == ID_VIEW_MERGE20_BRAND_HEADER)
+		GetOptionsMgr()->SaveOption(OPT_MERGE20_BRAND_HEADER, !!m_wndBrandBar.IsWindowVisible());
+	return result;
 }
 
 /**
@@ -4520,6 +4567,11 @@ void CMainFrame::ShowOutputPane(bool bShow)
 			SetDockState(pDockState);
 		// for the dimensions of the diff and location pane, use the CSizingControlBar loader
 		m_wndOutputBar.LoadState(_T("Settings-MainFrame"));
+		// Merge20 (UI U1): the dock-state restore above may have
+		// changed the brand header's visibility (GetDockState saves
+		// it); the option key rules, so re-apply it (same as OnCreate).
+		if (m_wndBrandBar.m_hWnd != nullptr)
+			__super::ShowControlBar(&m_wndBrandBar, GetOptionsMgr()->GetBool(OPT_MERGE20_BRAND_HEADER), FALSE);
 	}
 
 	__super::ShowControlBar(&m_wndOutputBar, bShow, 0);
@@ -4543,6 +4595,7 @@ void CMainFrame::SavePosition()
 		m_pDockState.SaveState(_T("Settings-MainFrame"));
 		// for the dimensions of the output pane, use the CSizingControlBar save
 		m_wndOutputBar.SaveState(_T("Settings-MainFrame"));
+		m_wndBrandBar.SaveState(_T("Settings-MainFrame"));
 	}	
 }
 
