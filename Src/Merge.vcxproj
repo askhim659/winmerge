@@ -1070,6 +1070,8 @@
     <ClInclude Include="Merge20\Merge20FormSpotPreview.h" />
     <ClInclude Include="Merge20\Merge20FormImpact.h" />
     <ClInclude Include="Merge20\Merge20FormTable.h" />
+    <ClInclude Include="Merge20\Merge20FormMaster.h" />
+    <ClInclude Include="Merge20\Merge20FormMasterDlg.h" />
     <ClInclude Include="Merge20\Merge20Split.h" />
     <ClInclude Include="Merge20\Merge20Sniper.h" />
     <ClInclude Include="Merge20\Merge20Grep.h" />
@@ -1446,6 +1448,7 @@
     <ClCompile Include="Merge20\Merge20FormCompareDoc.cpp" />
     <ClCompile Include="Merge20\Merge20FormCompareFrame.cpp" />
     <ClCompile Include="Merge20\Merge20FormCompareView.cpp" />
+    <ClCompile Include="Merge20\Merge20FormMasterDlg.cpp" />
     <ClCompile Include="Merge20\Merge20FormCanvas.cpp" />
     <ClCompile Include="Merge20\Merge20FormSpotlight.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
@@ -1469,6 +1472,11 @@
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20FormTable.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FormMaster.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
