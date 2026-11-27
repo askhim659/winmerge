@@ -3413,9 +3413,42 @@ void CMainFrame::UpdateToolbar()
 void CMainFrame::OnUpdateFrameTitle(BOOL bAddToTitle)
 {
 	CFrameWnd::OnUpdateFrameTitle(bAddToTitle);
-	
+
 	if (m_wndTabBar.m_hWnd != nullptr)
 		m_wndTabBar.UpdateTabs();
+
+	// Merge20 (UI U2, design section 4/U2): show the folder-compare
+	// progress in the title bar ("WizMerge - <N> unreviewed -
+	// <doc>"); the taskbar button shows the same text, since it shows
+	// the main window title. Only while a folder compare is the
+	// active document: a file compare or no document keeps the stock
+	// title, so the title can never break there. The option defaults
+	// to on; off restores the stock title.
+	// Note: this rewrites the title whatever bAddToTitle is, so the
+	// progress survives the OnUpdateFrameTitle(FALSE) call from
+	// OnTimer (menu update while maximized), which would otherwise
+	// strip it back to the bare app name.
+	if (!GetOptionsMgr()->GetBool(OPT_MERGE20_TITLE_PROGRESS))
+		return;
+	CMDIChildWnd* pChild = MDIGetActive();
+	if (pChild == nullptr)
+		return;
+	CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(pChild->GetActiveDocument());
+	if (pDirDoc == nullptr)
+		return;
+	CDirView* pView = pDirDoc->GetMainView();
+	if (pView == nullptr)
+		return;
+	// Same definition as S3 (CDirView::GetMerge20StatusCountText):
+	// displayed file rows only (directories and the ".." row are
+	// skipped) whose review state is TODO.
+	int counts[5] = {};
+	pView->Merge20CountDisplayedByReviewState(counts);
+	const int nUnreviewed = counts[static_cast<int>(ReviewState::TODO)];
+	String strDocTitle = pDirDoc->GetTitle();
+	SetWindowText(strutils::format_string2(
+		_("WizMerge - %1 unreviewed - %2"),
+		strutils::to_str(nUnreviewed), strDocTitle).c_str());
 }
 
 /** @brief Show none/small/big/huge toolbar. */
