@@ -5763,3 +5763,45 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 ### 55.4 次への移行
 - U1（ブランド帯）はブランチ `merge20/ui-u1`（base `e2bed6dc`）で進行中。
 - F2（`merge20/form-f2`）と B1（`merge20/wf-b1`）も進行中（いずれも CI 実行中）。
+
+## §56 最高峰ワークフロー B1 — 差分単位の明示的結論 — B1a・B1b マージ・CI 検証済み（2026-11-27）
+
+### 56.1 内容（ギャップ分析書 §4.2 B1。北極星の第 1 波の最初）
+- 差分ごとに結論状態（未判断／旧採用／新採用／両方採用／不採用／現状維持）を持たせる。結果ペインの差分に状態を表示し、D4 フォーカスドックの判定ボタンと結果ペインの右クリックメニューから結論を付けられるようにする。結論を付けたらファイルの確認内容を連動させる（HTML の `setHunk` と同じ規則：不採用以外は出力チェック ON・TODO→DONE、不採用は出力チェック OFF・確認内容は変更なし。ただし 2-way の新のみファイルは S2 の規則どおり ON にしない）。ファイル比較の下部またはステータスバーに「判断済み X／Y 差分」を表示する。セッション（S8 の `diffJudgments`）に結論状態を保存・復元する。学習候補の受け入れも同じ結論として扱い、同じ連動規則に乗せる。
+- B1 は 2 PR に分けて実装した（B1a：状態＋表示＋連動、B1b：セッション保存・復元＋学習受け入れの統合）。
+
+### 56.2 B1a — 変更一覧（ブランチ `merge20/wf-b1`、base master `951c1b07`。18 コミット・17 ファイル）
+- 内容：結論 6 状態の純粋モジュール `Merge20Conclusion.h/.cpp`、結果ペイン右クリック「差分の結論」サブメニュー、D4 フォーカスドック判定ボタンからの付与、ヘッダの「判断済み X／Y 差分」表示、結果ペインのマージン表示（現状維持=K・不採用=X）、唯一の連動規則 `ApplyMerge20ConclusionLinkage`（不採用以外は出力チェック ON・TODO→DONE、不採用は出力チェック OFF・確認内容は変更なし。2-way 新のみファイルは S2 規則どおり ON にしない）、分割・再結合での結論引き継ぎ、Rescan でクリア、`.po` 新規 7 件。
+- **PR #50**：`B1a: per-diff explicit conclusion (state + display + linkage)`。18 コミット、+801/−28、変更ファイル 17 件。
+
+### 56.3 B1a — 検証レポート（コーディネーター検証済み）
+- **PR #50**：open・mergeable=true・mergeable_state=clean、head `9e9c8493`、base master。
+- **CI（ブランチ head）**：実行 45938220865、completed／success。全文ログ（3,565,258 バイト、ジョブ `build` 140306248995）で GoogleTest `[ PASSED ] 793 tests.`（F1・U0 時点 782 件 → +11 件＝新規 `Merge20Conclusion` テスト全 OK）、`[ FAILED ]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。`.po` 番兵「Merge20 strings present in the bundled Japanese.po.」も通過。全文ログは `~/workspace/.coord/b1a_final_log.txt` に保存。
+- **成果物（実行 45938220865）**：`WinMerge-x64.zip` 26,476,258 バイト、`WinMerge-x64-Setup-x64.exe` 39,923,456 バイト。いずれも未失効。
+- **マージ**：マージコミット `e37ed445`。マージコミット CI：実行 45941175196、completed／success（head_sha=e37ed445 と一致）。
+
+### 56.4 B1b — 変更一覧（ブランチ `merge20/wf-b1b`、base 当初 `merge20/wf-b1`→マージ後に master へ付け替え。7 コミット＋CI 起動用空コミット 1 件）
+- コミット：`cffb7107` Merge20Types.h（`conclusion` 追加）、`55697733` Merge20Session.cpp（任意フィールド `"conclusion"` の保存・読込、v1 互換・範囲外は差分のみ破棄）、`7ffacd16` Merge20Session_test.cpp（`ConclusionRoundTrip` テスト）、`547ca2a2` MergeDoc.h（`Merge20SetDiffConclusionRestored` 宣言）、`9903fbe2` Merge20SessionDoc.cpp（結論の抽出・復元＋ドック刷新）、`b2e7b8db` MergeDocResultPane.cpp（復元用セッター＋学習受け入れの結論化）、`b13cce12` Merge20FocusDock.cpp（差分未選択時も進捗表示）。
+- 学習受け入れの写像：InsertOld／ReplaceWithOld→旧採用、BothOldNew→両方採用、KeepNew→削除ブロックなら不採用、それ以外は新採用。受け入れは結論を格納し B1a と同一の `ApplyMerge20ConclusionLinkage` を呼ぶ。学習記録は既存ループのみ（重複記録なし）。
+- 新規 UI 文字列なし（`.po` 変更なし）。
+- **スタック PR の扱い**：`.github/workflows/main.yml` は `pull_request: branches: [ master ]` のみを対象とするため、base が `merge20/wf-b1` の #51 では CI が起動しなかった。B1a マージ後に base を master に付け替え（API PATCH）、さらに base 付け替えだけではワークフローが起動しないため、調整役が空コミット `af10121e`（`Trigger CI for B1b (base retargeted to master)`）をブランチに作って CI を起動した。
+- **PR #51**：`B1b: session save/restore of diff conclusions + learning acceptance as conclusion`。7 コミット＋空コミット 1 件。
+
+### 56.5 B1b — 検証レポート（コーディネーター検証済み）
+- **PR #51**：open・mergeable=true・mergeable_state=clean、head `af10121e`、base master。
+- **CI（ブランチ head）**：実行 45941445600、completed／success。全文ログ（3,565,481 バイト、ジョブ `build` 140316449671）で GoogleTest `[ PASSED ] 794 tests.`（B1a 時点 793 件 → +1 件＝新規 `ConclusionRoundTrip`）、`[ FAILED ]` 行なし、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。全文ログは `~/workspace/.coord/b1b_final_log.txt` に保存。
+- **成果物（実行 45941445600）**：`WinMerge-x64.zip` 26,478,985 バイト（ID 15173467401）、`WinMerge-x64-Setup-x64.exe` 39,926,291 バイト（ID 15173357847）。いずれも未失効。
+- **マージ**：マージコミット `b13b7ab0`。マージコミット CI：実行 45942672719、completed／success（head_sha=b13b7ab0 と一致）。
+
+### 56.6 受け入れ条件の照合（ギャップ分析書 §4.2 B1）
+- (a) 任意の差分に 6 状態を付けられる — 合格（B1a。メニュー＋ドック判定ボタン）。CI 緑。
+- (b) 「判断済み X／Y 差分」表示 — 合格（B1a。ドックヘッダ。差分未選択時も B1b で表示）。CI 緑。
+- (c) 連動が S2 のファイル単位規則と一致 — 合格（B1a。唯一の連動関数）。CI 緑。
+- (d) セッション保存・復元で結論が戻る — 合格（B1b。単体テスト `ConclusionRoundTrip` あり）。CI 緑。
+- (e) 学習受け入れも同じ結論・同じ連動規則 — 合格（B1b）。CI 緑。
+- **未検証（実機でしか確認できないもの）**：実機での結論付与→確認内容・出力チェックの連動、進捗表示、分割・再結合後の結論。実機でのセッション保存→再起動→復元（結論・進捗の反映）。実機での学習候補の受け入れ（結論マーカー・確認内容・出力チェックの連動）。実機での日本語表示（`.po` は CI のバンドルチェックで確認済み）。
+
+### 56.7 次への移行
+- B1 の完了により、北極星の第 1 波は B9（終わりの一覧確認）→ B2（未判断警告ゲート）へ進む。B2 は S7 未着手のため終了時警告だけ先行実装する選択肢がある（ギャップ分析書 §5）。
+- F2（`merge20/form-f2`）は CI 失敗が続いており、子エージェントに原因（`Merge20FormCompareDoc.cpp:272,289` の `SetTitle` への `String` 渡し。`.c_str()` が要る）を伝えて修正中。
+- U1（`merge20/ui-u1`）は進行中。
