@@ -5993,3 +5993,39 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - U2（PR #58）はマージ済み（マージコミット `cfd4534c`）。マージコミット CI（実行 45956300465）は進行中。検証後に §61 として記録する。
 - ID 割り当て状況（2026-11-27 07:10 JST 時点）：コントロール ID は F3 が 1858–1865、B9 が 1866–1871（付け替え後）、F4 が 1872–1881（予約済み）。コマンド ID は B9 が 38979、F4 が 38980（予約済み）。master の `_APS_NEXT_COMMAND_VALUE` は 38979、`_APS_NEXT_CONTROL_VALUE` は 1866（F3 マージ時点。B9 マージ時にそれぞれ 38980／1872 へ進む）。
 - 運用の教訓：`/tmp` 配下の作業ファイルは VM により消去されることがある（U2 担当が未コミットの編集 1 件を失った。調整役の `/tmp/gh.py` も消去された）。作業用スクラッチと共用スクリプトは `~/workspace/.coord/` 配下に置くこと（`gh.py` は `~/workspace/.coord/gh.py` に再作成済み）。
+## §61 UI 見直し U2 — タイトルバーに WizMerge＋進捗を表示 — マージ・CI 検証済み（2026-11-27）
+
+### 61.1 内容（UI 見直し設計書 §4 U2）
+- 新規オプション `OPT_MERGE20_TITLE_PROGRESS`（`Merge20/TitleProgress`、既定 true）。OFF で従来のタイトル書式に戻る。オプション画面への項目追加は設計書どおり本スライスの範囲外のため、OFF の切り替えは設定ファイルで行う。
+- `CMainFrame::OnUpdateFrameTitle` を拡張。アクティブな `CDirDoc` がある場合のみタイトルを `"WizMerge - N unreviewed - <文書名>"` 形（日本語表示では `WizMerge - 未確認 N件 - <文書名>`）に書き換える。`bAddToTitle=FALSE` の場合（`OnTimer` のメニュー更新時）でも進捗表示が消えないよう、書き換えは `bAddToTitle` の値によらず行う。
+- **N の定義**：S3 と同じ（`GetMerge20StatusCountText()` と同じ定義）。表示中のファイル行のみで、ディレクトリ行と `..` 行は数えず、確認内容が TODO の件数。既存の `Merge20CountDisplayedByReviewState` を流用し、新しい数え方は作っていない。`DirView.h` で同関数を private→public へ移動（実装無変更。U1 が `GetMerge20StatusCountText` で行ったのと同じ前例）。
+- **更新の契機**：`CDirView::UpdateMerge20StatusCount()` の末尾からメインフレームの `OnUpdateFrameTitle(TRUE)` を呼ぶ。`UpdateMerge20StatusCount()` は確認内容変更の単一の funnel（Redisplay・キー 1〜5／Space・一括チェック・ディレクトリ単位操作・セッション復元・ファイル一覧パネル経由の `CDirDoc::Merge20UpdateDirViewStatus`）のため、S2 の連動と同じ経路でタイトルが追従する。フレーム側はアクティブな文書から件数を読み直すため、バックグラウンドのタブの更新がタイトルを壊すことはない。
+- タイトル書式は画面内部の語彙のため【Wiz】は付けていない（入口の文字列にだけ付ける約束どおり）。
+- 新規コマンド ID なし。`.po` 新規 1 件。
+
+### 61.2 変更一覧（ブランチ `merge20/ui-u2`、base master `93035933`。6 ファイル 6 コミット＋マージ 1 件）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/OptionsDef.h` | `7a99d4d6` | `OPT_MERGE20_TITLE_PROGRESS`（`Merge20/TitleProgress`）を追加 |
+| 2 | `Src/OptionsInit.cpp` | `6cf4f8ef` | 既定 true で初期化 |
+| 3 | `Src/DirView.h` | `36ec022a` | `Merge20CountDisplayedByReviewState` を private→public へ移動（実装無変更） |
+| 4 | `Src/MainFrm.cpp` | `54485e2d` | `CMainFrame::OnUpdateFrameTitle` を拡張 |
+| 5 | `Src/DirView.cpp` | `5cc6859e` | `UpdateMerge20StatusCount()` の末尾から `OnUpdateFrameTitle(TRUE)` を呼ぶ配線を追加 |
+| 6 | `Translations/WinMerge/Japanese.po` | `ccb7fb68` | 新規 1 件：msgid `WizMerge - %1 unreviewed - %2`／msgstr `WizMerge - 未確認 %1件 - %2`（msgid 2222→2223 件） |
+| — | （マージ） | `d63e2eb0` | master へのマージコミット（下記「競合の解消」を参照） |
+
+- 差分は +60/−2（マージコミットを除く）。`.github/workflows/*` と `MERGE20_NOTES.md` には触れていない。
+- 競合の解消：PR 作成直後、master に F3（PR #54）がマージされ、PR は `mergeable: false（dirty）` になり CI が起動しなかった。競合ファイルは `Translations/WinMerge/Japanese.po` のみ（F3 が 35 行追加、U2 が 5 行追加）。U1 の前例（§58.3）どおり、リベースや force-push はせず、**マージコミット `d63e2eb0`** で解消した（API による 3-way マージ）。`.po` は master 側の内容（2228 件）に U2 の 1 件を再追加したもの（計 2229 件）とし、F3 の 16 ファイルは master 側の blob をそのまま取り込んだ。マージ後、PR は mergeable: true になり CI が起動した。
+
+### 61.3 検証レポート（コーディネーター検証済み）
+- **PR #58**：open・mergeable=true・mergeable_state=clean、head `d63e2eb0`、base master `dee3974f`。7 コミット、変更ファイル 6 件（U2 の 6 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45953876566、completed／success。全文ログ（3,575,188 バイト、ジョブ `build` 140355740743、48,019 行）をコーディネーターが取得・確認（`~/workspace/.coord/u2/ci_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`（U1 時 814 件からの +21 件は F3 のテスト分。U2 は MFC 依存のため新規テストなし）、`[ FAILED ]` 行なし（ログ中の "FAILED" 4 件はすべて `IDS_FILESAVE_FAILED`／`IDS_MERGE_RESULT_SAVE_FAILED` の翻訳文字列 ID で、W2 §25.4 と同じ既知のもの）、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件。`.pot` 抽出ステップで新規 msgid `WizMerge - %1 unreviewed - %2`（`MainFrm.cpp:3450`）が拾われていることもログで確認。`.po` 番兵も通過。
+- **成果物（実行 45953876566）**：`WinMerge-x64.zip` 26,582,648 バイト（ID 15178720721）、`WinMerge-x64-Setup-x64.exe` 40,044,890 バイト（ID 15178551405）。いずれも未失効。成果物内の `Build\Translations\WinMerge\Japanese.po` が同梱されていることもログで確認済み（コネクタでは成果物の中身をダウンロードできないため、`.po` 内の文字列の直接確認はログの番兵＋msgid 抽出による間接確認）。
+- **マージ**：マージコミット `cfd4534c`。マージコミット CI：実行 45956300465、completed／success（head_sha=cfd4534c と一致）。全文ログ（3,574,204 バイト、ジョブ `build` 140363439634、48,004 行）をコーディネーターが取得・確認（`~/workspace/.coord/u2_merge_final_log.txt`）。GoogleTest `[ PASSED ] 835 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,582,607 バイト、`WinMerge-x64-Setup-x64.exe` 40,044,573 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（設計書 §4 U2）**：
+  - (a) フォルダ比較を開くとタイトルバーに「WizMerge - 未確認 N件 - …」と表示されること（タスクバーにも同じ表示が出ること） — コード上は満たす（アクティブな `CDirDoc` がある場合のみ書き換え。タスクバーはメインウィンドウのタイトルを表示するため同じ表示になる）。**実機未検証**。
+  - (b) 確認内容を「済」にするとタイトルの N が減ること — コード上は満たす（`UpdateMerge20StatusCount()` 経由で全ての確認内容変更からタイトルを更新）。**実機未検証**。
+  - (c) オプション OFF で従来のタイトルに戻ること — コード上は満たす（`OPT_MERGE20_TITLE_PROGRESS` false で早期 return し、基底のタイトルが残る）。**実機未検証**。
+  - (d) 単独ファイル比較・フォルダ比較なしの状態でタイトルが壊れないこと（`"WizMerge"` のみ） — コード上は満たす（`CDirDoc` でない／文書がない場合は基底の結果をそのまま残す）。**実機未検証**。
+- **未検証（実機でしか確認できないもの）**：(a)〜(d) はすべて実機未検証。実機チェックリストは PR #58 の説明文に記載済み（フォルダ比較でのタイトル表示と N の一致、キー 1〜5／専用バー／ファイル一覧パネルでの「済」による N の減少、`Merge20/TitleProgress=false` での従来タイトルへの復帰、単独ファイル比較・文書なし状態でのタイトル、MDI 子の最大化／通常表示の両方）。
+- 作業中の出来事：作業中に `/tmp` 配下の作業ファイルが VM により消去され、未コミットの MainFrm.cpp 編集 1 件を失った。プッシュ済みの 3 コミットは無事で、MainFrm.cpp を master から再取得して編集を再適用し直した（内容は同一）。以後、作業用スクラッチは `~/workspace/.coord/u2/` 配下に置いている（§60.4 の教訓も参照）。
