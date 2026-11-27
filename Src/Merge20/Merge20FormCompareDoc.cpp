@@ -269,7 +269,7 @@ void CFormCompareDoc::UpdateResources()
 		if (pView != nullptr)
 			pView->UpdateResources();
 	}
-	SetTitle(_("FORM Compare (view only)"));
+	SetTitle(_("FORM Compare (view only)").c_str());
 }
 
 void CFormCompareDoc::RefreshKpi()
@@ -286,7 +286,7 @@ CFormCompareDoc* Merge20FormCompareOpenFolders(const String& leftFolder, const S
 	if (pDoc == nullptr)
 		return nullptr;
 	pDoc->SetFolders(leftFolder, rightFolder);
-	pDoc->SetTitle(_("FORM Compare (view only)"));
+	pDoc->SetTitle(_("FORM Compare (view only)").c_str());
 	pDoc->RunAnalysis();
 	return pDoc;
 }
