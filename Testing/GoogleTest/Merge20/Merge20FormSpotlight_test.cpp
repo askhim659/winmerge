@@ -245,19 +245,22 @@ TEST(Merge20FormSpotlight, ArrowHeadPointsAlongShaft)
 	// A horizontal shaft to the right: the head is 12 units long,
 	// its base corners 30 degrees off the shaft.
 	const Merge20FormSpotlightArrowHead head =
-		Merge20FormSpotlightArrowHead(0.0, 0.0, 100.0, 0.0);
+		Merge20FormSpotlightMakeArrowHead(0.0, 0.0, 100.0, 0.0);
 	EXPECT_DOUBLE_EQ(head.tipX, 100.0);
 	EXPECT_DOUBLE_EQ(head.tipY, 0.0);
-	EXPECT_NEAR(head.base1X, 100.0 - 12.0 * std::cos(-3.14159265358979323846 / 6.0), 1e-9);
-	EXPECT_NEAR(head.base1Y, 0.0 - 12.0 * std::sin(-3.14159265358979323846 / 6.0), 1e-9);
-	EXPECT_NEAR(head.base2X, 100.0 - 12.0 * std::cos(3.14159265358979323846 / 6.0), 1e-9);
-	EXPECT_NEAR(head.base2Y, 0.0 - 12.0 * std::sin(3.14159265358979323846 / 6.0), 1e-9);
+	// The head is 12 units long, its base corners 30 degrees off the shaft.
+	const double cos30 = std::cos(3.14159265358979323846 / 6.0);
+	const double sin30 = std::sin(3.14159265358979323846 / 6.0);
+	EXPECT_NEAR(head.base1X, 100.0 - 12.0 * cos30, 1e-9);
+	EXPECT_NEAR(head.base1Y, 0.0 + 12.0 * sin30, 1e-9);
+	EXPECT_NEAR(head.base2X, 100.0 - 12.0 * cos30, 1e-9);
+	EXPECT_NEAR(head.base2Y, 0.0 - 12.0 * sin30, 1e-9);
 }
 
 TEST(Merge20FormSpotlight, ArrowHeadDegenerateWhenPointsCoincide)
 {
 	const Merge20FormSpotlightArrowHead head =
-		Merge20FormSpotlightArrowHead(50.0, 50.0, 50.0, 50.0);
+		Merge20FormSpotlightMakeArrowHead(50.0, 50.0, 50.0, 50.0);
 	EXPECT_DOUBLE_EQ(head.tipX, 50.0);
 	EXPECT_DOUBLE_EQ(head.tipY, 50.0);
 	EXPECT_DOUBLE_EQ(head.base1X, 50.0);
