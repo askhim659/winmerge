@@ -12080,3 +12080,25 @@ msgstr "警告：未判断のファイルが %1 件あります。確定する�
 #: Src/DirView.cpp
 msgid "There are no files to review."
 msgstr "確認するファイルがありません。"
+
+#. Merge20 (B2 stage 1): close-warning dialog title (Merge.rc)
+#: Src/Merge.rc
+msgid "Unreviewed Items Remain"
+msgstr "【Wiz】未判断の項目があります"
+
+#. Merge20 (B2 stage 1): close-warning dialog, proceed button (Merge.rc, DirDoc.cpp)
+#: Src/Merge.rc
+#: Src/DirDoc.cpp
+msgid "Close anyway"
+msgstr "それでも閉じる"
+
+#. Merge20 (B2 stage 1): close-warning counts line (Merge20CloseWarnDlg.cpp)
+#: Src/Merge20/Merge20CloseWarnDlg.cpp
+msgid "Unreviewed files: %1 | Undecided diffs: %2 | Of which high risk: %3"
+msgstr "未確認ファイル：%1 件｜未判断差分：%2 件｜うち高リスク：%3 件"
+
+#. Merge20 (B2 stage 1): close-warning line (Merge20CloseWarnDlg.cpp)
+#: Src/Merge20/Merge20CloseWarnDlg.cpp
+msgid "Warning: %1 unreviewed file(s) and %2 undecided diff(s) remain, of which %3 high risk. Review them before closing."
+msgstr "警告：未確認ファイル %1 件と未判断差分 %2 件（うち高リスク %3 件）が残っています。閉じる前に確認してください。"
+
