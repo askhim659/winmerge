@@ -103,6 +103,14 @@ constexpr UINT_PTR IDT_PREVIEWMODE = 3;
 // Merge20 (Phase 4 D2): dedicated-bar auto-hide poll (500ms).
 constexpr UINT_PTR IDT_DEDHIDE = 4;
 
+// Merge20 (best-workflow B12): how many file-compare frames are in
+// dedicated mode right now. SetDedicatedMode is the only entry/exit
+// funnel, but a frame destroyed while in dedicated mode never runs
+// SetDedicatedMode(false) (DestroyWindow calls ExitDedicatedMode
+// directly), so the destructor balances the count for that path.
+// The session restore reads it through HasOpenDedicatedModeFrame.
+int g_nMerge20DedicatedModeFrames = 0;
+
 /////////////////////////////////////////////////////////////////////////////
 // CMergeEditFrame construction/destruction
 
@@ -133,6 +141,12 @@ CMergeEditFrame::CMergeEditFrame()
  */
 CMergeEditFrame::~CMergeEditFrame()
 {
+	// Merge20 (best-workflow B12): balance the dedicated-mode frame
+	// count when this frame is destroyed while still in dedicated
+	// mode (DestroyWindow calls ExitDedicatedMode directly, not
+	// SetDedicatedMode, so the flag is still set here).
+	if (m_bDedicatedMode && g_nMerge20DedicatedModeFrames > 0)
+		--g_nMerge20DedicatedModeFrames;
 }
 
 BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
@@ -521,10 +535,28 @@ void CMergeEditFrame::SetDedicatedMode(bool bEnable)
 		return;
 	m_bDedicatedMode = bEnable;
 	if (bEnable)
+	{
+		// Merge20 (best-workflow B12): count this frame so the
+		// session restore can tell a dedicated bar is open.
+		++g_nMerge20DedicatedModeFrames;
 		EnterDedicatedMode();
+	}
 	else
+	{
+		if (g_nMerge20DedicatedModeFrames > 0)
+			--g_nMerge20DedicatedModeFrames;
 		ExitDedicatedMode();
+	}
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_DED_MODE, bEnable);
+}
+
+/**
+ * @brief True while any file-compare frame is in dedicated mode
+ * (best-workflow B12; see the counter above).
+ */
+bool CMergeEditFrame::HasOpenDedicatedModeFrame()
+{
+	return g_nMerge20DedicatedModeFrames > 0;
 }
 
 /**
