@@ -136,11 +136,11 @@ TEST(Merge20FormCanvasGeom, ContentSizeIncludesOriginOffset)
 
 TEST(Merge20FormCanvasGeom, GridLineMajor)
 {
-	EXPECT_TRUE(Merge20FormCanvasGridLineIsMajor(32.0));
-	EXPECT_TRUE(Merge20FormCanvasGridLineIsMajor(532.0));
-	EXPECT_TRUE(Merge20FormCanvasGridLineIsMajor(1032.0));
-	EXPECT_FALSE(Merge20FormCanvasGridLineIsMajor(132.0));
-	EXPECT_FALSE(Merge20FormCanvasGridLineIsMajor(232.0));
+	EXPECT_TRUE(Merge20FormCanvasGridLineIsMajor(0.0));
+	EXPECT_TRUE(Merge20FormCanvasGridLineIsMajor(500.0));
+	EXPECT_TRUE(Merge20FormCanvasGridLineIsMajor(1000.0));
+	EXPECT_FALSE(Merge20FormCanvasGridLineIsMajor(100.0));
+	EXPECT_FALSE(Merge20FormCanvasGridLineIsMajor(200.0));
 }
 
 TEST(Merge20FormCanvasGeom, HitTestSmallestAreaWins)
