@@ -86,9 +86,9 @@ public:
 protected:
 	virtual BOOL OnInitDialog() override;
 	virtual void OnOK() override;
-	virtual void OnSize(UINT nType, int cx, int cy);
 
 	//{{AFX_MSG(CMerge20FormMasterDlg)
+	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnTextChanged();
 	afx_msg void OnResetToDefault();
 	//}}AFX_MSG
