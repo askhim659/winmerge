@@ -5,7 +5,7 @@
  * @brief Implementation of the FORM compare frame (Wave 5 F2).
  * No bars in F2; the view owns all controls.
  */
-#include "pch.h"
+#include "StdAfx.h"
 #include "Merge20/Merge20FormCompareFrame.h"
 
 #ifdef _DEBUG
