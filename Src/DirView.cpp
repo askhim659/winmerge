@@ -3708,10 +3708,20 @@ String CDirView::GetMerge20StatusCountText()
  * Called from Redisplay() (the displayed set changed) and from every
  * place that changes an output flag, so the count always follows
  * filters and check operations (T-2-2).
+ * UI U2: the main-frame title shows the same unreviewed count, so
+ * refresh it here too. This is the single funnel for review-state
+ * changes (keys 1-5/Space, batch check, per-directory operations,
+ * session restore, and the file-list panel via
+ * CDirDoc::Merge20UpdateDirViewStatus), so the title follows every
+ * confirmation change. The frame reads the active document, so a
+ * background tab's refresh can only rewrite the title from the
+ * active document, never from this view.
  */
 void CDirView::UpdateMerge20StatusCount()
 {
 	GetParentFrame()->SetStatus(GetMerge20StatusCountText().c_str());
+	if (CMainFrame* pMainFrame = GetMainFrame())
+		pMainFrame->OnUpdateFrameTitle(TRUE);
 }
 
 /**
