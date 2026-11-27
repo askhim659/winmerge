@@ -711,7 +711,13 @@
     <ClCompile Include="Merge20\Merge20Slim.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20CloseWarn.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20Summary.cpp">
+      <Filter>Merge20</Filter>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20CloseWarnDlg.cpp">
       <Filter>Merge20</Filter>
     </ClCompile>
     <ClCompile Include="Merge20\Merge20SummaryDlg.cpp">
@@ -1643,7 +1649,13 @@
     <ClInclude Include="Merge20\Merge20Slim.h">
       <Filter>Merge20</Filter>
     </ClInclude>
+    <ClInclude Include="Merge20\Merge20CloseWarn.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
     <ClInclude Include="Merge20\Merge20Summary.h">
+      <Filter>Merge20</Filter>
+    </ClInclude>
+    <ClInclude Include="Merge20\Merge20CloseWarnDlg.h">
       <Filter>Merge20</Filter>
     </ClInclude>
     <ClInclude Include="Merge20\Merge20SummaryDlg.h">
