@@ -12710,11 +12710,11 @@ msgstr "監査ログの CSV 作成に失敗しました：\n%1"
 
 #: Src/DirView.cpp
 msgid "Audit log..."
-msgstr "監査ログ…"
+msgstr "【Wiz】監査ログ…"
 
 #: Src/DirView.cpp
 msgid "Export audit log as CSV..."
-msgstr "監査ログを CSV で出力…"
+msgstr "【Wiz】監査ログを CSV で出力…"
 
 #: Src/DirView.cpp
 msgid "There are no audit log entries yet. Make a judgment (review state, output check, diff conclusion) and it will be recorded here."
@@ -12738,7 +12738,7 @@ msgstr "この監査ログは「いつ・誰が・何を変えたか」を記録
 
 #: Src/Merge.rc
 msgid "Audit Log"
-msgstr "監査ログ"
+msgstr "【Wiz】監査ログ"
 
 #: Src/Merge.rc
 msgid "Export as CSV..."
