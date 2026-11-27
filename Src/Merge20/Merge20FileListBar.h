@@ -56,6 +56,16 @@
  * filter-tab rows, and owner-drawn filter tabs (HTML .pill.on:
  * only the selected tab gets an accent border + opaque tinted
  * fill). Columns, rows, buttons and their IDs are unchanged.
+ *
+ * B4 (best-workflow, gap analysis sections 3.5 and 4.2 B4) adds
+ * the undecided high-risk remainder line directly under the
+ * count line: "Undecided high risk: N", from the same B2 counts
+ * (CDirDoc::GetMerge20CloseWarnCounts). It shows only while N >
+ * 0 and takes no vertical space at 0, so the count line (S3/D3)
+ * and the list are untouched. The display lives here alone: no
+ * status-bar duplicate. The pure trigger module
+ * (Merge20HighRiskRemain) decides whether a Refresh needs to
+ * touch the control at all.
  */
 #pragma once
 
@@ -156,6 +166,12 @@ public:
 
 private:
 	void LayoutChildren();
+	/** @brief Update the B4 high-risk remainder line from the
+	 * folder document's B2 counts (CDirDoc::
+	 * GetMerge20CloseWarnCounts). The pure trigger module decides
+	 * whether the control needs touching; at 0 the line hides.
+	 * No-op without a folder document or before OnCreate. */
+	void UpdateHighRiskRemain();
 	/** @brief (Re-)insert the eight filter-tab labels (P2, P-R10):
 	 * "all" plus the seven action categories, in ActionCategory
 	 * enum order. Literal _() calls (see SetupColumns): the .pot
@@ -219,6 +235,9 @@ private:
 	bool m_bSlim = false; /**< P4: slim display is on */
 	int m_nSelectedTab = 0; /**< P2: selected filter tab (0 = all categories) */
 	CStatic m_stCount; /**< Count line (P1, P-R6): "N displayed, M checked, K unreviewed" */
+	CStatic m_stHighRisk; /**< High-risk remainder line (B4): "Undecided high risk: N", shown only while N > 0 */
+	bool m_bHighRiskVisible = false; /**< B4: the remainder line is currently shown */
+	int m_nHighRiskShown = 0; /**< B4: the N last shown on the remainder line (0 while hidden) */
 	CMerge20FileListCtrl m_wndList; /**< Virtual file list */
 	CStatic m_stEmpty; /**< Empty state: "No folder comparison" */
 	/** @brief U5: row rects whose bottom 2px carry the accent
