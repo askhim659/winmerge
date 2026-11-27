@@ -498,6 +498,7 @@ BEGIN
     BEGIN
         MENUITEM "&Filters...",                 ID_TOOLS_FILTERS
         MENUITEM "&Generate Patch...",          ID_TOOLS_GENERATEPATCH
+        MENUITEM "FORM Compare (view only)...", ID_MERGE20_FORM_COMPARE
     END
     POPUP "&Plugins"
     BEGIN
@@ -676,6 +677,7 @@ BEGIN
         MENUITEM "&Filters...",                 ID_TOOLS_FILTERS
         MENUITEM "&Generate Patch...",          ID_TOOLS_GENERATEPATCH
         MENUITEM "Generate &Report...",         ID_TOOLS_GENERATEREPORT
+        MENUITEM "FORM Compare (view only)...", ID_MERGE20_FORM_COMPARE
     END
     POPUP "&Plugins"
     BEGIN

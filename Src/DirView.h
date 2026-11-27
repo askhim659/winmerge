@@ -417,6 +417,8 @@ protected:
 	afx_msg void OnMerge20BulkClassify();
 	// Merge20 (Phase 4 D8): master management dialog
 	afx_msg void OnMerge20Master();
+	// Merge20 (Wave 5 F2): FORM compare (view-only) launch
+	afx_msg void OnMerge20FormCompare();
 	// Merge20 (Phase 4 D9): slim list toggle
 	afx_msg void OnMerge20Slim();
 	// Merge20 (Phase 4 D11): review-state filter toggle (command range

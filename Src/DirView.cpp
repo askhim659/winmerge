@@ -48,6 +48,7 @@
 #include "Merge20/Merge20MemoDlg.h"
 #include "Merge20/Merge20LearnDlg.h"
 #include "Merge20/Merge20MasterDlg.h"
+#include "Merge20/Merge20FormCompareDoc.h"
 #include "Merge20/Merge20Measure.h"
 #include "Merge20/Merge20Patrol.h"
 #include "Merge20/Merge20SessionDoc.h"
@@ -167,6 +168,7 @@ BEGIN_MESSAGE_MAP(CDirView, CListView)
 	ON_COMMAND(ID_MERGE20_GREP, OnMerge20Grep)
 	ON_COMMAND(ID_MERGE20_BULK_CLASSIFY, OnMerge20BulkClassify)
 	ON_COMMAND(ID_MERGE20_MASTER, OnMerge20Master)
+	ON_COMMAND(ID_MERGE20_FORM_COMPARE, OnMerge20FormCompare)
 	ON_COMMAND(ID_MERGE20_SLIM, OnMerge20Slim)
 	ON_COMMAND_RANGE(ID_MERGE20_SHOW_REVIEW_TODO, ID_MERGE20_SHOW_REVIEW_KEEP, OnMerge20ShowReview)
 	ON_UPDATE_COMMAND_UI(ID_MERGE20_SESSION_SAVE, OnUpdateMerge20Session)
@@ -1018,6 +1020,12 @@ void CDirView::ListContextMenu(CPoint point, int /*i*/)
 	// Master management (exclude words, highlight, risk keywords). Always offered.
 	String sMerge20Master = _("Master Management...");
 	pPopup->AppendMenu(MF_STRING, ID_MERGE20_MASTER, sMerge20Master.c_str());
+	// Merge20 (Wave 5 F2, design sections 3.2 and 7.1): FORM
+	// compare (view-only). The two folder paths are handed over
+	// as-is; the FORM window runs its own .xml-only scan (the
+	// folder compare result is not reused).
+	String sMerge20FormCompare = _("FORM Compare (view only)...");
+	pPopup->AppendMenu(MF_STRING, ID_MERGE20_FORM_COMPARE, sMerge20FormCompare.c_str());
 	// Merge20 (Phase 4 D9, design section 5.2/D9, spec sections 3
 	// (4/4) and 5.1): slim list. Always offered; the check shows
 	// the current state (the menu is rebuilt on every popup, as for
@@ -3921,6 +3929,23 @@ void CDirView::OnMerge20Master()
 		return;
 	if (dlg.ExcludeChanged())
 		GetDocument()->Rescan();
+}
+
+/**
+ * @brief Merge20 (Wave 5 F2, design sections 3.2 and 7.1): open
+ * the FORM compare window (view-only) for this folder pair. The
+ * left/right folder paths are handed over as-is; no confirmation
+ * dialog (the menu choice itself states the intent, design
+ * section 1.4). A 3-way folder compare hands over its outer two
+ * folders; the middle folder is ignored.
+ */
+void CDirView::OnMerge20FormCompare()
+{
+	CDirDoc* pDoc = GetDocument();
+	if (pDoc == nullptr)
+		return;
+	const CDiffContext& ctxt = pDoc->GetDiffContext();
+	Merge20FormCompareOpenFolders(ctxt.GetLeftPath(), ctxt.GetRightPath());
 }
 
 /**

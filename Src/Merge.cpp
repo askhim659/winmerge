@@ -38,6 +38,9 @@
 #include "OutputDoc.h"
 #include "DirView.h"
 #include "OutputView.h"
+#include "Merge20/Merge20FormCompareDoc.h"
+#include "Merge20/Merge20FormCompareFrame.h"
+#include "Merge20/Merge20FormCompareView.h"
 #include "PropBackups.h"
 #include "FileOrFolderSelect.h"
 #include "FileFilterHelper.h"
@@ -111,6 +114,7 @@ CMergeApp::CMergeApp() :
 , m_pHexMergeTemplate(nullptr)
 , m_pDirTemplate(nullptr)
 , m_pOutputTemplate(nullptr)
+, m_pFormCompareTemplate(nullptr)
 , m_mainThreadScripts(nullptr)
 , m_nLastCompareResult(-1)
 , m_bNonInteractive(false)
@@ -632,6 +636,24 @@ CMultiDocTemplate* CMergeApp::GetOutputTemplate()
 		AddDocTemplate(m_pOutputTemplate);
 	}
 	return m_pOutputTemplate;
+}
+
+CMultiDocTemplate* CMergeApp::GetFormCompareTemplate()
+{
+	// FORM compare view (Merge20 Wave 5 F2, design section 3.2):
+	// a view-only MDI child window. The shared menu is the main
+	// menu (IDR_MAINFRAME), like the Open view: the FORM window
+	// needs no document-specific menu in F2.
+	if (!m_pFormCompareTemplate)
+	{
+		m_pFormCompareTemplate = new CMultiDocTemplate(
+			IDR_MAINFRAME,
+			RUNTIME_CLASS(CFormCompareDoc),
+			RUNTIME_CLASS(CFormCompareFrame), // custom MDI child frame
+			RUNTIME_CLASS(CFormCompareView));
+		AddDocTemplate(m_pFormCompareTemplate);
+	}
+	return m_pFormCompareTemplate;
 }
 
 static void OpenContributersFile(int&)
