@@ -1799,6 +1799,15 @@ Merge20UndoApplyResult CMergeDoc::Merge20ApplyConclusionUndo(const Merge20UndoEn
 		ResultChooseSources(entry.diffIndex,
 			Merge20ConclusionSrcPanes(target, m_nBuffers, static_cast<int>(pRange->op)));
 	Merge20SetDiffConclusionRestored(entry.diffIndex, target);
+	// Merge20 (best-workflow B10 PR2): undoing a conclusion back to
+	// Undecided leaves the diff undecided, so its candidate (when
+	// the store still matches the diff) shows again at once instead
+	// of waiting for the next rescan. PR1 left this as a known
+	// limitation; the recompute is the same refresh a split /
+	// regroup already runs, and it changes no other diff's
+	// candidate (the store is untouched by the undo).
+	if (target == Merge20DiffConclusion::Undecided)
+		Merge20LearnRefreshCandidates(*this);
 	ctxt.SetMerge20ReviewState(entry.relPath, bUndo ? entry.oldReview : entry.newReview);
 	ctxt.SetMerge20IncludeInOutput(entry.relPath, bUndo ? entry.oldInclude : entry.newInclude);
 	pFolderDoc->Merge20UpdateDirViewItem(*pItem);
