@@ -1064,6 +1064,8 @@
     <ClInclude Include="Merge20\Merge20FormCompareFrame.h" />
     <ClInclude Include="Merge20\Merge20FormCompareView.h" />
     <ClInclude Include="Merge20\Merge20FormList.h" />
+    <ClInclude Include="Merge20\Merge20FormCanvasGeom.h" />
+    <ClInclude Include="Merge20\Merge20FormCanvas.h" />
     <ClInclude Include="Merge20\Merge20Split.h" />
     <ClInclude Include="Merge20\Merge20Sniper.h" />
     <ClInclude Include="Merge20\Merge20Grep.h" />
@@ -1431,7 +1433,13 @@
     <ClCompile Include="Merge20\Merge20FormCompareDoc.cpp" />
     <ClCompile Include="Merge20\Merge20FormCompareFrame.cpp" />
     <ClCompile Include="Merge20\Merge20FormCompareView.cpp" />
+    <ClCompile Include="Merge20\Merge20FormCanvas.cpp" />
     <ClCompile Include="Merge20\Merge20FormList.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
+    <ClCompile Include="Merge20\Merge20FormCanvasGeom.cpp">
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
@@ -2184,3 +2192,4 @@
     </VisualStudio>
   </ProjectExtensions>
 </Project>
+
