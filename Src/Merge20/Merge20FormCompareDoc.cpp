@@ -13,6 +13,7 @@
 #include "StdAfx.h"
 #include "Merge20/Merge20FormCompareDoc.h"
 #include "Merge20/Merge20FormImpact.h"
+#include "Merge20/Merge20FormMasterDlg.h"
 #include "Merge20/Merge20FormCompareView.h"
 #include "Merge.h"
 #include "MergeApp.h"
@@ -124,6 +125,26 @@ namespace
 		}
 	}
 
+	// Resolve every result's form name from the name-master
+	// file (F6, design section 8). A missing or unparsable file
+	// falls back to the default list, so a broken master file
+	// never blocks the analysis.
+	void ResolveFormNames(std::vector<Merge20FormFileResult>& results)
+	{
+		Merge20FormMaster master;
+		String text;
+		if (Merge20FormMasterLoadText(text))
+		{
+			int badLine = 0;
+			if (!Merge20FormMasterParseText(text, master, badLine))
+				master = Merge20FormMasterGetDefault();
+		}
+		else
+			master = Merge20FormMasterGetDefault();
+		for (Merge20FormFileResult& result : results)
+			result.formName = Merge20FormMasterResolve(master, result.fileName);
+	}
+
 } // namespace
 
 IMPLEMENT_DYNCREATE(CFormCompareDoc, CDocument)
@@ -222,6 +243,9 @@ bool CFormCompareDoc::RunAnalysis()
 	// canvas native size limits the page-overflow check.
 	for (Merge20FormFileResult& result : m_results)
 		Merge20ApplyFormImpact(result, 0.0, 0.0);
+	// The name master (F6) resolves the real form names here;
+	// Merge20DiffFormFiles only leaves "(unregistered)".
+	ResolveFormNames(m_results);
 	RefreshKpi();
 	m_bAnalyzed = true;
 	RefreshVisible();
@@ -267,6 +291,13 @@ void CFormCompareDoc::SetSortOrder(Merge20FormSort sort)
 void CFormCompareDoc::RefreshVisible()
 {
 	m_visibleIndices = Merge20FormListApplyFilterSort(m_results, m_filter, m_strSearchLower, m_sortOrder);
+}
+
+void CFormCompareDoc::RefreshFormNames()
+{
+	ResolveFormNames(m_results);
+	RefreshVisible();
+	UpdateAllViews(nullptr);
 }
 
 void CFormCompareDoc::UpdateResources()
