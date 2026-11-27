@@ -1078,7 +1078,7 @@ void CFormCompareView::UpdateSpotlightBanner()
 			_T(" \u0394Y:") + (dy >= 0 ? _T("+") : _T("")) + std::to_wstring(dy);
 		if (dw != 0 || dh != 0)
 		{
-			coordLine += _T("  \u0394W:") + (dw >= 0 ? _T("+") : _T("")) + std::to_wstring(dw) +
+			coordLine += String(_T("  \u0394W:")) + (dw >= 0 ? _T("+") : _T("")) + std::to_wstring(dw) +
 				_T(" \u0394H:") + (dh >= 0 ? _T("+") : _T("")) + std::to_wstring(dh);
 		}
 	}
