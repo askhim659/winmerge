@@ -6133,3 +6133,51 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - F4（スポットライト）は CI 失敗の修正中（`Merge20FormSpotlight_test.cpp` の 2 引数 `EXPECT_NEAR`、63 Error(s)）。F4 担当に診断ヒントを送付済み。完了報告待ち。
 - B3（リスク順巡回）を次に着手する（B4 の次。ギャップ分析書の推奨順序どおり）。
 - ID 割り当て状況（2026-11-27 08:45 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・未使用）、B2 が 1882–1885、B4 が 1886。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 用に 38982 を確保予定。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38980、`_APS_NEXT_CONTROL_VALUE` 1887。
+## §64 最高峰ワークフロー B4 — 未判断の高リスク残量表示 — マージ・CI 検証済み（2026-11-27）
+
+### 64.1 内容（ギャップ分析書 §4.2 B4。柱 1「すべての差分に明示的な結論」の残量表示）
+- 「【Wiz】未判断の高リスク：N 件」を常駐表示する。N が 0 になったら行ごと非表示にする（縦幅も取らない。警告表示にはしない）。
+- **表示場所：ファイル一覧パネルのヘッダ、件数行の直下。1 か所に統一**（§3.5）。S3／D3 の件数表示は実際にファイル一覧パネルのヘッダ（`CMerge20FileListCtrl::GetCountText()` → `CMerge20FileListBar::m_stCount`）に描かれていることをコードで確認した。ステータスバーには同種の件数表示はないため、パネルヘッダに決定。ステータスバーには置かない。**後続の B3 も同じ場所（パネルヘッダ）に統一すること**（PR 説明文に明記済み）。
+- **件数：B2 の Z と完全一致**。`CDirDoc::GetMerge20CloseWarnCounts()` を新設し、収集（判断スタッシュ＋走査＋`Merge20CloseWarnComputeCounts`）を B2 の警告ダイアログと B4 の表示で共有。定義も収集も 1 か所。高リスクの定義は S4 の分類と同一。
+- **更新の契機**：既存の通知経路（`NotifyMerge20FileListChanged` → `MSG_MERGE20_FILELIST_REFRESH` → パネル `Refresh()`。レビュー状態・B1 結論の連動が通知を出す）に乗せる。純粋モジュール `Merge20HighRiskRemain` が「表示を触る必要があるか」を判定し、件数が変わらない Refresh ではコントロールに触れない。`SetMerge20DiffJudgments`／`SetMerge20SplitGroups` は通知を出さないため、パネル更新内での判断スタッシュに再通知ループの危険がないことも確認済み。
+- 集計が 50ms を超えた場合のみ `Merge20 high-risk remain: X ms for N files` をログに出す（D10 計測ログのパターン）。
+- リソース割り当て：コントロール ID は `IDC_MERGE20_FILELIST_HIGHRISK` ＝ 1886 のみ使用し、`_APS_NEXT_CONTROL_VALUE` を 1887 へ進めた（`resource.h` の割り当てコメントも更新）。コマンド ID・ダイアログ ID は不使用。`.po` 新規 1 件（`Undecided high risk: %1` → `【Wiz】未判断の高リスク：%1 件`。msgid 総数 2,242 → 2,243）。
+- B2 の `SaveModified` は集計呼び出しだけを置き換え（ダイアログ挙動は同一）。
+
+### 64.2 変更一覧（ブランチ `merge20/wf-b4`、base master `7147e61f`。13 コミット、13 ファイル）
+| # | ファイル | コミット | 内容 |
+|---|---|---|---|
+| 1 | `Src/Merge20/Merge20HighRiskRemain.h` | `d62b321f` | 新規・純粋モジュール |
+| 2 | `Src/Merge20/Merge20HighRiskRemain.cpp` | `4eafef65` | 新規 |
+| 3 | `Testing/GoogleTest/Merge20/Merge20HighRiskRemain_test.cpp` | `473ed2a1` | 新規・9 件 |
+| 4 | `Src/DirDoc.h` | `ef7beb5b` | 共有集計メソッドの宣言 |
+| 5 | `Src/DirDoc.cpp` | `30568869` | 共有集計の実装＋`SaveModified` の寄せ |
+| 6 | `Src/Merge20/Merge20FileListBar.h` | `6dbb9dd3` | 残量行の宣言 |
+| 7 | `Src/Merge20/Merge20FileListBar.cpp` | `1ef23c31` | 残量行の表示・更新・レイアウト |
+| 8 | `Src/resource.h` | `d5dd11fd` | IDC 1886 割り当て |
+| 9 | `Translations/WinMerge/Japanese.po` | `d0b71b06` | 新訳文 |
+| 10 | `Src/Merge.vcxproj` | `fff49330` | 登録 |
+| 11 | `Src/Merge.vcxproj.filters` | `91146113` | 登録 |
+| 12 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj` | `30366e77` | 登録 |
+| 13 | `Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters` | `faaaec59` | 登録（ブランチ head） |
+
+- `.po` の確認：`<<<<<<<` のヒットは stock 翻訳の正当なもの（コンフリクト表示の説明文）のみで、`diff3` マーカーの残存なし。
+
+### 64.3 検証レポート（コーディネーター検証済み）
+- **PR #61**：open・mergeable=true・mergeable_state=clean、head `faaaec59`、base master `7147e61f`。13 コミット、変更ファイル 13 件（B4 の 13 ファイルのみ）。
+- **CI（ブランチ head）**：実行 45964954783、completed／success。全文ログ（3,580,202 バイト、ジョブ `build` 140391321090、48,080 行）をコーディネーターが取得・確認（`~/workspace/.coord/b4_final_log.txt`）。GoogleTest `[ PASSED ] 855 tests.`（846＋B4 の 9 件。`Merge20HighRiskRemain` 全 9 件合格）、`[ FAILED ]` 0 件（ログ中の "FAILED" 4 ヒットは `.pot` 生成時の `IDS_FILESAVE_FAILED` 等の文字列 ID で、テスト失敗ではない）、コンパイルエラー `error C[0-9]` 0 件、`Build succeeded` 1 件、`0 Error(s)`。警告 429 件は既存のもののみで、B4 のファイル由来の警告は 0 件。`.po` 番兵も通過。
+- **成果物（実行 45964954783）**：`WinMerge-x64.zip` 26,599,055 バイト（ID 15182688891）、`WinMerge-x64-Setup-x64.exe` 40,058,204 バイト（ID 15182504948）。いずれも未失効（expire 2027-02-25）。
+- **マージ**：マージコミット `4c359a70`。マージコミット CI：実行 45967396948、completed／success（head_sha=4c359a70 と一致）。全文ログ（3,581,025 バイト、ジョブ `build` 140399269017、48,092 行）をコーディネーターが取得・確認（`~/workspace/.coord/b4_merge_final_log.txt`）。GoogleTest `[ PASSED ] 855 tests.`、`Build succeeded`、`0 Error(s)`、`.po` 番兵通過、`error C[0-9]` 0 件。成果物：`WinMerge-x64.zip` 26,599,031 バイト、`WinMerge-x64-Setup-x64.exe` 40,071,494 バイト。いずれも未失効（expire 2027-02-25）。
+- **受け入れ条件の照合（ギャップ分析書 §4.2 B4）**：
+  - (a) 未判断の高リスク差分・ファイルの件数が正しく表示されること — B2 と同じ集計を流用。テスト `AcceptanceScenario`（3 件→2 件→0 件）、`DiffsKeepRemainder`（DONE ファイルの未判断差分も数える）で確認。コード上の確認であり、画面表示そのものは**実機未検証**。
+  - (b) 判断が進むと件数が減ること — S3 の通知経路に乗り、テスト `CountDecreaseUpdates` で件数変化時の表示更新を確認。B1 結論の連動（TODO→DONE）は `SetMerge20ReviewState` 経由で通知を出すこともコードで確認済み。
+  - (c) 0 件のときは警告表示にならないこと — 行ごと非表示＋縦幅ゼロ。テスト `ZeroHides`／`ZeroStaysHidden` で確認。
+  - (d) 100〜1000 ファイル規模でも表示更新が重くならないこと — 純粋集計の 1000 件テスト `ScaleThousandFiles` で highRisk 800 を正確に算出。MFC 側は 50ms 超え時のみログを出す仕組み。**実機での重さの目視・ログ確認は未検証**。
+  - (e) 回帰なし — 件数行・リスト・B9 ダイアログ・B2 警告・ステータスバーの既存表示に触れていない。B2 の `SaveModified` は集計呼び出しだけを置き換え（ダイアログ挙動は同一）。全 855 テスト合格。
+- **未検証（実機でしか確認できないもの）**：パネルヘッダに「【Wiz】未判断の高リスク：N 件」が実際に表示されること。検証手順：リスク高の未確認ファイル 3 件を含むフォルダ比較で (1)「未判断の高リスク：3 件」になること、(2) 1 件を DONE にすると 2 件になること、(3) 全件 DONE にすると行が消えること。100〜1000 ファイル規模で表示更新が重くないこと（遅い場合のみログに `Merge20 high-risk remain:` が出る）。日本語表示（【Wiz】未判断の高リスク：N 件）。
+
+### 64.4 次への移行
+- B3（リスク順巡回）はマージ済み（マージコミット `f4cf22bc`）。マージコミット CI は進行中。検証後に §65 として記録する。
+- F4（スポットライト）は前任者が途中終了し、後継担当を spawn 済み（根本原因は C2373 の同名衝突で確定。調整役の `EXPECT_NEAR` ヒントは誤りだったことを認め、後継への指示で訂正済み）。後継の完了報告待ち。
+- B14（高リスク確認）を次に着手する（B3 の次。ギャップ分析書の推奨順序どおり）。
+- ID 割り当て状況（2026-11-27 09:30 JST 時点）：IDD は B9 が 301、B2 が 303（302 は `IDI_ROTATE2`）。コントロール ID は F3 が 1858–1865、B9 が 1866–1871、F4 が 1872–1881（予約済み・未使用）、B2 が 1882–1885、B4 が 1886、B3 が 1887–1896（予約。実使用は `IDC_MERGE20_DED_RISK_ORDER` 1888 を含む）。コマンド ID は B9 が 38979、F4 が 38980（予約済み・未使用）、B2 第2段階用に 38981 を予約済み、B3 が `ID_MERGE20_RISK_ORDER` 38982 を使用。`_APS_NEXT_RESOURCE_VALUE` 304、`_APS_NEXT_COMMAND_VALUE` 38983（B3 マージ後）、`_APS_NEXT_CONTROL_VALUE` 1897（B3 マージ後。B3 の実使用分は要確認）。
