@@ -3,7 +3,8 @@
  * @file  Merge20Undo.cpp
  *
  * @brief Implementation of the judgment undo / redo stack
- * (Merge20 best-workflow B10 PR1).
+ * (Merge20 best-workflow B10 PR1, extended by PR2 with the
+ * split / regroup and learning accept / dismiss kinds).
  *
  * This file stays ASCII: it stores ordinals and paths only and
  * never formats user-visible text.
@@ -20,15 +21,34 @@ bool Merge20UndoEntryHasChange(const Merge20UndoEntry& entry)
 	case Merge20UndoKind::IncludeInOutput:
 		return entry.oldInclude != entry.newInclude;
 	case Merge20UndoKind::DiffConclusion:
-	default:
 		return entry.oldConclusion != entry.newConclusion ||
 			entry.oldReview != entry.newReview || entry.oldInclude != entry.newInclude;
+	case Merge20UndoKind::SplitDiff:
+	case Merge20UndoKind::RegroupDiff:
+		// A split / regroup always moves at least one diff into
+		// (or out of) per-row hunks; a group with fewer than two
+		// rows is not a split at all.
+		return entry.splitGroup.rows >= 2;
+	case Merge20UndoKind::LearnAccept:
+		// Consuming the candidate is the change, even when the
+		// conclusion it expresses was already set (the candidate
+		// disappearing is visible); a moved conclusion or file
+		// state is a change too.
+		return entry.hadCandidate || entry.oldConclusion != entry.newConclusion ||
+			entry.oldReview != entry.newReview || entry.oldInclude != entry.newInclude;
+	case Merge20UndoKind::LearnDismiss:
+		// A dismissal changes nothing but the candidate itself.
+		return entry.hadCandidate;
+	default:
+		return false;
 	}
 }
 
 bool Merge20UndoEntryMatchesDiff(const Merge20UndoEntry& entry, int op, const int begin[3], const int end[3])
 {
-	if (entry.kind != Merge20UndoKind::DiffConclusion)
+	if (entry.kind != Merge20UndoKind::DiffConclusion &&
+		entry.kind != Merge20UndoKind::LearnAccept &&
+		entry.kind != Merge20UndoKind::LearnDismiss)
 		return true;
 	if (entry.diffOp != op)
 		return false;
