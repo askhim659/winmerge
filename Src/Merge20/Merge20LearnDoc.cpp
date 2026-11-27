@@ -625,6 +625,20 @@ bool Merge20LearnDismissCandidate(CMergeDoc& doc, int nDiff)
 	return true;
 }
 
+bool Merge20LearnUndismissCandidate(CMergeDoc& doc, int nDiff)
+{
+	if (nDiff < 0 || nDiff >= doc.m_diffList.GetSize())
+		return false;
+	const DIFFRANGE* pRange = doc.m_diffList.DiffRangeAt(nDiff);
+	if (pRange == nullptr)
+		return false;
+	// Drop the identity from the dismissed set (the same key the
+	// dismissal inserted). The caller recomputes the candidates,
+	// so the candidate shows again when the diff is still waiting
+	// for a decision; nothing is recorded in the learning data.
+	return doc.GetMerge20LearnDismissed().erase(DismissedKey(*pRange)) > 0;
+}
+
 void Merge20LearnRefreshCandidates(CMergeDoc& doc)
 {
 	std::map<int, Merge20LearnCandidate>& candidates = doc.GetMerge20LearnCandidates();
