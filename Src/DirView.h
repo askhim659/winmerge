@@ -442,6 +442,10 @@ protected:
 	afx_msg void OnMerge20DirUncheckAll();
 	// Merge20 (best-workflow B10): judgment undo / redo (folder compare context menu + Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y).
 	afx_msg void OnMerge20UndoJudgment();
+	// Merge20 (best-workflow B11): audit-log viewer and CSV export (folder compare context menu).
+	afx_msg void OnMerge20AuditView();
+	afx_msg void OnMerge20AuditCsv();
+	afx_msg void OnUpdateMerge20Audit(CCmdUI* pCmdUI);
 	afx_msg void OnUpdateMerge20UndoJudgment(CCmdUI* pCmdUI);
 	afx_msg void OnMerge20RedoJudgment();
 	afx_msg void OnUpdateMerge20RedoJudgment(CCmdUI* pCmdUI);

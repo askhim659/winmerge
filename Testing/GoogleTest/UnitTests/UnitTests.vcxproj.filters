@@ -228,6 +228,9 @@
     <ClCompile Include="..\Merge20\Merge20Undo_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\Merge20\Merge20Audit_test.cpp">
+      <Filter>Tests</Filter>
+    </ClCompile>
     <ClCompile Include="..\Merge20\Merge20Split_test.cpp">
       <Filter>Tests</Filter>
     </ClCompile>
@@ -505,6 +508,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Undo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\Src\Merge20\Merge20Audit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\..\Src\Merge20\Merge20Split.cpp">
@@ -810,6 +816,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Undo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Src\Merge20\Merge20Audit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Src\Merge20\Merge20Split.h">

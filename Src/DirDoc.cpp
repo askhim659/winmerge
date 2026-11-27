@@ -39,6 +39,7 @@
 #include "FilterErrorMessages.h"
 #include "DirActions.h"
 #include "DirScan.h"
+#include "Merge20/Merge20AuditDoc.h"
 #include "Merge20/Merge20CloseWarn.h"
 #include "Merge20/Merge20CloseWarnDlg.h"
 #include "Merge20/Merge20Measure.h"
@@ -674,7 +675,19 @@ void CDirDoc::SetMerge20IncludeInOutput(const DIFFITEM& di, bool include, bool b
 {
 	if (m_pCtxt == nullptr)
 		return;
+	// Merge20 (best-workflow B11): the audit entry is logged here,
+	// not in CDiffContext (the context is also compiled into the
+	// GoogleTest runner, whose project has no MFC adapter files,
+	// so an adapter call from there would not link). Every user
+	// toggle funnels through here with bRecordUndo=true; batch
+	// checks pass false and log their own BatchCheck entries, the
+	// conclusion linkage calls the context directly with false,
+	// and undo uses the raw setter, so none of those log here.
+	const bool bOldInclude = m_pCtxt->GetMerge20IncludeInOutput(di);
 	m_pCtxt->SetMerge20IncludeInOutput(di, include, bRecordUndo);
+	if (bRecordUndo)
+		Merge20AuditLogIncludeChange(GetDiffContext(), di.getItemRelativePath(),
+			bOldInclude, include, Merge20AuditKind::IncludeInOutput);
 }
 
 /**
@@ -686,7 +699,19 @@ void CDirDoc::ApplyMerge20ReviewState(const DIFFITEM& di, ReviewState state, boo
 {
 	if (m_pCtxt == nullptr)
 		return;
+	// Merge20 (best-workflow B11): one audit entry per user review
+	// change (see SetMerge20IncludeInOutput above for why the log
+	// lives here and not in CDiffContext). The S2 linkage may also
+	// have moved the output flag; that goes into the entry's note,
+	// not a second entry. The conclusion linkage does not come
+	// through here (it sets the review state directly), so it is
+	// never double-logged.
+	const ReviewState oldReview = m_pCtxt->GetMerge20ReviewState(di.getItemRelativePath());
+	const bool bOldInclude = m_pCtxt->GetMerge20IncludeInOutput(di);
 	m_pCtxt->ApplyMerge20ReviewState(di, state, bRecordUndo);
+	if (bRecordUndo)
+		Merge20AuditLogReviewChange(GetDiffContext(), di.getItemRelativePath(), oldReview, state,
+			bOldInclude, m_pCtxt->GetMerge20IncludeInOutput(di));
 }
 
 /**
@@ -943,7 +968,10 @@ void CDirDoc::ApplyMerge20ReviewState(const PathContext& paths, ReviewState stat
 	DIFFITEM* pos = FindMerge20ItemFromPaths(*m_pCtxt, paths);
 	if (pos == nullptr)
 		return;
-	m_pCtxt->ApplyMerge20ReviewState(*pos, state);
+	// Merge20 (best-workflow B11): route through the DIFFITEM
+	// overload above, so a dedicated-bar / focus-dock review change
+	// is audit-logged exactly like a folder-list one.
+	ApplyMerge20ReviewState(*pos, state);
 	if (m_pDirView != nullptr)
 	{
 		const int nIdx = m_pDirView->GetItemIndex(pos);

@@ -131,6 +131,8 @@
 #define IDD_MERGE20_FORM_MASTER      306
 // Merge20 (Wave 5 F7): FORM compare CSV export range-selection dialog.
 #define IDD_MERGE20_FORM_CSV_EXPORT  308
+// Merge20 (best-workflow B11): audit-log viewer dialog.
+#define IDD_MERGE20_AUDIT              309
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -964,6 +966,12 @@
 #define IDC_MERGE20_FORM_CSV                1910
 #define IDC_MERGE20_FORM_CSV_FILTERED       1911
 #define IDC_MERGE20_FORM_CSV_ALL            1912
+// Merge20 (best-workflow B11): audit-log viewer dialog (count
+// line, learning-separation note, entry list, CSV export button).
+#define IDC_MERGE20_AUDIT_INFO          1913
+#define IDC_MERGE20_AUDIT_NOTE          1914
+#define IDC_MERGE20_AUDIT_LIST          1915
+#define IDC_MERGE20_AUDIT_EXPORT        1916
 #define IDC_MERGE20_CLOSE_WARN_COUNTS       1882
 #define IDC_MERGE20_CLOSE_WARN_WARNING      1883
 #define IDC_MERGE20_CLOSE_WARN_TODO_ONLY    1884
@@ -1985,6 +1993,10 @@
 // pane context menu; Ctrl+Z / Ctrl+Shift+Z in the folder list).
 #define ID_MERGE20_UNDO_JUDGMENT        38984
 #define ID_MERGE20_REDO_JUDGMENT        38985
+// Merge20 (best-workflow B11, gap analysis section 4.2 B11):
+// audit-log viewer and CSV export (folder compare context menu).
+#define ID_MERGE20_AUDIT_VIEW           38986
+#define ID_MERGE20_AUDIT_CSV            38987
 #define IDS_SPLASH_GPLTEXT              38977
 #define ID_VIEW_MERGE20_BRAND_HEADER   38978
 #define IDS_MESSAGEBOX_OK               39001
@@ -2776,8 +2788,9 @@
 // by the output gate, like the B2 warning.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
-// - dialogs (IDD_*): from 309 (_APS_NEXT_RESOURCE_VALUE). 305 is the B7
+// - dialogs (IDD_*): from 311 (_APS_NEXT_RESOURCE_VALUE). 305 is the B7
 //   verification problem-list dialog, 306 is the F6 name-master dialog,
+//   309 is the B11 audit-log viewer dialog,
 //   308 is the F7 FORM CSV export dialog, 307 is IDR_LOGO. The numeric
 //   space is shared with icons/bitmaps, so 301 is the B9 summary
 //   dialog, 302 (IDI_ROTATE2), 303 is the B2 close-warning dialog,
@@ -2786,11 +2799,11 @@
 //   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1913 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1917 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
 //   F4 takes 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1888,
 //   B14 takes 1889-1892, B7 takes 1893-1897 (reserves 1893-1902), F5 takes 1903-1904,
-//   F6 takes 1905-1909, F7 takes 1910-1912.
+//   F6 takes 1905-1909, F7 takes 1910-1912, B11 takes 1913-1916.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2801,7 +2814,8 @@
 //   command; 38982 is the B3 risk-order patrol toggle command;
 //   38983 is the B8 verification report command;
 //   38984-38985 are the B10 judgment undo / redo commands;
-//   _APS_NEXT_COMMAND_VALUE is now 38986), free from 38986
+//   38986-38987 are the B11 audit-log view / CSV commands;
+//   _APS_NEXT_COMMAND_VALUE is now 38988), free from 38988
 //   (38977 is IDS_SPLASH_GPLTEXT: not usable as a command ID).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2810,9 +2824,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        309
-#define _APS_NEXT_COMMAND_VALUE         38986
-#define _APS_NEXT_CONTROL_VALUE         1913
+#define _APS_NEXT_RESOURCE_VALUE        311
+#define _APS_NEXT_COMMAND_VALUE         38988
+#define _APS_NEXT_CONTROL_VALUE         1917
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
