@@ -231,5 +231,5 @@ TEST(Merge20FormCanvasGeom, PointToPixels)
 	// Missing / invalid input falls back to 10pt at 96 dpi.
 	EXPECT_NEAR(Merge20FormCanvasPointToPixels(std::nan(""), 96), 13.333333333333334, 1e-9);
 	EXPECT_NEAR(Merge20FormCanvasPointToPixels(0.0, 96), 13.333333333333334, 1e-9);
-	EXPECT_NEAR(Merge20FormCanvasPointToPixels(12.0, 0), 16.0);
+	EXPECT_DOUBLE_EQ(Merge20FormCanvasPointToPixels(12.0, 0), 16.0);
 }
