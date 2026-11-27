@@ -122,6 +122,7 @@
 #define IDD_MERGE20_MASTER              299
 #define IDD_MERGE20_BULK_CLASSIFY      300
 #define IDD_MERGE20_SUMMARY            301
+#define IDD_MERGE20_CLOSE_WARN         303
 #define IDI_ROTATE2                     302
 #define IDR_LOGO                        307
 #define IDR_MARGIN_ICONS_PNG            310
@@ -927,6 +928,10 @@
 #define IDC_MERGE20_SUMMARY_LIST            1869
 #define IDC_MERGE20_SUMMARY_TODO_ONLY       1870
 #define IDC_MERGE20_SUMMARY_CONFIRM         1871
+#define IDC_MERGE20_CLOSE_WARN_COUNTS       1882
+#define IDC_MERGE20_CLOSE_WARN_WARNING      1883
+#define IDC_MERGE20_CLOSE_WARN_TODO_ONLY    1884
+#define IDC_MERGE20_CLOSE_WARN_PROCEED      1885
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -2679,15 +2684,21 @@
 // F3 consumes controls 1858-1865 (FORM compare canvas: canvas, preview label, zoom 100%/25%/fit buttons,
 // zoom slider, zoom label, viewport height toggle).
 // B9 consumes dialog 301, controls 1866-1871 and command 38979 (end-of-session summary dialog).
+// B2 stage 1 consumes dialog 303 and controls 1882-1885 (close-warning dialog: counts, warning,
+// show-unreviewed-only and proceed buttons). It uses no command ID: the warning is automatic on
+// close. Command 38981 is held for the B2 stage 2 output gates (S7/S5); controls 1872-1881 are
+// held for F4.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
-// - dialogs (IDD_*): from 303 (_APS_NEXT_RESOURCE_VALUE). The numeric
+// - dialogs (IDD_*): from 304 (_APS_NEXT_RESOURCE_VALUE). The numeric
 //   space is shared with icons/bitmaps, so 301 is the B9 summary
-//   dialog, 302 (IDI_ROTATE2), 307 (IDR_LOGO), 310
+//   dialog, 302 (IDI_ROTATE2), 303 is the B2 close-warning dialog,
+//   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1872 (_APS_NEXT_CONTROL_VALUE), free
-//   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871.
+// - controls (IDC_*): from 1886 (_APS_NEXT_CONTROL_VALUE), free
+//   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
+//   F4 holds 1872-1881, B2 takes 1882-1885.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2704,9 +2715,9 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
-#define _APS_NEXT_RESOURCE_VALUE        303
+#define _APS_NEXT_RESOURCE_VALUE        304
 #define _APS_NEXT_COMMAND_VALUE         38980
-#define _APS_NEXT_CONTROL_VALUE         1872
+#define _APS_NEXT_CONTROL_VALUE         1886
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
