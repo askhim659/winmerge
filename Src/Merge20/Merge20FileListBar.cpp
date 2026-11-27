@@ -27,6 +27,15 @@
  * the folder view (row repaint + status-bar count) through the
  * CDirDoc forwarders, closing the P2 known limitation.
  *
+ * B4 (best-workflow, gap analysis sections 3.5 and 4.2 B4) adds
+ * the undecided high-risk remainder line directly under the count
+ * line: "Undecided high risk: N", from the same B2 counts
+ * (CDirDoc::GetMerge20CloseWarnCounts). It shows only while N >
+ * 0 and takes no vertical space at 0. The display lives here
+ * alone (no status-bar duplicate). UpdateHighRiskRemain() runs
+ * from Refresh(), so it rides the S3 status-update path: every
+ * review-state notification refreshes the remainder too.
+ *
  * U5 (UI redesign, design sections 2.1 and 4/U5) adds the WizMerge
  * accent: a 2px accent underline under the count, search and
  * filter-tab rows (OnPaint, rows recorded by LayoutChildren; each
@@ -41,8 +50,11 @@
 #include "Merge20/Merge20FileListBar.h"
 #include "Merge20/Merge20Theme.h"
 #include "Merge20/Merge20BatchCheckDlg.h"
+#include "Merge20/Merge20CloseWarn.h"
+#include "Merge20/Merge20HighRiskRemain.h"
 #include "DiffContext.h"
 #include "DirDoc.h"
+#include "Logger.h"
 #include "OptionsMgr.h"
 #include "OptionsDef.h"
 #include "Merge20/Merge20FileListFilter.h"
@@ -66,6 +78,13 @@ namespace
 	constexpr LONG Merge20FileListMaxWidth = 600;
 	/** @brief Height of the count line at the top of the bar (P1). */
 	constexpr LONG Merge20FileListCountHeight = 22;
+	/** @brief Height of the high-risk remainder line (B4): same as
+	 * the count line it sits under. */
+	constexpr LONG Merge20FileListHighRiskHeight = 22;
+	/** @brief Count-computation time (ms) above which the B4
+	 * update writes one measure-log line (D10 pattern): a
+	 * 100-1000-file compare that stays below this stays silent. */
+	constexpr long long Merge20FileListHighRiskSlowMs = 50;
 	/** @brief Height of the search row (P2): label + edit. */
 	constexpr LONG Merge20FileListSearchHeight = 26;
 	/** @brief Width of the search label (P2), so the edit fills the rest. */
@@ -95,6 +114,14 @@ namespace
 			const DIFFITEM& di = ctxt.GetNextDiffPosition(p);
 			byRelPath[di.getItemRelativePath()] = &di;
 		}
+	}
+
+	/** @brief B4 remainder text for N undecided high-risk items.
+	 * Literal _() call (see CMerge20FileListCtrl::SetupColumns):
+	 * the .pot generator only scans literal arguments. */
+	String Merge20FileListHighRiskText(int highRisk)
+	{
+		return strutils::format_string1(_("Undecided high risk: %1"), strutils::to_str(highRisk));
 	}
 } // namespace
 
@@ -236,6 +263,17 @@ int CMerge20FileListBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		return -1;
 	}
 	m_stCount.SetFont(pFont);
+	// High-risk remainder line (B4): "Undecided high risk: N".
+	// Created hidden (no WS_VISIBLE): Refresh() shows it only
+	// while N > 0, so at 0 it is not a warning display. The text
+	// is set by UpdateHighRiskRemain(), not here.
+	if (!m_stHighRisk.Create(_T(""), WS_CHILD | SS_LEFTNOWORDWRAP,
+		rc, this, IDC_MERGE20_FILELIST_HIGHRISK))
+	{
+		TRACE0("Failed to create Merge20FileListBar high-risk label\n");
+		return -1;
+	}
+	m_stHighRisk.SetFont(pFont);
 	if (!m_wndList.Create(WS_CHILD | WS_VISIBLE | LVS_REPORT | LVS_OWNERDATA | LVS_SHOWSELALWAYS | LVS_SINGLESEL,
 		rc, this, IDC_MERGE20_FILELIST_LIST))
 	{
@@ -482,8 +520,7 @@ void CMerge20FileListBar::Refresh()
 	m_btnCollapseAll.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_stCount.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
 	m_wndList.ShowWindow(bHasDirDoc ? SW_SHOW : SW_HIDE);
-	m_stEmpty.ShowWindow(bHasDirDoc ? SW_HIDE : SW_SHOW);
-	m_stSearchLabel.EnableWindow(bHasDirDoc);
+	m_stEmpty.ShowWindow(bHasDirDoc ? SW_HIDE : SW_SHOW);	m_stSearchLabel.EnableWindow(bHasDirDoc);
 	m_wndSearch.EnableWindow(bHasDirDoc);
 	m_wndFilterTabs.EnableWindow(bHasDirDoc);
 	m_btnBatch.EnableWindow(bHasDirDoc);
@@ -493,10 +530,24 @@ void CMerge20FileListBar::Refresh()
 	if (bHasDirDoc)
 		m_wndList.SetDiffContext(&m_pDirDoc->GetDiffContext());
 	else
+	{
 		m_wndList.SetDiffContext(nullptr);
+		// No folder document: the remainder line goes away with
+		// the count line. Its state resets, so a later folder
+		// compare starts hidden until the first count arrives.
+		if (m_bHighRiskVisible)
+		{
+			m_bHighRiskVisible = false;
+			m_nHighRiskShown = 0;
+		}
+		m_stHighRisk.ShowWindow(SW_HIDE);
+	}
 	m_wndList.Refresh();
 	if (bHasDirDoc)
+	{
 		m_stCount.SetWindowText(m_wndList.GetCountText().c_str());
+		UpdateHighRiskRemain();
+	}
 	// P3 (P-R7): re-select the file the compare window shows. The
 	// rows were just rebuilt (a rescan may have moved them), so the
 	// selection is re-applied by relative path, not kept by index.
@@ -505,6 +556,51 @@ void CMerge20FileListBar::Refresh()
 	if (!m_sCurrentRelPath.empty())
 		m_wndList.SelectRowByRelPath(m_sCurrentRelPath);
 	LayoutChildren();
+}
+
+/**
+ * @brief Update the B4 high-risk remainder line (gap analysis
+ * section 4.2 B4).
+ *
+ * The count is B2's highRisk (CDirDoc::GetMerge20CloseWarnCounts),
+ * so this line and the close warning can never disagree: a TODO
+ * file with risk HIGH counts 1, and so does each undecided diff
+ * in a HIGH-risk file (see Merge20CloseWarn.h). The pure trigger
+ * module (Merge20HighRiskRemainDecideUpdate) decides whether the
+ * control needs touching at all: a Refresh with an unchanged
+ * count leaves it alone, so search keystrokes and unrelated
+ * notifications do not churn the control. At 0 the line hides;
+ * LayoutChildren (called by Refresh() after this) reclaims its
+ * row, so it takes no vertical space and is never a warning
+ * display. No-op without a folder document or before OnCreate.
+ *
+ * The count is timed (D10 measure-log pattern): a slow update on
+ * a 100-1000-file compare writes one log line, so the
+ * real-machine check can see it; fast updates stay silent.
+ */
+void CMerge20FileListBar::UpdateHighRiskRemain()
+{
+	if (m_pDirDoc == nullptr || m_stHighRisk.GetSafeHwnd() == nullptr)
+		return;
+	const auto t0 = std::chrono::steady_clock::now();
+	const Merge20CloseWarnCounts counts = m_pDirDoc->GetMerge20CloseWarnCounts();
+	const long long elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+		std::chrono::steady_clock::now() - t0).count();
+	if (elapsedMs >= Merge20FileListHighRiskSlowMs)
+	{
+		const std::string line = "Merge20 high-risk remain: " + std::to_string(elapsedMs) +
+			" ms for " + std::to_string(counts.total) + " files";
+		RootLogger::Info(String(line.begin(), line.end()));
+	}
+	const Merge20HighRiskRemainUpdate update = Merge20HighRiskRemainDecideUpdate(
+		m_bHighRiskVisible, m_nHighRiskShown, counts.highRisk);
+	if (!update.changed)
+		return;
+	m_bHighRiskVisible = update.visible;
+	m_nHighRiskShown = update.highRisk;
+	if (update.visible)
+		m_stHighRisk.SetWindowText(Merge20FileListHighRiskText(update.highRisk).c_str());
+	m_stHighRisk.ShowWindow(update.visible ? SW_SHOW : SW_HIDE);
 }
 
 /**
@@ -725,6 +821,17 @@ void CMerge20FileListBar::LayoutChildren()
 	if (bHasDoc)
 		m_rcCountRow.SetRect(rcClient.left, y, rcClient.right, y + Merge20FileListCountHeight);
 	y += Merge20FileListCountHeight;
+	// B4: the high-risk remainder line sits directly under the
+	// count line and only while N > 0; at 0 it takes no space, so
+	// the list starts right under the count line as before.
+	if (bHasDoc && m_bHighRiskVisible && m_stHighRisk.GetSafeHwnd() != nullptr)
+	{
+		CRect rcHighRisk = rcClient;
+		rcHighRisk.top = y;
+		rcHighRisk.bottom = y + Merge20FileListHighRiskHeight;
+		m_stHighRisk.MoveWindow(&rcHighRisk);
+		y += Merge20FileListHighRiskHeight;
+	}
 	if (m_wndList.GetSafeHwnd() != nullptr)
 	{
 		CRect rcList = rcClient;
@@ -798,6 +905,11 @@ void CMerge20FileListBar::UpdateResources()
 		// at once instead of waiting for the next Refresh().
 		if (m_pDirDoc != nullptr && m_stCount.GetSafeHwnd() != nullptr)
 			m_stCount.SetWindowText(m_wndList.GetCountText().c_str());
+		// B4: re-apply the remainder text the same way, so a
+		// language change shows at once. The line stays hidden
+		// at 0; only the shown count is re-applied.
+		if (m_bHighRiskVisible && m_stHighRisk.GetSafeHwnd() != nullptr)
+			m_stHighRisk.SetWindowText(Merge20FileListHighRiskText(m_nHighRiskShown).c_str());
 	}
 	// U5: repaint the accent underlines and the owner-drawn tabs.
 	Invalidate(FALSE);
