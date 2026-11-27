@@ -225,6 +225,12 @@ void Init(COptionsMgr *pOptions)
 	// Merge20 (S8): session auto-save (default ON), learning (Phase 3,
 	// default ON), batch-approve dialog (S5, default shown), and the
 	// review-state filter defaults (default: show all).
+	// Merge20 (best-workflow B7): final-verification checks,
+	// all default ON (see OPT_MERGE20_VERIFY_* in OptionsDef.h).
+	pOptions->InitOption(OPT_MERGE20_VERIFY_REDIFF, true);
+	pOptions->InitOption(OPT_MERGE20_VERIFY_LINE_COUNT, true);
+	pOptions->InitOption(OPT_MERGE20_VERIFY_SYNTAX, true);
+	pOptions->InitOption(OPT_MERGE20_VERIFY_CONSISTENCY, true);
 	pOptions->InitOption(OPT_MERGE20_SESSION_AUTOSAVE, true);
 	pOptions->InitOption(OPT_MERGE20_LEARNING_ENABLED, true);
 	pOptions->InitOption(OPT_MERGE20_LEARNING_OWNER, _T(""));
