@@ -5543,3 +5543,50 @@ D10（PR #32、§36）の実装を master から読んで照合した結果。D1
 - マージ順序：F0→F1→F2→F3→F4→F5→F6→F7。F3・F4・F5 は並行可だがマージは順序どおり。
 - ユーザー確認待ち（未回答）：F-7（点滅）、F-10（Merge20.flt 既定フィルタ）、F-15（S4 add-only「中」vs HTML「なし」）、「【Wiz】」→「【WizMerge】」ラベル変更、T-F-1（実フォームXMLサンプル）、T-F-9（名称マスターの保存形式／場所）。
 - Wave 2 の S5／S7 は引き続き U-0-2（2-way 自動マージの実機検証待ち）のため保留。
+
+## §49 F0 マージ・Wave 5 F0 完了・F1 起動（2026-11-27）
+
+### 49.1 F0 のマージ（PR #44 → master）
+
+- F0（基盤：XMLパーサ＋データモデル＋単体テスト、ブランチ `merge20/form-f0`、7コミット・7ファイル・追加のみ +1347/-0、base master `94956238`）をコーディネーター検証後にマージ。マージコミット **15173552**。
+- コーディネーター検証済み（マージ前）：PR #44 は open・mergeable=true・mergeable_state=clean、head `6e780da8910008fba1f8ab627c475c2c8ff62c64`、base `94956238313b95f233f3eba76bd5c2bfc9333416`。最終 head の CI 実行 45924163470 は completed／success（head_sha=6e780da8 と一致）。全文ログで GoogleTest `[ PASSED ] 763 tests.`（H-DOC 時点 754＋新規 9。`[ FAILED ]` は翻訳文字列 ID（IDS_FILESAVE_FAILED 等）のみでテスト失敗ではない）、コンパイルエラー 0 件（`error C[0-9]`・`error LNK` 0 件、`Build succeeded` 1 件）。成果物（実行 45924163470）：`WinMerge-x64.zip` 26,472,199 バイト（ID 15166555717）、`WinMerge-x64-Setup-x64.exe` 39,928,899 バイト（ID 15166096676）、失効 2027-02-25。全文ログは `~/workspace/.coord/f0_final_log.txt` に保存（47,767 行）。
+- マージコミット CI は実行 45925523753 でポーリング中（本節記録時点 in_progress）。完了後に API で成果物を確認し、本節へ追記すること。
+
+### 49.2 受け入れ条件の照合（設計書 §10 F0）
+
+| 条件 | 結果 |
+|---|---|
+| (a) 正常 XML のパースと不正 XML の失敗 | 合格。要素・属性・テキスト・コメント・XML宣言・CDATA を正しくパースし、タグ対応不一致・属性値の引用符の閉じ忘れ・未閉じタグ・裸の `&`／`<`・ルートなし・ルート後のゴミをパース失敗として返す（単体テストで検証） |
+| (b) 実体参照のデコード | 合格。`&amp;`・`&lt;`・`&gt;`・`&quot;`・`&apos;`・数値文字参照をデコード。未定義の実体参照はそのまま保持 |
+| (c) HTML版 ground truth との一致 | 合格。HTML版 `parseXmlToMapAndShapes` の関数そのものを Node＋jsdom の DOMParser で実行した ground truth と、同じ 12 入力に対するフォークのパーサ出力を突き合わせ、要素の集合・属性・図形の座標すべて一致（不一致 0 件）。ローカル g++ ハーネスでも 59 件のチェック全合格 |
+| (d) 回帰なし | 合格。新規モジュールの追加のみ。既存コードの変更はなし（`.vcxproj`／`.filters` は新規ファイルの登録のみ） |
+
+### 49.3 変更一覧（1 ファイル 1 コミット、7 件。連続コミットの間に sleep 3）
+
+| # | コミット | ファイル | 内容 |
+|---|---|---|---|
+| 1 | `426ca0fa` | Src/Merge20/Merge20FormXml.h | 新規。データモデル（`Merge20FormElement`／`Merge20FormShape`／`Merge20FormDiffRecord`／`Merge20FormFileResult`、`Merge20FormDiffType`／`Merge20FormSeverity`）＋パーサ宣言。座標は double。`isEstimated`・`structPath`・`groupId` を含む（F1 用の受け皿） |
+| 2 | `1ec617a5` | Src/Merge20/Merge20FormXml.cpp | 新規。自前 XML パーサ（要素・属性・テキスト・コメント・XML宣言・CDATA。タグ対応・引用符の検査。実体参照のデコード）。図形の抽出規則は HTML版と同じ（x／y のフォールバック、x2／y2 の推定、`line` 判定） |
+| 3 | `f7c49fb9` | Testing/GoogleTest/Merge20/Merge20FormXml_test.cpp | 新規。単体テスト 9 件（ParseBasicForm／ParseEntitiesAndNamespaces／ParseFailures／UnknownEntityKeptAsIs／ShapeEstimationAndLines／DuplicateKeysUseGlobalCounter／StructPaths／NonNumericCoordsMakeNoShape／ParseNumber） |
+| 4 | `83e1756e` | Src/Merge.vcxproj | 新規 2 ファイルを登録（`Merge20FormXml.cpp` は pch.h グループ） |
+| 5 | `719fe5d3` | Src/Merge.vcxproj.filters | 同上 |
+| 6 | `d12b2e68` | Testing/GoogleTest/UnitTests/UnitTests.vcxproj | 新規ファイルとテストを登録（S1 の LNK2019 の教訓） |
+| 7 | `6e780da8` | Testing/GoogleTest/UnitTests/UnitTests.vcxproj.filters | 同上 |
+
+### 49.4 意図的な差異（設計書 §3.3 どおり。PR 説明文にも記載）
+
+- 未定義の実体参照はパース失敗にせずそのまま保持する（DOMParser は致命的エラー）。`&unknown;` を含む入力では HTML版は null、フォークは成功する。
+- `xmlns`／`xmlns:*` はキー化から除外する（属性自体は保持）。属性署名キーはソート順（HTML版は文書順）。
+
+### 49.5 未検証（実機）・次への移行
+
+- F0 には UI・永続化・記録フックがないため、実機で確認できる動作はない。実機確認は「CI 成果物の `WinMergeU.exe` が従来どおり起動すること（回帰確認）」のみ。
+- `wchar_t` 2 バイト時のサロゲートペア処理（`&#x10000;` 以上）はコード上の対応のみで実機未検証。
+- F1 を起動（ブランチ `merge20/form-f1`、base は F0 マージ後の master `15173552`）。受け入れ条件は設計書 §10 F1 (a)〜(d)。
+- **パネルバグ（実機報告 2026-11-27 10:49 JST）**：品質修正版ビルド（run 45893505703）で、フォルダをドラッグ＆ドロップで開いた場合にファイル比較ウィンドウのパネルが「フォルダ比較がありません」と表示する。フォルダ比較ウィンドウ自体には一覧が出ているため、P3 の連携（DirDoc の取得／Merge20FindRelPath／FindMerge20ItemFromPaths のフォールバック）の不具合で確定。`workspace/goals/winmerge-fork-with-20-features/hidden_files/panel-bug-2026-11-27.md` に記録。修正を別ブランチ `merge20/panel-dragdrop-fix`（base `15173552`）で F1 と並行して着手する（触るファイルの重なりなし）。GitHub Issue での記録は 410 で作成できなかった（Issue が無効の可能性）。
+
+## §50 品質修正版の .po 欠落：artifact レベルで解消を確認（親エージェント報告、2026-11-27 ~10:25 JST）
+
+- 親エージェントが品質修正版の artifact 自体（run 45893505703、内側 zip `wizmerge-2.16.60-bbc43fb-x64-exe.zip`）から確認：出荷 `WizMerge/Languages/Japanese.po` は **2,069 msgids**（リポジトリ版 2,046 に対し +23）。**欠落 0 件**（以前のビルドでは 111 件欠落）。Merge20 文字列はすべて存在（Review State、Include in Output、Action Category、Risk、Summary、Memo、Learning...、Batch check...、Excluded: %1 lines、Dedicated Compare Mode）。列名は日本語で表示されるはず。
+- ZIP 内のトップフォルダは `WizMerge/` になり、リネームが artifact にも到達した。
+- 本節は親エージェントの確認結果の記録である（コーディネーター自身の検証ではない）。ユーザーへの実機確認のチェックリスト（`quality-fix-checklist.md`）には引き続き「列名が日本語で表示されること」を残す。
