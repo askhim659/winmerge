@@ -1083,6 +1083,8 @@
     <ClInclude Include="Merge20\Merge20Sniper.h" />
     <ClInclude Include="Merge20\Merge20Grep.h" />
     <ClInclude Include="Merge20\Merge20HighRiskRemain.h" />
+    <ClInclude Include="Merge20\Merge20Impact.h" />
+    <ClInclude Include="Merge20\Merge20ImpactSearch.h" />
     <ClInclude Include="Merge20\Merge20Master.h" />
     <ClInclude Include="Merge20\Merge20MasterDoc.h" />
     <ClInclude Include="Merge20\Merge20MasterDlg.h" />
@@ -1573,6 +1575,11 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
+    <ClCompile Include="Merge20\Merge20Impact.cpp">
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)2.pch</PrecompiledHeaderOutputFile>
+    </ClCompile>
     <ClCompile Include="Merge20\Merge20CloseWarnDlg.cpp" />
     <ClCompile Include="Merge20\Merge20HighRiskConfirmDlg.cpp" />
     <ClCompile Include="Merge20\Merge20SummaryDlg.cpp" />
@@ -1584,6 +1591,7 @@
     <ClCompile Include="Merge20\Merge20FocusResultView.cpp" />
     <ClCompile Include="Merge20\Merge20SniperDlg.cpp" />
     <ClCompile Include="Merge20\Merge20GrepDlg.cpp" />
+    <ClCompile Include="Merge20\Merge20ImpactSearch.cpp" />
     <ClCompile Include="Merge20\Merge20BulkClassifyDlg.cpp" />
     <ClCompile Include="Merge20\Merge20SniperView.cpp" />
     <ClCompile Include="Merge20\Merge20Learn.cpp">
