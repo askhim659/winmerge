@@ -239,11 +239,12 @@ void CMerge20FileListCtrl::Refresh()
 		filterRow.depth = row.depth;
 		filterRow.classified = row.classified;
 		filterRow.action = row.actionCategory;
+		filterRow.risk = row.riskLevel;
 		filterRow.collapsed = m_collapsed.count(row.relPath) != 0;
 		filterRows.push_back(std::move(filterRow));
 	}
 	const std::vector<bool> visible =
-		Merge20ComputeFileListVisibility(filterRows, m_searchText, m_actionFilter);
+		Merge20ComputeFileListVisibility(filterRows, m_searchText, m_actionFilter, m_riskFilter);
 	m_rows.clear();
 	for (size_t i = 0; i < m_allRows.size(); ++i)
 	{
@@ -300,6 +301,22 @@ void CMerge20FileListCtrl::SetActionFilter(int actionFilter)
 	if (m_actionFilter == actionFilter)
 		return;
 	m_actionFilter = actionFilter;
+	Refresh();
+}
+
+/**
+ * @brief Set the risk filter (B3) and refresh.
+ *
+ * -1 shows every risk level; otherwise the combo's RiskLevel.
+ * Saving and restoring the selected item is the bar's job (P4
+ * pattern: the bar owns the option key, the control only holds
+ * the value, like the action filter).
+ */
+void CMerge20FileListCtrl::SetRiskFilter(int riskFilter)
+{
+	if (m_riskFilter == riskFilter)
+		return;
+	m_riskFilter = riskFilter;
 	Refresh();
 }
 

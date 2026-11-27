@@ -9,6 +9,7 @@
  * user-visible text.
  */
 #include "pch.h"
+#include <algorithm>
 #include "Merge20/Merge20Patrol.h"
 
 namespace
@@ -97,4 +98,114 @@ int Merge20OrdinalOfTarget(const std::vector<bool>& isTarget, int current)
 			++ordinal;
 	}
 	return ordinal;
+}
+
+Merge20RiskRank Merge20RiskRankOfRisk(RiskLevel risk)
+{
+	switch (risk)
+	{
+	case RiskLevel::HIGH:
+		return Merge20RiskRank::HIGH;
+	case RiskLevel::MEDIUM:
+		return Merge20RiskRank::MEDIUM;
+	case RiskLevel::NONE:
+	default:
+		return Merge20RiskRank::NONE;
+	}
+}
+
+Merge20RiskRank Merge20RiskRankOfFile(bool classified, RiskLevel risk)
+{
+	if (!classified)
+		return Merge20RiskRank::UNCLASSIFIED;
+	return Merge20RiskRankOfRisk(risk);
+}
+
+std::vector<int> Merge20BuildRiskOrder(const std::vector<Merge20RiskRank>& ranks, const std::vector<bool>& isTarget)
+{
+	std::vector<int> order;
+	for (size_t i = 0; i < isTarget.size(); ++i)
+	{
+		if (isTarget[i])
+			order.push_back(static_cast<int>(i));
+	}
+	// Stable sort by rank: High, Medium, None, unclassified, with
+	// list/diff order kept within one rank. A rank past the ranks
+	// vector counts as unclassified (see the header comment).
+	std::stable_sort(order.begin(), order.end(),
+		[&ranks](int a, int b)
+		{
+			const Merge20RiskRank ra = a < static_cast<int>(ranks.size()) ?
+				ranks[static_cast<size_t>(a)] : Merge20RiskRank::UNCLASSIFIED;
+			const Merge20RiskRank rb = b < static_cast<int>(ranks.size()) ?
+				ranks[static_cast<size_t>(b)] : Merge20RiskRank::UNCLASSIFIED;
+			return ra < rb;
+		});
+	return order;
+}
+
+int Merge20FindNextInOrder(const std::vector<int>& order, int current, int direction, bool wrap)
+{
+	if (direction != 1 && direction != -1)
+		return -1;
+	if (order.empty())
+		return -1;
+	// Position of the current row/diff in the order (-1 when it is
+	// not a patrol target).
+	int pos = -1;
+	for (size_t i = 0; i < order.size(); ++i)
+	{
+		if (order[i] == current)
+		{
+			pos = static_cast<int>(i);
+			break;
+		}
+	}
+	if (pos >= 0)
+	{
+		const int nextPos = pos + direction;
+		if (nextPos >= 0 && nextPos < static_cast<int>(order.size()))
+			return order[static_cast<size_t>(nextPos)];
+		if (!wrap)
+			return -1;
+		// Wrap around: the first entry forward, the last one
+		// backward. With a single target that is the current
+		// row/diff itself, exactly like Merge20FindNextTarget.
+		return direction > 0 ? order.front() : order.back();
+	}
+	// The current row/diff is not a patrol target (e.g. a reviewed
+	// file while TODO-only is on, or a directory row): step from
+	// its list/diff position, like Merge20FindNextTarget scans
+	// from the current row. Forward takes the first entry of the
+	// order past the current position, backward the last entry
+	// before it; with no such entry the patrol wraps (or stops
+	// when wrapping is off). For a list-ordered order this is
+	// exactly Merge20FindNextTarget, so the plain D3 patrol is
+	// unchanged; for a risk-ordered order the risk priority still
+	// rules (the scan follows the patrol sequence, not the list).
+	if (direction > 0)
+	{
+		for (size_t i = 0; i < order.size(); ++i)
+		{
+			if (order[i] > current)
+				return order[i];
+		}
+		return wrap ? order.front() : -1;
+	}
+	for (size_t i = order.size(); i-- > 0;)
+	{
+		if (order[i] < current)
+			return order[i];
+	}
+	return wrap ? order.back() : -1;
+}
+
+int Merge20OrdinalInOrder(const std::vector<int>& order, int current)
+{
+	for (size_t i = 0; i < order.size(); ++i)
+	{
+		if (order[i] == current)
+			return static_cast<int>(i) + 1;
+	}
+	return 0;
 }

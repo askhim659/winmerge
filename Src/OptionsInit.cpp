@@ -272,6 +272,7 @@ void Init(COptionsMgr *pOptions)
 	pOptions->InitOption(OPT_MERGE20_DED_PIN_FIRST, true);
 	pOptions->InitOption(OPT_MERGE20_DED_ZOOM, 750, 350, 2200);
 	pOptions->InitOption(OPT_MERGE20_TODO_ONLY, false);
+	pOptions->InitOption(OPT_MERGE20_RISK_ORDER, false);
 	pOptions->InitOption(OPT_MERGE20_SNIPER_ON, false);
 	pOptions->InitOption(OPT_MERGE20_SNIPER_FONT, 20, 14, 28);
 	pOptions->InitOption(OPT_MERGE20_SNIPER_LAYOUT, 0, 0, 1);
@@ -290,6 +291,7 @@ void Init(COptionsMgr *pOptions)
 	// directories, slim off.
 	pOptions->InitOption(OPT_MERGE20_FILELIST_SEARCH, _T(""));
 	pOptions->InitOption(OPT_MERGE20_FILELIST_TAB, 0, 0, 7);
+	pOptions->InitOption(OPT_MERGE20_FILELIST_RISK_FILTER, -1, -1, 2);
 	pOptions->InitOption(OPT_MERGE20_FILELIST_COLLAPSED, _T(""));
 	pOptions->InitOption(OPT_MERGE20_FILELIST_SLIM, false);
 	pOptions->InitOption(OPT_MERGE20_FOCUS_DOCK_HEIGHT, 0);

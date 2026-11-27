@@ -232,3 +232,55 @@ TEST(Merge20Classify, ParseRiskKeywords)
 	EXPECT_EQ(trimmed[0], String(L"a"));
 	EXPECT_EQ(trimmed[1], String(L"b"));
 }
+
+TEST(Merge20Classify, DiffRiskPerRangeTable)
+{
+	// B3: the S4 file rule applied to one diff range (see
+	// Merge20ClassifyDiffRisk in Merge20Classify.h). One range
+	// carries one OP_TYPE, so each case below is one range.
+	const std::vector<String> kws = DefaultKeywords();
+	// Deleted-only range: 1 structural point -> Medium.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_1STONLY, L"    // old only code", nullptr),
+	}, kws), RiskLevel::MEDIUM);
+	// Deleted line with a risk keyword: +1 point -> High.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_1STONLY, L"    // \u7a0e\u984d\u306e\u8a08\u7b97", nullptr),
+	}, kws), RiskLevel::HIGH);
+	// Changed range: 1 structural point -> Medium.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_DIFF, L"    int x = 1;", L"    int x = 2;"),
+	}, kws), RiskLevel::MEDIUM);
+	// Changed line with a risk keyword: +1 point -> High.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_DIFF, L"    // \u7a0e\u984d", L"    // \u7a0e\u984d 2"),
+	}, kws), RiskLevel::HIGH);
+	// Added-only range: 0 structural points -> None.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_2NDONLY, nullptr, L"    // new line"),
+	}, kws), RiskLevel::NONE);
+	// Added line with a risk keyword: +1 point -> Medium.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_2NDONLY, nullptr, L"    // \u7a0e\u984d\u306e\u8a08\u7b97"),
+	}, kws), RiskLevel::MEDIUM);
+	// Trivial range and no diff lines: None.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_TRIVIAL, L"   ", L" "),
+	}, kws), RiskLevel::NONE);
+	EXPECT_EQ(Merge20ClassifyDiffRisk({}, kws), RiskLevel::NONE);
+	// Context lines (enclosing function definition) do not change
+	// the risk of the range they belong to.
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		ContextLine(L"    public long calc(long cost, double ratio) {"),
+		Line(OP_2NDONLY, nullptr, L"    // new line"),
+	}, kws), RiskLevel::NONE);
+	// Insights add no risk point: a pure constant change stays
+	// Medium, and a deleted if guard without a keyword stays
+	// Medium (same rule as the file-level classification).
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_DIFF, L"// 10002345", L"// 20009876"),
+	}, kws), RiskLevel::MEDIUM);
+	EXPECT_EQ(Merge20ClassifyDiffRisk({
+		Line(OP_1STONLY, L"        if (ratio < 0.20) { ratio = 0.20; }", nullptr),
+	}, kws), RiskLevel::MEDIUM);
+}

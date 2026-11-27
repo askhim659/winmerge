@@ -77,6 +77,10 @@ BEGIN_MESSAGE_MAP(CMergeEditFrame, CMergeFrameCommon)
 	ON_COMMAND_RANGE(ID_MERGE20_DED_REVIEW_TODO, ID_MERGE20_DED_REVIEW_KEEP, OnMerge20DedReview)
 	ON_COMMAND(ID_MERGE20_DED_PIN, OnMerge20DedPin)
 	ON_COMMAND(ID_MERGE20_DED_TODO_ONLY, OnMerge20DedTodoOnly)
+	// Merge20 (best-workflow B3): risk-order patrol toggle (View
+	// menu + dedicated-bar button, same command).
+	ON_COMMAND(ID_MERGE20_RISK_ORDER, OnMerge20RiskOrder)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_RISK_ORDER, OnUpdateMerge20RiskOrder)
 	ON_COMMAND(ID_MERGE20_DED_SNIPER, OnMerge20DedSniper)
 	// Merge20 (Phase 4 D9): diffs-only toggle (dedicated-bar button + F key).
 	ON_COMMAND(ID_MERGE20_DED_DIFFS_ONLY, OnMerge20DedDiffsOnly)
@@ -684,6 +688,9 @@ void CMergeEditFrame::UpdateDedBar()
 	m_wndDedBar.SetPinned(GetOptionsMgr()->GetBool(OPT_MERGE20_DED_PINNED));
 	const bool bTodoOnly = GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
 	m_wndDedBar.SetTodoOnly(bTodoOnly);
+	// Merge20 (best-workflow B3): the risk-order check follows
+	// OPT_MERGE20_RISK_ORDER, like the unreviewed-only check.
+	m_wndDedBar.SetRiskOrder(GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER));
 	m_wndDedBar.SetSniperOn(GetOptionsMgr()->GetBool(OPT_MERGE20_SNIPER_ON));
 	// Merge20 (Phase 4 D9): the diffs-only check follows the live diff
 	// context (0 = diffs only). OPT_DIFF_CONTEXT is saved by
@@ -794,6 +801,24 @@ void CMergeEditFrame::OnMerge20DedTodoOnly()
 	const bool bTodoOnly = !GetOptionsMgr()->GetBool(OPT_MERGE20_TODO_ONLY);
 	GetOptionsMgr()->SaveOption(OPT_MERGE20_TODO_ONLY, bTodoOnly);
 	FlashDedBar();
+}
+
+/**
+ * @brief Risk-order patrol toggle (best-workflow B3; View menu +
+ * dedicated-bar button). The state is kept in
+ * OPT_MERGE20_RISK_ORDER; the patrol behaviour is CDirView (file
+ * patrol) and CMergeDiffNavigation (diff patrol).
+ */
+void CMergeEditFrame::OnMerge20RiskOrder()
+{
+	const bool bRiskOrder = !GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_RISK_ORDER, bRiskOrder);
+	FlashDedBar();
+}
+
+void CMergeEditFrame::OnUpdateMerge20RiskOrder(CCmdUI* pCmdUI)
+{
+	pCmdUI->SetCheck(GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER) ? 1 : 0);
 }
 
 /**

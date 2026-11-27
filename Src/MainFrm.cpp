@@ -329,6 +329,10 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMDIFrameWnd)
 	// own key by the OnBarCheck override below.
 	ON_UPDATE_COMMAND_UI(ID_VIEW_MERGE20_BRAND_HEADER, OnUpdateControlBarMenu)
 	ON_COMMAND_EX(ID_VIEW_MERGE20_BRAND_HEADER, OnBarCheck)
+	// Merge20 (best-workflow B3): risk-order patrol toggle (View
+	// menu; the file compare frame handles the same command there).
+	ON_COMMAND(ID_MERGE20_RISK_ORDER, OnMerge20RiskOrder)
+	ON_UPDATE_COMMAND_UI(ID_MERGE20_RISK_ORDER, OnUpdateMerge20RiskOrder)
 	// [Plugins] menu
 	ON_COMMAND(ID_PLUGINS_LIST, OnPluginsList)
 	ON_COMMAND_RANGE(ID_UNPACK_MANUAL, ID_UNPACK_AUTO, OnPluginUnpackMode)
@@ -2862,6 +2866,25 @@ void CMainFrame::OnViewOutputBar()
 void CMainFrame::OnUpdateViewOutputBar(CCmdUI* pCmdUI)
 {
 	pCmdUI->SetCheck(m_wndOutputBar.m_hWnd != nullptr && !!m_wndOutputBar.IsVisible());
+}
+
+/**
+ * @brief Risk-order patrol toggle (best-workflow B3; View menu in
+ * the folder compare frame). Toggles the shared
+ * OPT_MERGE20_RISK_ORDER option; the patrol behaviour is CDirView
+ * (file patrol) and CMergeDiffNavigation (diff patrol). The file
+ * compare frame handles the same command there, so the menu item
+ * works in both frames.
+ */
+void CMainFrame::OnMerge20RiskOrder()
+{
+	const bool bRiskOrder = !GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER);
+	GetOptionsMgr()->SaveOption(OPT_MERGE20_RISK_ORDER, bRiskOrder);
+}
+
+void CMainFrame::OnUpdateMerge20RiskOrder(CCmdUI* pCmdUI)
+{
+	pCmdUI->SetCheck(GetOptionsMgr()->GetBool(OPT_MERGE20_RISK_ORDER) ? 1 : 0);
 }
 
 /**

@@ -95,6 +95,30 @@ struct Merge20ClassifyResult
 Merge20ClassifyResult Merge20ClassifyDiffLines(const std::vector<Merge20DiffLine>& lines, const std::vector<String>& riskKeywords);
 
 /**
+ * @brief Risk of one diff range, for the B3 risk-order diff patrol
+ * (gap analysis section 4.2 B3 (b)).
+ *
+ * Definition: the S4 file rule (see the header comment) applied to
+ * that range's lines alone. One range carries one OP_TYPE, so the
+ * table is:
+ * - deleted-only range (OP_1STONLY): 1 structural point -> Medium;
+ *   +1 when a risk keyword appears -> High.
+ * - changed range (OP_DIFF): 1 structural point -> Medium; +1 with
+ *   a risk keyword -> High.
+ * - added-only range (OP_2NDONLY): 0 structural points -> None; +1
+ *   with a risk keyword -> Medium.
+ * - trivial range (OP_TRIVIAL) or no diff lines: None.
+ * Insights (rounding / SQL / deleted if guard / condition /
+ * constant) are reported by Merge20ClassifyDiffLines but add no
+ * risk point, exactly as in the file rule, so a pure constant
+ * change stays Medium and never becomes High on its own. Context
+ * lines (OP_NONE) do not change the risk either. The learning
+ * state of the diff is not an input (risk axis and learning axis
+ * are independent, gap analysis section 3.1).
+ */
+RiskLevel Merge20ClassifyDiffRisk(const std::vector<Merge20DiffLine>& lines, const std::vector<String>& riskKeywords);
+
+/**
  * @brief Split the OPT_MERGE20_RISK_KEYWORDS option value.
  * @param [in] text Semicolon-separated keyword list.
  * @return Keywords, trimmed, empty entries dropped, in order.

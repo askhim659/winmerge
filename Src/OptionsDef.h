@@ -383,6 +383,14 @@ inline const String OPT_MERGE20_DED_PINNED {_T("Merge20/DedPinned"s)};
 inline const String OPT_MERGE20_DED_PIN_FIRST {_T("Merge20/DedPinFirst"s)};
 inline const String OPT_MERGE20_DED_ZOOM {_T("Merge20/DedZoom"s)};
 inline const String OPT_MERGE20_TODO_ONLY {_T("Merge20/TodoOnly"s)};
+// Merge20 (best-workflow B3, gap analysis section 4.2 B3): risk-order
+// patrol mode. When on, the D3 unreviewed-only patrol (and, with
+// TODO-only off, the all-files patrol) visits files in risk order
+// (High, Medium, None, unclassified last) instead of list order,
+// and the in-file diff patrol visits diffs in per-diff risk order.
+// The mode is a display + state key only; the patrol behaviour is
+// B3. Default false (list order, as before).
+inline const String OPT_MERGE20_RISK_ORDER {_T("Merge20/RiskOrder"s)};
 inline const String OPT_MERGE20_SNIPER_ON {_T("Merge20/SniperOn"s)};
 inline const String OPT_MERGE20_SNIPER_FONT {_T("Merge20/SniperFont"s)};
 inline const String OPT_MERGE20_SNIPER_LAYOUT {_T("Merge20/SniperLayout"s)};
@@ -424,6 +432,12 @@ inline const String OPT_MERGE20_FILELIST_SEARCH {_T("Merge20/FileListSearch"s)};
 inline const String OPT_MERGE20_FILELIST_TAB {_T("Merge20/FileListTab"s)};
 inline const String OPT_MERGE20_FILELIST_COLLAPSED {_T("Merge20/FileListCollapsed"s)};
 inline const String OPT_MERGE20_FILELIST_SLIM {_T("Merge20/FileListSlim"s)};
+// Merge20 (best-workflow B3): the panel risk filter (-1 = all risks,
+// otherwise static_cast<int>(RiskLevel) of the selected combo item).
+// A dedicated key (the panel filter is panel-only: the folder list
+// is not filtered, and the H-FILTER deck has no risk dimension, so
+// no existing key is reused).
+inline const String OPT_MERGE20_FILELIST_RISK_FILTER {_T("Merge20/FileListRiskFilter"s)};
 inline const String OPT_MERGE20_FOCUS_DOCK_HEIGHT {_T("Merge20/FocusDockHeight"s)};
 inline const String OPT_MERGE20_GREP_HISTORY {_T("Merge20/GrepHistory"s)};
 

@@ -26,7 +26,8 @@
 std::vector<bool> Merge20ComputeFileListVisibility(
 	const std::vector<Merge20FileListFilterRow>& rows,
 	const String& searchText,
-	int actionFilter)
+	int actionFilter,
+	int riskFilter)
 {
 	// Search definition (HTML tool qFile): trim, lower-case,
 	// substring over the whole relative path.
@@ -77,7 +78,9 @@ std::vector<bool> Merge20ComputeFileListVisibility(
 		{
 			const bool actionMatch = (actionFilter < 0) ||
 				(row.classified && static_cast<int>(row.action) == actionFilter);
-			const bool show = searchMatch && actionMatch && !hidden;
+			const bool riskMatch = (riskFilter < 0) ||
+				(row.classified && static_cast<int>(row.risk) == riskFilter);
+			const bool show = searchMatch && actionMatch && riskMatch && !hidden;
 			visible[i] = show;
 			if (show)
 			{
