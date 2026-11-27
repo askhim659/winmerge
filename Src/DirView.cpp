@@ -56,6 +56,7 @@
 #include "Merge20/Merge20Slim.h"
 #include "Merge20/Merge20Summary.h"
 #include "Merge20/Merge20SummaryDlg.h"
+#include "Merge20/Merge20HighRiskConfirmDlg.h"
 #include "FileOrFolderSelect.h"
 #include "DirAdditionalPropertiesDlg.h"
 #include "DirSelectFilesDlg.h"
@@ -3375,7 +3376,25 @@ BOOL CDirView::PreTranslateMessage(MSG* pMsg)
 					if (pMsg->wParam == VK_SPACE)
 					{
 						ReviewState curState = GetDocument()->GetMerge20ReviewState(dip);
-						GetDocument()->ApplyMerge20ReviewState(dip, static_cast<ReviewState>((static_cast<int>(curState) + 1) % 5));
+						const ReviewState nextState = static_cast<ReviewState>((static_cast<int>(curState) + 1) % 5);
+						// Merge20 (best-workflow B14): Space cycles
+						// blindly, so the step that declares a
+						// high-risk file done (TODO -> DONE, which
+						// also turns its output checkbox ON) needs
+						// one confirmation; a cancel changes
+						// nothing. Directory rows hold no file
+						// judgment, so they are not guarded. Keys
+						// 1-5 stay unguarded: pressing '2' is an
+						// explicit choice of DONE, unlike Space.
+						if (!dip.diffcode.isDirectory() &&
+							!Merge20ConfirmHighRiskFileReview(this,
+								dip.getItemRelativePath(),
+								GetDocument()->GetDiffContext().GetMerge20FileStates().GetState(dip.getItemRelativePath()),
+								curState, nextState))
+						{
+							return TRUE;
+						}
+						GetDocument()->ApplyMerge20ReviewState(dip, nextState);
 						GetListCtrl().RedrawItems(sel, sel);
 						UpdateMerge20StatusCount();
 						return TRUE;
