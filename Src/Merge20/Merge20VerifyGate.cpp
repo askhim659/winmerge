@@ -27,6 +27,7 @@
 #include "StdAfx.h"
 #include <algorithm>
 #include "Merge20VerifyGate.h"
+#include "unicoder.h"
 #include "MergeDoc.h"
 #include "MergeResultPane.h"
 #include "MergeResultView.h"
@@ -350,7 +351,14 @@ Merge20VerifyFileResult Merge20VerifyCheckMergeDocFile(const CMergeDoc& doc, int
 	{
 		// No merge session: nothing to verify, clean by
 		// definition (the caller only gates built results).
+		// B8: the file still gets a display name (the NEW pane's
+		// file name) and verified=false, so the report can list
+		// it as "not verified" instead of dropping it.
+		file.verified = false;
 		file.result.passed = true;
+		const int newPane = doc.Merge20GetNewPane();
+		if (newPane >= 0 && newPane < doc.m_nBuffers)
+			file.fileName = paths::FindFileName(doc.GetPath(newPane));
 		return file;
 	}
 	file.fileName = displayName;
@@ -465,9 +473,100 @@ void Merge20VerifyJumpToIssue(CMergeDoc& doc, const Merge20VerifyIssue& issue)
 	}
 }
 
-bool Merge20VerifyBeforeOutput(CMergeDoc& doc)
+String Merge20VerifyCheckDisplayName(Merge20VerifyCheck check)
+{
+	switch (check)
+	{
+	case Merge20VerifyCheck::Rediff:
+		return _("Re-diff");
+	case Merge20VerifyCheck::LineCountEncoding:
+		return _("Lines / encoding");
+	case Merge20VerifyCheck::Syntax:
+		return _("Syntax (simple check)");
+	case Merge20VerifyCheck::Consistency:
+		return _("Judgment consistency");
+	default:
+		return _("Check");
+	}
+}
+
+String Merge20VerifyFormatIssueLocation(const Merge20VerifyIssue& issue)
+{
+	if (issue.diffIndex >= 0)
+	{
+		if (issue.resultLine >= 1)
+		{
+			return strutils::format_string2(_("Diff %1, result line %2"),
+				strutils::to_str(issue.diffIndex + 1), strutils::to_str(issue.resultLine));
+		}
+		return strutils::format_string1(_("Diff %1"), strutils::to_str(issue.diffIndex + 1));
+	}
+	if (issue.resultLine >= 1)
+		return strutils::format_string1(_("Result line %1"), strutils::to_str(issue.resultLine));
+	return _("Whole file");
+}
+
+String Merge20VerifyFormatIssueDetail(const Merge20VerifyIssue& issue)
+{
+	String detail;
+	switch (issue.kind)
+	{
+	case Merge20VerifyIssueKind::RediffUnexplained:
+		if (issue.newLine >= 1)
+		{
+			detail = strutils::format_string1(_("Unexplained difference from NEW (NEW line %1)"),
+				strutils::to_str(issue.newLine));
+		}
+		else
+		{
+			detail = _("Unexplained difference from NEW");
+		}
+		break;
+	case Merge20VerifyIssueKind::LineCountMismatch:
+		detail = strutils::format_string2(_("Expected %1 lines, got %2 lines"),
+			strutils::to_str(issue.expectedCount), strutils::to_str(issue.actualCount));
+		break;
+	case Merge20VerifyIssueKind::EncodingUnrepresentable:
+		detail = strutils::format_string1(_("Character U+%1 cannot be written in the output encoding"),
+			strutils::format(_T("%04X"), issue.codePoint));
+		break;
+	case Merge20VerifyIssueKind::EncodingInvalidUtf8:
+		detail = strutils::format_string1(_("Invalid byte at offset %1"),
+			strutils::to_str(issue.byteOffset));
+		break;
+	case Merge20VerifyIssueKind::SyntaxUnmatchedCloser:
+		detail = _("Unmatched closing bracket");
+		break;
+	case Merge20VerifyIssueKind::SyntaxUnclosedOpener:
+		detail = _("Opening bracket is never closed");
+		break;
+	case Merge20VerifyIssueKind::SyntaxMismatchedPair:
+		detail = _("Closing bracket does not match its opener");
+		break;
+	case Merge20VerifyIssueKind::ConsistencyMismatch:
+		detail = strutils::format_string2(_("The output does not match its judgment (expected %1 line(s), got %2)"),
+			strutils::to_str(issue.expectedCount), strutils::to_str(issue.actualCount));
+		break;
+	case Merge20VerifyIssueKind::ConsistencyUnresolved:
+		detail = _("Judged, but still unresolved");
+		break;
+	default:
+		detail = _("Problem found");
+		break;
+	}
+	// The offending line content (file content, shown verbatim).
+	if (!issue.text.empty())
+	{
+		detail += _T(" : ") + ucr::toTString(issue.text);
+	}
+	return detail;
+}
+
+bool Merge20VerifyBeforeOutput(CMergeDoc& doc, Merge20VerifyFileResult* pLastResult)
 {
 	Merge20VerifyFileResult file = Merge20VerifyCheckMergeDocFile(doc);
+	if (pLastResult != nullptr)
+		*pLastResult = file;
 	if (file.result.passed)
 		return true;
 
