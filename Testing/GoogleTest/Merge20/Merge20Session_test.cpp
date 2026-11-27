@@ -45,6 +45,11 @@ namespace
 		session.display.hiddenItems = { L"src\\.git", L"bin" };
 		session.display.focusedPath = L"src\\foo.cpp";
 		session.display.topIndex = 3;
+		// Merge20 (best-workflow B12): the file compare open at save
+		// time, with its current diff and first visible line.
+		session.display.resumeRelPath = L"src\\foo.cpp";
+		session.display.resumeDiff = 4;
+		session.display.resumeTopLine = 120;
 		{
 			Merge20SessionFile f;
 			f.relPath = L"src\\foo.cpp";
@@ -217,6 +222,11 @@ TEST(Merge20Session, SessionRoundTrip)
 	ASSERT_EQ(back.display.hiddenItems.size(), 2u);
 	EXPECT_EQ(back.display.focusedPath, L"src\\foo.cpp");
 	EXPECT_EQ(back.display.topIndex, 3);
+	// Merge20 (best-workflow B12): the resume position survives the
+	// round trip.
+	EXPECT_EQ(back.display.resumeRelPath, L"src\\foo.cpp");
+	EXPECT_EQ(back.display.resumeDiff, 4);
+	EXPECT_EQ(back.display.resumeTopLine, 120);
 	ASSERT_EQ(back.files.size(), 2u);
 	const Merge20SessionFile& f = back.files[0];
 	EXPECT_EQ(f.relPath, L"src\\foo.cpp");
@@ -415,6 +425,58 @@ TEST(Merge20Session, DisplayFieldsBackwardCompat)
 	ASSERT_TRUE(Merge20SessionToJson(session, json));
 	ASSERT_TRUE(Merge20SessionFromJson(json, back, err, skipped));
 	EXPECT_EQ(back.display.dedZoom, 2200);
+}
+
+TEST(Merge20Session, ResumeFieldsBackwardCompat)
+{
+	// Merge20 (best-workflow B12): a file saved before B12 has no
+	// resume fields and still loads, with the resume at its defaults
+	// (no file compare to reopen).
+	Merge20Session back;
+	std::string err;
+	int skipped = -1;
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"showIdentical\":false,\"treeMode\":true}}",
+		back, err, skipped));
+	EXPECT_TRUE(err.empty());
+	EXPECT_TRUE(back.display.resumeRelPath.empty());
+	EXPECT_EQ(back.display.resumeDiff, -1);
+	EXPECT_EQ(back.display.resumeTopLine, 0);
+	// A file that has the resume fields keeps them after a round
+	// trip through ToJson/FromJson.
+	Merge20Session session = MakeSession();
+	std::string json;
+	ASSERT_TRUE(Merge20SessionToJson(session, json));
+	EXPECT_NE(json.find("\"resumeRelPath\""), std::string::npos);
+	ASSERT_TRUE(Merge20SessionFromJson(json, back, err, skipped));
+	EXPECT_EQ(back.display.resumeRelPath, L"src\\foo.cpp");
+	EXPECT_EQ(back.display.resumeDiff, 4);
+	EXPECT_EQ(back.display.resumeTopLine, 120);
+	// Out-of-range resume values fail the load, like topIndex does.
+	EXPECT_FALSE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"resumeDiff\":-2}}",
+		back, err, skipped));
+	EXPECT_FALSE(err.empty());
+	EXPECT_FALSE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"resumeTopLine\":-1}}",
+		back, err, skipped));
+	EXPECT_FALSE(err.empty());
+	EXPECT_FALSE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"resumeRelPath\":123}}",
+		back, err, skipped));
+	EXPECT_FALSE(err.empty());
+	// -1 (no current diff) and 0 (top of file) are valid values.
+	ASSERT_TRUE(Merge20SessionFromJson(
+		"{\"app\":\"Merge20\",\"version\":1,"
+		"\"display\":{\"resumeRelPath\":\"f.txt\",\"resumeDiff\":-1,\"resumeTopLine\":0}}",
+		back, err, skipped));
+	EXPECT_EQ(back.display.resumeRelPath, L"f.txt");
+	EXPECT_EQ(back.display.resumeDiff, -1);
+	EXPECT_EQ(back.display.resumeTopLine, 0);
 }
 
 TEST(Merge20Session, SessionFormatErrors)
