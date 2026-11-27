@@ -7,7 +7,7 @@
  * (DEFAULT_GUI_FONT, dummy rect at creation, layout in OnSize,
  * literal _() calls for the .pot generator).
  */
-#include "StdAfx.h"
+#include "pch.h"
 #include "Merge20/Merge20FormCompareView.h"
 #include "resource.h"
 #include <cmath>
@@ -241,7 +241,7 @@ void CFormCompareView::LayoutControls()
 		m_stKpi[i].MoveWindow(kFormMargin + i * kpiWidth, y, kpiWidth, kFormKpiHeight);
 	y += kFormKpiHeight + kFormRowGap;
 	// Filter tabs (left) + previous / next / navigator toggle (right).
-	const int tabWidth = std::min(520, width / 2);
+	const int tabWidth = (std::min)(520, width / 2);
 	m_wndTabs.MoveWindow(kFormMargin, y, tabWidth, kFormControlHeight);
 	const int btnWidth = 90;
 	const int toggleWidth = 140;
@@ -267,13 +267,13 @@ void CFormCompareView::LayoutControls()
 	// Bottom area: navigator (left) + card list (rest).
 	const int navWidth = m_bNavVisible ? kFormNavWidth : 0;
 	const int listTop = y;
-	const int listHeight = std::max(0, height - listTop - kFormMargin);
+	const int listHeight = (std::max)(0, height - listTop - kFormMargin);
 	if (m_bNavVisible)
 		m_wndNav.MoveWindow(kFormMargin, listTop, navWidth, listHeight);
 	else
 		m_wndNav.MoveWindow(kFormMargin, listTop, 0, listHeight);
 	const int listLeft = kFormMargin + navWidth + (m_bNavVisible ? kFormRowGap : 0);
-	const int listWidth = std::max(0, width - listLeft - kFormMargin);
+	const int listWidth = (std::max)(0, width - listLeft - kFormMargin);
 	m_wndList.MoveWindow(listLeft, listTop, listWidth, listHeight);
 	m_stEmpty.MoveWindow(listLeft, listTop, listWidth, listHeight);
 }
