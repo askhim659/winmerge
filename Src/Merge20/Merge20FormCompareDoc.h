@@ -100,6 +100,15 @@ public:
 	/** @brief Re-apply _() texts after a GUI language change. */
 	void UpdateResources();
 
+	/**
+	 * @brief Re-resolve every result's form name from the
+	 * name-master file (F6, design section 8). Called after the
+	 * master is edited and saved; reloads the file (the default
+	 * list when the file is missing or unparsable) and refreshes
+	 * the visible list and the views.
+	 */
+	void RefreshFormNames();
+
 protected:
 	virtual BOOL OnNewDocument() override;
 	virtual void DeleteContents() override;
