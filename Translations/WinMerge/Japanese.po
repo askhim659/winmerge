@@ -11741,12 +11741,12 @@ msgstr "新ファイルで追加された行の数。ファイルを開いた後
 #. Merge20 (Wave 5 F2): FORM compare menu item (Merge.rc) and folder compare context menu (DirView.cpp, design section 3.2)
 #: Src/Merge.rc
 msgid "FORM Compare (view only)..."
-msgstr "FORM比較（見るだけ）..."
+msgstr "【Wiz】FORM比較（見るだけ）..."
 
 #. Merge20 (Wave 5 F2): FORM compare document title / window caption (design section 1.4)
 #: Src/Merge20/Merge20FormCompareDoc.cpp
 msgid "FORM Compare (view only)"
-msgstr "FORM比較（見るだけ）"
+msgstr "【Wiz】FORM比較（見るだけ）"
 
 #. Merge20 (Wave 5 F2): KPI label, total files (HTML updateKpiBadges)
 #: Src/Merge20/Merge20FormCompareView.cpp
