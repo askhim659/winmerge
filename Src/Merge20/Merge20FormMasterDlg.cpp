@@ -179,7 +179,7 @@ BOOL CMerge20FormMasterDlg::OnInitDialog()
 	}
 
 	const DWORD dwLabelStyle = WS_CHILD | WS_VISIBLE | SS_LEFT;
-	m_stHint.Create(_T(""), dwLabelStyle, CRect(0, 0, 1, 1), this);
+	m_stHint.Create(_T(""), dwLabelStyle, CRect(0, 0, 1, 1), this, IDC_MERGE20_FORM_MASTER_HINT);
 	m_stHint.SetWindowText(_("One \"ID<TAB>form name\" line per form. Saving applies the names immediately to the FORM compare window.").c_str());
 	m_stCount.Create(_T(""), dwLabelStyle, CRect(0, 0, 1, 1), this, IDC_MERGE20_FORM_MASTER_COUNT);
 
