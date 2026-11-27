@@ -230,25 +230,22 @@ BOOL CMergeEditFrame::OnCreateClient( LPCREATESTRUCT /*lpcs*/,
 	});
 	m_pMergeDoc->SetLocationView(pLocationView);
 
-	// Merge20 (Panel P0/P1, design section 12.5): register this
-	// frame for the folder-compare state-change notification, and
-	// hand the panel its folder document. The context posts
-	// MSG_MERGE20_FILELIST_REFRESH to the frame through the callback
-	// (no polling). The context is shared by every file compare
-	// opened from the same folder compare, so every open frame
-	// registers (P1 multicast: Add, keyed by window handle) and
-	// every open panel refreshes; P0 registered with Set, so only
-	// the last registered frame was notified. The panel reads the
-	// file list through CDirDoc, never touching CDiffContext
-	// internals.
-	if (CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc()))
-	{
-		HWND hwndFrame = GetSafeHwnd();
-		pDirDoc->GetDiffContext().AddMerge20FileListNotifyCallback(
-			reinterpret_cast<std::uintptr_t>(hwndFrame),
-			[hwndFrame]() { ::PostMessage(hwndFrame, MSG_MERGE20_FILELIST_REFRESH, 0, 0); });
-		m_wndFileListBar.SetDirDoc(pDirDoc);
-	}
+	// Merge20 (Panel linkage fix, design section 12.5): the
+	// notification registration and the panel's folder document
+	// used to live here, but they never ran: this frame is created
+	// inside CMultiDocTemplate::OpenDocumentFile, and
+	// CMergeDoc::SetDirDoc is only called afterwards, in
+	// GetMergeDocForDiff (MainFrm.cpp), so GetDirDoc() is always
+	// nullptr during frame creation. Both now happen in
+	// RefreshFileListPanel(), the first time GetDirDoc() becomes
+	// non-null (on activation, after the files are loaded). The
+	// context posts MSG_MERGE20_FILELIST_REFRESH to the frame
+	// through the callback (no polling). The context is shared by
+	// every file compare opened from the same folder compare, so
+	// every open frame registers (P1 multicast: Add, keyed by
+	// window handle) and every open panel refreshes. The panel
+	// reads the file list through CDirDoc, never touching
+	// CDiffContext internals.
 
 	// kdiff3-style merge result pane: a dockable
 	// bar at the bottom with a full-width editable result view
@@ -983,7 +980,7 @@ BOOL CMergeEditFrame::DestroyWindow()
 	// (P1 left the entry behind; the list grew with every file
 	// compare opened from the same folder compare). The callback
 	// key is this frame's window handle, the same key used to
-	// register in OnCreateClient. Safe when nothing was registered
+	// register in RefreshFileListPanel. Safe when nothing was registered
 	// (removing an unknown key is a no-op).
 	if (m_pMergeDoc != nullptr)
 	{
@@ -1397,7 +1394,46 @@ void CMergeEditFrame::RefreshFileListPanel()
 	if (m_pMergeDoc != nullptr)
 	{
 		if (CDirDoc* pDirDoc = dynamic_cast<CDirDoc*>(m_pMergeDoc->GetDirDoc()))
+		{
+			// Merge20 (Panel linkage fix): attach the panel to the
+			// folder document here, on the first refresh after the
+			// link exists. The frame is created inside
+			// CMultiDocTemplate::OpenDocumentFile and
+			// CMergeDoc::SetDirDoc runs only afterwards (in
+			// GetMergeDocForDiff, MainFrm.cpp), so an attach in
+			// OnCreateClient never ran and the panel's DirDoc stayed
+			// nullptr for every file opened from a folder compare:
+			// Refresh() always took the "No folder comparison"
+			// branch, on every open path (not drag & drop specific).
+			// The notification callback is registered here too, for
+			// the same reason (keyed by window handle, as before;
+			// re-attaching with the same key replaces the entry).
+			if (m_wndFileListBar.GetDirDoc() != pDirDoc)
+			{
+				HWND hwndFrame = GetSafeHwnd();
+				pDirDoc->GetDiffContext().AddMerge20FileListNotifyCallback(
+					reinterpret_cast<std::uintptr_t>(hwndFrame),
+					[hwndFrame]() { ::PostMessage(hwndFrame, MSG_MERGE20_FILELIST_REFRESH, 0, 0); });
+				m_wndFileListBar.SetDirDoc(pDirDoc);
+				// The initial-visibility decision in OnCreate ran
+				// before SetDirDoc too, so the panel started hidden
+				// even with the toggle on; show it now that the
+				// folder document is known. The saved toggle is the
+				// user's intent (OnBarCheck writes it), so a panel
+				// the user hid stays hidden. Refresh() is a no-op
+				// while hidden, so this runs before Refresh() below.
+				if (GetOptionsMgr()->GetBool(OPT_MERGE20_FILELIST_VISIBLE))
+					ShowControlBar(&m_wndFileListBar, TRUE, FALSE);
+			}
 			pDirDoc->Merge20FindRelPath(m_pMergeDoc->m_filePaths, sRelPath);
+		}
+		else if (m_wndFileListBar.GetDirDoc() != nullptr)
+		{
+			// Folder compare detached (DirDocClosing cleared the
+			// doc's link): drop the panel's reference so it cannot
+			// dangle, and fall back to the empty state.
+			m_wndFileListBar.SetDirDoc(nullptr);
+		}
 	}
 	m_wndFileListBar.SetCurrentFileRelPath(sRelPath);
 	m_wndFileListBar.Refresh();
