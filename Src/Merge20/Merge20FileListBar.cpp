@@ -1149,7 +1149,7 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 				continue;
 			const std::map<String, const DIFFITEM*>::const_iterator it = byRelPath.find(pRow->relPath);
 			if (it != byRelPath.end())
-				m_pDirDoc->SetMerge20IncludeInOutput(*it->second, true);
+				m_pDirDoc->SetMerge20IncludeInOutput(*it->second, true, false);
 		}
 		break;
 	}
@@ -1162,7 +1162,7 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 				continue;
 			const std::map<String, const DIFFITEM*>::const_iterator it = byRelPath.find(pRow->relPath);
 			if (it != byRelPath.end())
-				m_pDirDoc->SetMerge20IncludeInOutput(*it->second, true);
+				m_pDirDoc->SetMerge20IncludeInOutput(*it->second, true, false);
 		}
 		break;
 	}
@@ -1171,7 +1171,7 @@ void CMerge20FileListBar::OnMerge20BatchCheck()
 		{
 			const DIFFITEM& di = ctxt.GetNextDiffPosition(p);
 			if (!di.diffcode.isDirectory())
-				m_pDirDoc->SetMerge20IncludeInOutput(di, false);
+				m_pDirDoc->SetMerge20IncludeInOutput(di, false, false);
 		}
 		break;
 	case Merge20BatchCheckDlg::Action::None:
@@ -1583,6 +1583,6 @@ void CMerge20FileListBar::SetOutputForDirectory(const DIFFITEM& dir, bool includ
 		if (pChild->diffcode.isDirectory())
 			SetOutputForDirectory(*pChild, include);
 		else
-			m_pDirDoc->SetMerge20IncludeInOutput(*pChild, include);
+			m_pDirDoc->SetMerge20IncludeInOutput(*pChild, include, false);
 	}
 }
