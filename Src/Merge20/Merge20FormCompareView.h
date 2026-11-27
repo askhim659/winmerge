@@ -24,7 +24,10 @@
  * under the preview pane (design sections 2.9, 5.2, 5.3): the
  * four HTML columns, group rows collapsed by default with
  * expand on click, and row click -> spotlight for records with
- * a visual. The document and the list module stay the same.
+ * a visual. F6 adds the name-master edit button to the top bar
+ * (design sections 7.1 and 8): it opens the edit dialog, and
+ * after a save the document re-resolves every form name. The
+ * document and the list module stay the same.
  *
  * The view never changes the document except through the
  * document's SetFilter / SetSearchText / SetSortOrder (which
@@ -83,6 +86,8 @@ protected:
 	afx_msg void OnNavToggle();
 	afx_msg void OnNavSelChanged();
 	afx_msg void OnListItemChanged(NMHDR* pNMHDR, LRESULT* pResult);
+	/** @brief Name-master edit button (F6): open the edit dialog. */
+	afx_msg void OnMasterEdit();
 	/** @brief Zoom 100% button (F3). */
 	afx_msg void OnZoom100();
 	/** @brief Zoom 25% button (F3). */
@@ -144,6 +149,8 @@ private:
 	void SetupTableColumns();
 	/** @brief Rebuild the diff table of the selected file (F5). */
 	void RefreshTable();
+	/** @brief Update the name-master button text (F6; count badge). */
+	void RefreshMasterButton();
 	/** @brief Update the diff-table label (F5; ignored-noise count). */
 	void RefreshTableLabel();
 	/** @brief Make the row of this record visible and selected (F5). */
@@ -165,6 +172,7 @@ private:
 	CStatic m_stSortLabel; /**< Sort label ("Sort by"). */
 	CComboBox m_wndSort; /**< The five sort orders. */
 	CButton m_btnRerun; /**< Re-run analysis. */
+	CButton m_btnMaster; /**< Name-master edit button (F6). */
 	CButton m_btnPrev; /**< Previous form. */
 	CButton m_btnNext; /**< Next form. */
 	CButton m_btnNavToggle; /**< Show/hide the navigator. */
