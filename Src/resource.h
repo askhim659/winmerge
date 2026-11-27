@@ -934,6 +934,11 @@
 #define IDC_MERGE20_CLOSE_WARN_PROCEED      1885
 // Merge20 (B4): high-risk remainder line in the file-list panel header.
 #define IDC_MERGE20_FILELIST_HIGHRISK     1886
+// Merge20 (best-workflow B3): risk filter in the file-list panel header
+// (label + combo) and the dedicated-bar risk-order toggle button.
+#define IDC_MERGE20_FILELIST_RISK_LABEL 1887
+#define IDC_MERGE20_FILELIST_RISK_FILTER 1888
+#define IDC_MERGE20_DED_RISK_ORDER      1889
 #define IDC_EDIT_WHOLE_WORD             8603
 #define IDC_EDIT_MATCH_CASE             8604
 #define IDC_EDIT_FINDTEXT               8605
@@ -1919,6 +1924,10 @@
 #define ID_MERGE20_CONCLUSION_KEEP      38975
 #define ID_MERGE20_FORM_COMPARE         38976
 #define ID_MERGE20_SUMMARY              38979
+// Merge20 (best-workflow B3, gap analysis section 4.2 B3): risk-order
+// patrol toggle (View menu + dedicated-bar button). 38980 is held
+// for F4, 38981 for the B2 stage 2 output gates (S7/S5).
+#define ID_MERGE20_RISK_ORDER           38982
 #define IDS_SPLASH_GPLTEXT              38977
 #define ID_VIEW_MERGE20_BRAND_HEADER   38978
 #define IDS_MESSAGEBOX_OK               39001
@@ -2692,6 +2701,10 @@
 // held for F4.
 // B4 consumes control 1886 (file-list panel high-risk remainder line). It uses no command ID:
 // the remainder is a display, not a menu item.
+// B3 consumes command 38982 (risk-order patrol toggle: View menu +
+// dedicated-bar button) and controls 1887-1889 (panel risk-filter
+// label + combo, dedicated-bar risk-order button). Command 38980 is
+// held for F4.
 // U1 consumes command 38978 (brand header toggle).
 // Verified by sorting all numeric defines in resource.h:
 // - dialogs (IDD_*): from 304 (_APS_NEXT_RESOURCE_VALUE). The numeric
@@ -2700,9 +2713,9 @@
 //   307 (IDR_LOGO), 310
 //   (IDR_MARGIN_ICONS_PNG), 312 and 316+ are already taken; dialog
 //   IDs must skip those values.
-// - controls (IDC_*): from 1887 (_APS_NEXT_CONTROL_VALUE), free
+// - controls (IDC_*): from 1890 (_APS_NEXT_CONTROL_VALUE), free
 //   contiguously up to 8602 (the next IDC_* is 8603). F3 takes 1858-1865, B9 takes 1866-1871,
-//   F4 holds 1872-1881, B2 takes 1882-1885, B4 takes 1886.
+//   F4 holds 1872-1881, B2 takes 1882-1885, B4 takes 1886, B3 takes 1887-1889.
 // - commands (ID_*): from 38960 (38941 is ID_VIEW_MERGE20_DEDICATED_MODE,
 //   D1; 38942-38953 are the D2 dedicated-bar commands; 38954-38955
 //   are the D5 split/regroup commands; 38958-38959 are the D9
@@ -2710,7 +2723,8 @@
 //   38969 is the H-DOC user manual command;
 //   38970-38975 are the B1 conclusion commands; 38976 is the F2 FORM compare command;
 //   38978 is the U1 brand header toggle; 38979 is the B9 summary
-//   command; _APS_NEXT_COMMAND_VALUE is now 38980), free from 38980
+//   command; 38982 is the B3 risk-order patrol toggle command;
+//   _APS_NEXT_COMMAND_VALUE is now 38983), free from 38983
 //   (38977 is IDS_SPLASH_GPLTEXT: not usable as a command ID).
 // Never trust _APS_NEXT_* alone: sort all defines by value before
 // allocating (S3 lesson: CVT1100 duplicate resource).
@@ -2720,8 +2734,8 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_3D_CONTROLS                     1
 #define _APS_NEXT_RESOURCE_VALUE        304
-#define _APS_NEXT_COMMAND_VALUE         38980
-#define _APS_NEXT_CONTROL_VALUE         1887
+#define _APS_NEXT_COMMAND_VALUE         38983
+#define _APS_NEXT_CONTROL_VALUE         1890
 #define _APS_NEXT_SYMED_VALUE           134
 #endif
 #endif
